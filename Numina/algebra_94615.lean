@@ -51,12 +51,16 @@ theorem algebra_94615 (a b c : ℤ) (f : ℤ → ℤ) (hf : ∀ x, f x = a * x ^
   simp only [hf, ha, hb, hc, Int.reducePow, Int.reduceMul, Int.reduceNeg, Int.reduceAdd] at h4
   -- 5000 * k < 19305 < 5000 * (k + 1)
   -- k must be 3 since 15000 < 19305 < 20000.
-  refine Int.eq_iff_le_and_ge.mpr ⟨?_, ?_⟩
-  · suffices k < 4 from Int.lt_add_one_iff.mp this
+  suffices 2 < k ∧ k < 4 by
+    refine Int.eq_iff_le_and_ge.mpr ⟨?_, ?_⟩
+    · exact Int.lt_add_one_iff.mp this.2
+    · exact Int.sub_one_lt_iff.mp this.1
+  rw [Set.mem_Ioo] at h4
+  refine ⟨?_, ?_⟩
+  · suffices 2 + 1 < k + 1 by simpa only [add_lt_add_iff_right] using this
     refine Int.lt_of_mul_lt_mul_left ?_ (a := 5000) (by norm_num : 0 ≤ (5000 : ℤ))
-    refine h4.1.trans ?_
-    norm_num
-  · suffices 3 < k + 1 from (Int.add_le_add_iff_right 1).mp this
-    refine Int.lt_of_mul_lt_mul_left ?_ (a := 5000) (by norm_num : 0 ≤ (5000 : ℤ))
-    refine .trans ?_ h4.2
+    refine lt_of_le_of_lt ?_ h4.2
+    norm_cast
+  · refine Int.lt_of_mul_lt_mul_left ?_ (a := 5000) (by norm_num : 0 ≤ (5000 : ℤ))
+    refine lt_of_lt_of_le h4.1 ?_
     norm_num
