@@ -1,4 +1,4 @@
--- https://cloud.kili-technology.com/label/projects/label/cm7eniew000h5zz87966e5kv6?userID=cm7ln00x0cbs001at7mnncm9v
+-- https://cloud.kili-technology.com/label/projects/label/cm7eniew000h5zz87966e5kv6
 
 import Mathlib
 
