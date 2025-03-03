@@ -86,13 +86,7 @@ theorem number_theory_97068 {a b c d : ℕ}
   -- The value of a is determined by b.
   have ha : a = b * 3 / 2 := (Nat.div_eq_of_eq_mul_left (by norm_num) hab.symm).symm
   have hab : (a = 3 ∧ b = 2) ∨ (a = 6 ∧ b = 4) := by
-    cases hb_mem with
-    | inl hb =>
-      refine .inl ⟨?_, hb⟩
-      rw [ha, hb]
-    | inr hb =>
-      refine .inr ⟨?_, hb⟩
-      rw [ha, hb]
+    refine hb_mem.imp (fun hb ↦ ⟨?_, hb⟩) (fun hb ↦ ⟨?_, hb⟩) <;> simp [ha, hb]
 
   -- Obtain (c, d) for each candidate and show that one case is invalid.
   have hcd : d + c * 8 = (a + b * 12) * 4 / 9 :=
