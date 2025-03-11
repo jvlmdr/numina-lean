@@ -14,91 +14,88 @@ open Pointwise
 How many distinct values of z are possible? -/
 theorem number_theory_97905 :
     Set.ncard {z : ℤ | ∃ x y : ℕ, x ∈ Set.Ico 100 1000 ∧ y ∈ Set.Ico 100 1000 ∧
-      Nat.digits 10 y = (Nat.digits 10 x).reverse ∧ z = |(x - y : ℤ)|} = 9 := by
+      z = |(x - y : ℤ)| ∧ Nat.digits 10 y = (Nat.digits 10 x).reverse} = 9 := by
 
   have h_sub_ofDigits (a b c : ℕ) :
       Nat.ofDigits (10 : ℕ) [c, b, a] - Nat.ofDigits (10 : ℕ) [a, b, c] = 99 * (a - c : ℤ) := by
     simp only [Nat.ofDigits_cons, Nat.ofDigits_nil, Nat.cast_add, Nat.cast_mul]
     ring
 
-  -- First re-parameterize in the digits `a` and `c`, where `x = abc` and `y = cba`.
-  have h_param (z : ℤ) : (∃ x y : ℕ, x ∈ Set.Ico 100 1000 ∧ y ∈ Set.Ico 100 1000 ∧
-        Nat.digits 10 y = (Nat.digits 10 x).reverse ∧ z = |(x - y : ℤ)|) ↔
-      ∃ c a : ℕ, c ∈ Set.Ico 1 10 ∧ a ∈ Set.Ico 1 10 ∧ z = 99 * |(a - c : ℤ)| := by
+  calc _
+  _ = {z | ∃ c a : ℕ, c ∈ Set.Ico 1 10 ∧ a ∈ Set.Ico 1 10 ∧ z = 99 * |(a - c : ℤ)|}.ncard := by
+    congr
+    ext z
     calc _
     -- Use `ofDigits 10 (digits 10 x) = x` to put everything in terms of digits.
     -- Re-parameterize `x = Nat.ofDigits 10 l` where `l = Nat.digits 10 x`.
-    -- TODO: Use `List.enum` here?
     _ ↔ ∃ lx ly : List ℕ,
-        lx ∈ {l | (∀ u ∈ l, u < 10) ∧ ∃ h : l.length = 3, l[2] ≠ 0} ∧
-        ly ∈ {l | (∀ u ∈ l, u < 10) ∧ ∃ h : l.length = 3, l[2] ≠ 0} ∧
-        ly = lx.reverse ∧ z = |(Nat.ofDigits (10 : ℕ) lx - Nat.ofDigits (10 : ℕ) ly : ℤ)| := by
-      simp only [exists_and_left]
-      -- Use `Set.BijOn.exists` to prove equivalence of different parameterizations.
-      suffices Set.BijOn (Nat.digits 10) (Set.Ico 100 1000)
-          {l | (∀ u ∈ l, u < 10) ∧ ∃ h : l.length = 3, l[2] ≠ 0} by
-        rw [this.exists]
-        refine exists_congr fun x ↦ and_congr_right fun hx ↦ ?_
-        rw [this.exists]
-        refine exists_congr fun y ↦ and_congr_right fun hy ↦ ?_
-        simp only [Nat.ofDigits_digits]
-      -- TODO: Might be easier to use...
-      -- LeftInvOn.surjOn (requires MapsTo)
-      -- InvOn.bijOn (requires both inverses, both mapstos)
-      -- Will need to make use of...
-      -- `Nat.ofDigits_digits`, `Nat.digits.injective`, and then...
-      -- `Nat.digits_ofDigits`? `Nat.ofDigits_inj_of_len_eq`?
-
-      refine ⟨?_, (Nat.digits.injective 10).injOn, ?_⟩
-      · -- Set.MapsTo (Nat.digits 10) (Set.Ico 100 1000)
-        --   {l | (∀ u ∈ l, u < 10) ∧ ∃ (h : l.length = 3), l[2] ≠ 0}
-        sorry
-      · -- Set.SurjOn (Nat.digits 10) (Set.Ico 100 1000)
-        --   {l | (∀ u ∈ l, u < 10) ∧ ∃ (h : l.length = 3), l[2] ≠ 0}
-        intro l
-        simp
-        sorry
-
-    -- The following form is easier for the next step.
-    -- (The length constraint is extricated from the `getLast` constraint.)
-    _ = ∃ lx ly : List ℕ,
-        lx.length = 3 ∧ (∀ i u, (i, u) ∈ lx.enum → u < 10 ∧ (i + 1 = lx.length → u ≠ 0)) ∧
-        ly.length = 3 ∧ (∀ i u, (i, u) ∈ ly.enum → u < 10 ∧ (i + 1 = lx.length → u ≠ 0)) ∧
+        ((∀ u ∈ lx, u < 10) ∧ lx.length = 3 ∧ ∀ h : lx ≠ [], lx.getLast h ≠ 0) ∧
+        ((∀ u ∈ ly, u < 10) ∧ ly.length = 3 ∧ ∀ h : ly ≠ [], ly.getLast h ≠ 0) ∧
         z = |(Nat.ofDigits (10 : ℕ) lx - Nat.ofDigits (10 : ℕ) ly : ℤ)| ∧ ly = lx.reverse := by
-      -- Proof depends on final form of previous step.
-      sorry
+      -- Use `Set.BijOn.exists` to prove equivalence of different parameterizations.
+      have h_leftInv : Set.LeftInvOn (Nat.ofDigits 10) (Nat.digits 10) (Set.Ico 100 1000) :=
+        fun x _ ↦ Nat.ofDigits_digits 10 x
+      have h_rightInv : Set.RightInvOn (Nat.ofDigits 10) (Nat.digits 10)
+          {l | (∀ u ∈ l, u < 10) ∧ l.length = 3 ∧ ∀ h : l ≠ [], l.getLast h ≠ 0} := by
+        intro l
+        simp only [Set.mem_setOf, and_imp, forall_exists_index]
+        intro hl_lt hl_len hl_ne
+        exact Nat.digits_ofDigits 10 (by norm_num) l hl_lt hl_ne
+      have h_mapsTo_digits : Set.MapsTo (Nat.digits 10) (Set.Ico 100 1000)
+          {l | (∀ u ∈ l, u < 10) ∧ l.length = 3 ∧ ∀ h : l ≠ [], l.getLast h ≠ 0} := by
+        intro x
+        simp only [Set.mem_setOf, Set.mem_Ico, and_imp]
+        intro hx_ge hx_lt
+        have hx_ne : x ≠ 0 := Nat.not_eq_zero_of_lt hx_ge
+        refine ⟨?_, ?_, ?_⟩
+        · exact fun u ↦ Nat.digits_lt_base (by norm_num)
+        · rw [Nat.digits_len _ x (by norm_num) hx_ne]
+          simp only [Nat.reduceEqDiff]
+          exact (Nat.log_eq_iff (.inl <| by norm_num)).mpr ⟨hx_ge, hx_lt⟩
+        · exact fun _ ↦ Nat.getLast_digit_ne_zero _ hx_ne
+      have h_mapsTo_ofDigits : Set.MapsTo (Nat.ofDigits 10)
+          {l | (∀ u ∈ l, u < 10) ∧ l.length = 3 ∧ ∀ h : l ≠ [], l.getLast h ≠ 0}
+          (Set.Ico 100 1000) := by
+        intro l
+        simp only [Set.mem_setOf, Set.mem_Ico, and_imp, forall_exists_index]
+        intro hl_lt hl_len hl_ne
+        refine ⟨?_, ?_⟩
+        · refine Nat.le_of_mul_le_mul_left ?_ (by norm_num : 0 < 10)
+          convert Nat.pow_length_le_mul_ofDigits (l.ne_nil_of_length_eq_add_one hl_len)
+            (hl_ne <| List.ne_nil_of_length_eq_add_one hl_len) using 1
+          rw [hl_len]
+          norm_num
+        · convert Nat.ofDigits_lt_base_pow_length (by norm_num : 1 < 10) hl_lt
+          rw [hl_len]
+          norm_num
+      -- Put these four elements together to obtain bijection.
+      have h_bij : Set.BijOn (Nat.ofDigits 10)
+          {l | (∀ u ∈ l, u < 10) ∧ l.length = 3 ∧ ∀ h : l ≠ [], l.getLast h ≠ 0}
+          (Set.Ico 100 1000) :=
+        ⟨h_mapsTo_ofDigits, h_rightInv.injOn, h_leftInv.surjOn h_mapsTo_digits⟩
+      -- Make the change of variables.
+      simp only [exists_and_left]
+      simp only [h_bij.exists, Set.mem_setOf]
+      refine exists_congr fun lx ↦ and_congr_right fun hlx ↦ ?_
+      refine exists_congr fun ly ↦ and_congr_right fun hly ↦ ?_
+      rw [h_rightInv hlx, h_rightInv hly]
 
     -- Re-parameterize again using `Fin 3 → ℕ` rather than `List ℕ`.
     _ ↔ ∃ u v : Fin 3 → ℕ, ((∀ i, u i < 10) ∧ u 2 ≠ 0) ∧ ((∀ i, v i < 10) ∧ v 2 ≠ 0) ∧
         z = |(Nat.ofDigits (10 : ℕ) [u 0, u 1, u 2] - Nat.ofDigits (10 : ℕ) [v 0, v 1, v 2] : ℤ)| ∧
         v = u ∘ Fin.rev := by
-      -- Use `List.equivSigmaTuple`: equivalence between `List ℕ` and `(n : ℕ) × (Fin n → ℕ)`.
+      -- Use `List.equivSigmaTuple`; equivalence between `List ℕ` and `(n : ℕ) × (Fin n → ℕ)`.
       -- Then combine this with the condition that `l.length = 3` to obtain `Fin 3 → ℕ`.
       simp only [exists_and_left, List.equivSigmaTuple.exists_congr_left, Sigma.exists,
-        List.equivSigmaTuple_symm_apply, List.length_ofFn, exists_eq_left]
-      -- We need this condition for both variables.
-      have h_iff (n : ℕ) (u : Fin n.succ → ℕ) (p q : ℕ → Prop) :
-          (∀ i xi, (i, xi) ∈ (List.ofFn u).enum → p xi ∧ (i = n → q xi)) ↔
-          (∀ i : Fin n.succ, p (u i)) ∧ q (u (Fin.last n)) := by
-        -- Separate the two conditions.
-        simp only [forall₂_and, forall_and]
-        refine and_congr ?_ ?_
-        · simp only [List.mk_mem_enum_iff_getElem?, Fin.forall_iff]
-          simp [-List.ofFn_succ]
-        · simp only [List.mk_mem_enum_iff_getElem?, Fin.last, Nat.reduceEqDiff]
-          -- Re-order conditions to substitute `i = n`.
-          rw [forall_comm]
-          conv => lhs; intro u i; rw [forall_comm (β := i = n)]
-          simp [-List.ofFn_succ]
-      refine exists_congr fun u ↦ and_congr ?_ ?_
-      · simpa only [Nat.reduceEqDiff] using h_iff 2 u (· < 10) (· ≠ 0)
-      refine exists_congr fun v ↦ and_congr ?_ ?_
-      · simpa only [Nat.reduceEqDiff] using h_iff 2 v (· < 10) (· ≠ 0)
-      refine and_congr ?_ ?_
-      · simp
-      · simp [funext_iff, Fin.forall_fin_succ, Fin.rev_eq]
+        List.equivSigmaTuple_symm_apply, List.length_ofFn]
+      simp only [and_left_comm (b := _ = 3), and_assoc, exists_and_left, exists_eq_left,
+        List.forall_mem_ofFn_iff]
+      refine exists_congr fun u ↦ and_congr_right fun _ ↦ and_congr (by simp) ?_
+      refine exists_congr fun v ↦ and_congr_right fun _ ↦ and_congr (by simp) ?_
+      refine and_congr_right fun _ ↦ ?_
+      simp [funext_iff, Fin.forall_fin_succ, Fin.rev_eq]
 
-    -- Reduce to a single set of digits using the reverse constraint.
+    -- Reduce to a single list of digits using the reverse constraint.
     _ ↔ ∃ u : Fin 3 → ℕ, (∀ i, u i < 10) ∧ u 2 ≠ 0 ∧ u 0 ≠ 0 ∧ z = |99 * (u 2 - u 0 : ℤ)| := by
       refine exists_congr fun u ↦ ?_
       -- Extract common conditions.
@@ -139,56 +136,50 @@ theorem number_theory_97905 :
       simp [hb]
 
   -- Now we can reduce the problem to the size of `{|a - c| | c, a ∈ [1, 10]}`.
-  calc _
-  _ = Set.ncard {z : ℤ | ∃ c a : ℕ, c ∈ Set.Ico 1 10 ∧ a ∈ Set.Ico 1 10 ∧
-      z = 99 * |(a - c : ℤ)|} := by
-    rw [Set.ext h_param]
-  -- Switch to `Icc` (easier for pointwise subtraction).
-  _ = Set.ncard {z : ℤ | ∃ c a : ℕ, c ∈ Set.Icc 1 9 ∧ a ∈ Set.Icc 1 9 ∧
-      z = 99 * |(a - c : ℤ)|} := by
-    simp only [← Order.Ico_succ_right 1 9]
-    rfl
-
-  -- TODO: Remove ncards...
-
-  -- Rewrite as image of product.
-  _ = Set.ncard ((fun x : ℕ × ℕ ↦ 99 * |(x.2 - x.1 : ℤ)|) '' Set.Icc 1 9 ×ˢ Set.Icc 1 9) := by
-    congr
-    ext z
-    simp only [Set.mem_setOf, Prod.exists, Set.mem_image, Set.mem_prod]
-    simp [and_assoc, eq_comm]
-  -- Switch to integers.
-  _ = Set.ncard (((fun x : ℤ × ℤ ↦ 99 * |x.2 - x.1|) ∘ (Prod.map (↑) (↑))) ''
-      Set.Icc 1 9 ×ˢ Set.Icc 1 9) := by rfl
-  -- Rewrite as image of product.
-  _ = Set.ncard ((fun x : ℤ × ℤ ↦ 99 * |x.2 - x.1|) ''
-      (Nat.cast '' Set.Icc 1 9) ×ˢ (Nat.cast '' Set.Icc 1 9)) := by
-    rw [Set.image_comp]
-    refine congrArg Set.ncard <| congrArg _ ?_
-    -- Our version of Mathlib does not have `Set.prodMap_image_prod`.
-    ext x
-    rcases x with ⟨c, a⟩
-    simp only [Set.mem_prod, Set.mem_image, Prod.exists]
-    simp only [Prod.map_apply, Prod.mk.injEq, and_and_and_comm]
-    simp
   _ = Set.ncard ((fun x : ℤ × ℤ ↦ 99 * |x.2 - x.1|) '' Set.Icc 1 9 ×ˢ Set.Icc 1 9) := by
-    suffices Nat.cast '' Set.Icc 1 9 = (Set.Icc 1 9 : Set ℤ) by rw [this]
-    simpa using Nat.image_cast_int_Icc 1 9
-  -- Eliminate the factor of 99 to reduce clutter.
+    congr
+    calc _
+    -- Switch to `Icc` (easier for negation).
+    _ = {z | ∃ c a : ℕ, c ∈ Set.Icc 1 9 ∧ a ∈ Set.Icc 1 9 ∧ z = 99 * |(a - c : ℤ)|} := by
+      simp only [← Order.Ico_succ_right 1 9]
+      rfl
+    -- Rewrite as image of product.
+    _ = (fun x : ℕ × ℕ ↦ 99 * |(x.2 - x.1 : ℤ)|) '' Set.Icc 1 9 ×ˢ Set.Icc 1 9 := by
+      ext z
+      simp only [Set.mem_setOf, Prod.exists, Set.mem_image, Set.mem_prod]
+      simp [and_assoc, eq_comm]
+    -- Switch to integers for set subtraction.
+    _ = ((fun x : ℤ × ℤ ↦ 99 * |x.2 - x.1|) ∘ (Prod.map (↑) (↑))) '' Set.Icc 1 9 ×ˢ Set.Icc 1 9 :=
+      by rfl
+    _ = (fun x : ℤ × ℤ ↦ 99 * |x.2 - x.1|) ''
+        (Nat.cast '' Set.Icc 1 9) ×ˢ (Nat.cast '' Set.Icc 1 9) := by
+      rw [Set.image_comp]
+      refine congrArg _ ?_
+      -- Later versions of Mathlib have `Set.prodMap_image_prod` to resolve this.
+      ext x
+      rcases x with ⟨c, a⟩
+      simp only [Set.mem_prod, Set.mem_image, Prod.exists]
+      simp only [Prod.map_apply, Prod.mk.injEq, and_and_and_comm]
+      simp
+    _ = _ := by
+      suffices Nat.cast '' Set.Icc 1 9 = (Set.Icc 1 9 : Set ℤ) by rw [this]
+      simpa using Nat.image_cast_int_Icc 1 9
+
+  -- Eliminate the factor of 99.
   _ = Set.ncard (((99 * · ) ∘ fun x : ℤ × ℤ ↦ |x.2 - x.1|) '' Set.Icc 1 9 ×ˢ Set.Icc 1 9) := rfl
   _ = Set.ncard ((fun x : ℤ × ℤ ↦ |x.2 - x.1|) '' Set.Icc 1 9 ×ˢ Set.Icc 1 9) := by
     rw [Set.image_comp]
     refine Set.ncard_image_of_injective _ ?_
     exact mul_right_injective₀ (by norm_num)
+  -- Obtain the range of absolute differences for a, c ∈ [1, 9].
   _ = Set.ncard (Set.Icc (0 : ℤ) 8) := by
-    -- Find the range of absolute differences for a, c ∈ [1, 9].
     refine congrArg _ ?_
     calc _
     _ = (abs ∘ fun x : ℤ × ℤ ↦ x.2 - x.1) '' Set.Icc 1 9 ×ˢ Set.Icc 1 9 := by simp
+    -- Swap the order of arguments to use `Set.sub_image_prod`.
+    _ = (abs ∘ (fun x : ℤ × ℤ ↦ x.1 - x.2) ∘ Prod.swap) '' Set.Icc 1 9 ×ˢ Set.Icc 1 9 := rfl
     _ = (abs ∘ fun x : ℤ × ℤ ↦ x.1 - x.2) '' Set.Icc 1 9 ×ˢ Set.Icc 1 9 := by
-      simp only [Set.image_comp]
-      -- Need to swap...
-      sorry
+      simp only [Set.image_comp, Set.image_swap_prod]
     _ = abs '' (Set.Icc 1 9 - Set.Icc 1 9) := by
       rw [Set.image_comp, Set.sub_image_prod]
     _ = abs '' (Set.Icc 1 9 + Set.Icc (-9) (-1)) := by
@@ -201,15 +192,15 @@ theorem number_theory_97905 :
       suffices ∀ b : ℕ, abs '' (Set.Icc (-b : ℤ) b) = Set.Icc (0 : ℤ) b from this 8
       intro b
       ext x
+      simp only [Set.mem_image]
       constructor
-      · simp only [Set.mem_image, forall_exists_index, and_imp]
+      · simp only [forall_exists_index, and_imp]
         simp only [Set.mem_Icc]
         refine fun u hu ↦ ?_
         revert x
         simp only [forall_eq', abs_nonneg, true_and]
         exact abs_le.mpr hu
-      · simp only [Set.mem_image]
-        refine fun hx ↦ ⟨x, ?_, ?_⟩
+      · refine fun hx ↦ ⟨x, ?_, ?_⟩
         · refine Set.Icc_subset_Icc ?_ ?_ hx <;> simp
         · exact abs_eq_self.mpr (hx.1)
   -- Now it just remains to count the elements of [0, 8].
