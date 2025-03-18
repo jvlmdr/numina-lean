@@ -236,7 +236,7 @@ theorem number_theory_30933 (s t : Set ℕ)
   have hu' : u = {k | k % 500 = 16 ∨ k % 500 = 484} := by simp_rw [hu, h_iff_mod]
 
   -- To use `Nat.nth_comp_of_strictMono`, we need to prove that `s` has enough elements.
-  -- Use new definition to show `u.Infinite`, and then use this to show `s.Infinite`.
+  -- Use the alternate definition to show `u.Infinite`, then use this to show `s.Infinite`.
   have hu_infinite : u.Infinite := by
     rw [hu']
     refine Set.infinite_iff_exists_gt.mpr fun a ↦ ?_
@@ -249,7 +249,7 @@ theorem number_theory_30933 (s t : Set ℕ)
   have hs_infinite : s.Infinite := by
     rw [hsu]
     exact hu_infinite.image hg_mono.injective.injOn
-
+  -- Now we can relate the nth elements of s, u, t.
   have hsu_nth (i) : Nat.nth (· ∈ u) i ^ 2 = Nat.nth (· ∈ s) i := by
     convert Nat.nth_comp_of_strictMono hg_mono ?_ ?_ using 1
     · simp [hsu]
@@ -275,51 +275,46 @@ theorem number_theory_30933 (s t : Set ℕ)
   suffices Nat.count (fun x ↦ x % 500 = 16 ∨ x % 500 = 484) 2484 = 9 from
     Nat.count_injective (Nat.nth_mem_of_infinite (hu' ▸ hu_infinite) 9) (by norm_num)
       (Eq.trans (Nat.count_nth_of_infinite (hu' ▸ hu_infinite) 9) this.symm)
-  -- This enables it to be rewritten as a filter of a finite set.
-  rw [Nat.count_eq_card_filter_range]
+  -- Rewrite the `or` as membership of a `Finset` to simplify counting.
+  suffices Nat.count (· % 500 ∈ ({16, 484} : Finset ℕ)) 2484 = 9 by simpa
 
-  -- Rewrite the or statement as membership of a finite set to simplify counting
-  -- and enable the use of `Nat.filter_Ico_card_eq_of_periodic`.
-  suffices (Finset.filter (· % 500 ∈ ({16, 484} : Finset ℕ)) (Finset.range 2484)).card = 9 by
-    simpa using this
-
-  -- Note that our predicate is periodic.
+  -- The predicate is clearly periodic.
   have h_periodic : Function.Periodic (· % 500 ∈ ({16, 484} : Finset ℕ)) 500 :=
     (Nat.periodic_mod 500).comp _
-
   -- Use `Nat.filter_Ico_card_eq_of_periodic` to eliminate the 4 whole periods of 500.
-  have h_card_filter_range_add_of_periodic {p : ℕ → Prop} [DecidablePred p]
+  have h_count_add_of_periodic {p : ℕ → Prop} [DecidablePred p]
       {c : ℕ} (hp : p.Periodic c) (n : ℕ) :
-      ((Finset.range (n + c)).filter p).card = ((Finset.range n).filter p).card + c.count p := by
-    rw [Finset.range_add_eq_union, Finset.filter_union, Finset.card_union_of_disjoint
-      (Finset.disjoint_filter_filter (Finset.disjoint_range_addLeftEmbedding n _))]
-    congr
-    rw [Finset.range_eq_Ico, Finset.map_add_left_Ico, add_zero]
-    exact Nat.filter_Ico_card_eq_of_periodic n c p hp
+      (n + c).count p = n.count p + c.count p := by
+    rw [Nat.count_add]
+    congr 1
+    calc _
+    _ = (Finset.filter p (.map (addLeftEmbedding n) (.range c))).card := by
+      rw [Nat.count_eq_card_filter_range, Finset.filter_map, Finset.card_map]
+      rfl
+    _ = (Finset.filter p (.Ico n (n + c))).card := by
+      simp only [Finset.range_eq_Ico, Finset.map_add_left_Ico, add_zero]
+    _ = c.count p := Nat.filter_Ico_card_eq_of_periodic n c p hp
+  -- Since there are only 4 periods, simply expand them all.
+  simp only [h_count_add_of_periodic h_periodic (_ + 1)]
 
-
-  simp only [h_card_filter_range_add_of_periodic h_periodic]
-  simp only [← Nat.count_eq_card_filter_range]
-
-  -- Remove the modulo.
+  -- Remove the modulo when we can.
   have h_filter_mod_mem_of_le {c : ℕ} (s : Finset ℕ) {n : ℕ} (hn : n ≤ c) :
-      (Finset.range n).filter (· % c ∈ s) = (Finset.range n).filter (· ∈ s) := by
+      Finset.filter (· % c ∈ s) (.range n) = Finset.filter (· ∈ s) (.range n) := by
     refine Finset.filter_congr fun x hx ↦ ?_
     rw [Finset.mem_range] at hx
     rw [Nat.mod_eq_of_lt (by linarith)]
-
-  -- Swap the subset and the range to make it easier to expand.
+  -- Swap the subset condition and the range condition to make it easier to expand.
   have h_card_filter_range (s : Finset ℕ) (n : ℕ) :
-      ((Finset.range n).filter (· ∈ s)).card = (s.filter (· < n)).card := by
+      (Finset.filter (· ∈ s) (.range n)).card = (s.filter (· < n)).card := by
     simp only [← Finset.mem_range, Finset.filter_mem_eq_inter]
     rw [Finset.inter_comm]
 
+  -- Count the number in each period and in the remainder.
   have h_whole : Nat.count (fun x ↦ x % 500 ∈ ({16, 484} : Finset ℕ)) 500 = 2 := by
     rw [Nat.count_eq_card_filter_range]
     rw [h_filter_mod_mem_of_le _ (le_refl 500)]
     rw [h_card_filter_range]
     simp [Finset.filter_insert, Finset.filter_singleton]
-
   have h_rest : Nat.count (fun x ↦ x % 500 ∈ ({16, 484} : Finset ℕ)) 484 = 1 := by
     rw [Nat.count_eq_card_filter_range]
     rw [h_filter_mod_mem_of_le _ (by norm_num)]
