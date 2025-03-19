@@ -1,9 +1,7 @@
--- https://cloud.kili-technology.com/label/projects/review/cm84mpwv601vyiev5u7vtl93e
+-- https://cloud.kili-technology.com/label/projects/label/cm84mpwv601vyiev5u7vtl93e
 -- https://artofproblemsolving.com/wiki/index.php/2012_AIME_I_Problems/Problem_10
 
 import Mathlib
-
-open scoped Pointwise
 
 /- Let S be the set of all perfect squares whose rightmost three digits in base 10 are 256.
 Let T be the set of all numbers of the form $\frac{x - 256}{1000}$, where $x$ is in S.
@@ -16,75 +14,64 @@ theorem number_theory_30933 (s t : Set ℕ)
     (ht : t = {n : ℕ | ∃ m ∈ s, n = m / 1000}) :
     Nat.nth (· ∈ t) 9 % 1000 = 170 := by
 
-  -- Every `m ∈ s` can be written as `1000 * n + 256`.
-  -- This means we can write `s = {m | (∃ n, m = 1000 * n + 256) ∧ ∃ k, m = k ^ 2}` with
-  -- `t = {n | ∃ k, 1000 * n + 256 = k ^ 2}` and `u = {k | ∃ n, 1000 * n + 256 = k ^ 2}`.
-  -- Or equivalently, `s = Set.range (1000 * · + 256) ∩ Set.range (· ^ 2)` with
-  -- `t = (1000 * · + 256) ⁻¹' s` and `u = (· ^ 2) ⁻¹' s`.
-
-  generalize hu : {k | ∃ n, 1000 * n + 256 = k ^ 2} = u
-  replace hu := hu.symm
-
-  -- TODO: Better to obtain this using new definition of `s`?
-  -- First obtain `t` using old definition of `s` with modulo.
+  -- Every `m ∈ s` can be written `m = 1000 * n + 256`. This means we can write
+  -- `s = {m | (∃ n, m = 1000 * n + 256) ∧ ∃ k, m = k ^ 2}`,
+  -- `t = {n | ∃ k, 1000 * n + 256 = k ^ 2}`, and introduce
+  -- `u = {k | ∃ n, 1000 * n + 256 = k ^ 2}`.
+  -- Consequently, we have `s = Set.range (1000 * · + 256) ∩ Set.range (· ^ 2)` with two other
+  -- definitions as images of `t` and `u`: `s = (1000 * · + 256) '' t = (· ^ 2) '' u`.
+  -- The fact that these maps are strictly monotonic will prove useful for `Nat.nth`.
   replace ht : t = {n | ∃ k, 1000 * n + 256 = k ^ 2} := by
-    refine ht.trans ?_
-    rw [hs]
-    simp only [Set.mem_setOf_eq, and_right_comm]
+    simp only [ht, hs, Set.mem_setOf_eq, and_right_comm]
     -- Re-arrange to use `Nat.div_mod_unique`.
     simp only [and_comm, eq_comm (b := (_ / 1000 : ℕ))]
     simp only [Nat.div_mod_unique (by norm_num : 0 < 1000)]
-    simp only [add_comm]  -- TODO: Use `256 + 1000 * n` instead?
-    norm_num
-
-  -- TODO: Some way to avoid this definition?
-  have h_mod_eq_of_lt (m : ℕ) {r d : ℕ} (hr : r < d) : m % d = r ↔ ∃ n, m = d * n + r := by
-    suffices r ≤ m → (m % d = r ↔ ∃ n, m = d * n + r) by
-      refine (iff_congr ?_ ?_).mpr (and_congr_right this)
-      · refine iff_and_self.mpr fun h ↦ ?_
-        simpa only [← h] using Nat.mod_le m d
-      · refine iff_and_self.mpr fun h ↦ ?_
-        rcases h with ⟨n, hn⟩
-        simpa only [hn] using Nat.le_add_left r _
-    intro hrm
-    calc _
-    _ ↔ m % d = r % d := by rw [Nat.mod_eq_of_lt hr]
-    _ ↔ r ≡ m [MOD d] := Nat.ModEq.comm
-    _ ↔ d ∣ m - r := Nat.modEq_iff_dvd' hrm
-    _ ↔ ∃ n, m - r = d * n := dvd_iff_exists_eq_mul_right
-    _ ↔ _ := exists_congr fun n ↦ Nat.sub_eq_iff_eq_add hrm
-
+    simp [add_comm]
   replace hs : s = {m | (∃ n, m = 1000 * n + 256) ∧ ∃ k, m = k ^ 2} := by
-    refine hs.trans ?_
-    simp only [h_mod_eq_of_lt _ (by norm_num : 256 < 1000)]
+    ext m
+    simp only [hs, Set.mem_setOf_eq]
+    refine and_congr_left fun _ ↦ ?_
+    -- Introduce the assumption `256 ≤ m` as it follows from both sides.
+    suffices 256 ≤ m → (m % 1000 = 256 ↔ ∃ n, m = 1000 * n + 256) by
+      refine (iff_congr ?_ ?_).mp (and_congr_right this)
+      · refine and_iff_right_of_imp fun h ↦ ?_
+        rw [← h]
+        exact Nat.mod_le m 1000
+      · refine and_iff_right_of_imp fun ⟨n, hn⟩ ↦ ?_
+        simp [hn]
+    intro hm
+    calc m % 1000 = 256
+    _ ↔ m % 1000 = 256 % 1000 := by norm_num
+    _ ↔ m ≡ 256 [MOD 1000] := Iff.rfl
+    _ ↔ 1000 ∣ m - 256 := by rw [Nat.ModEq.comm, Nat.modEq_iff_dvd' hm]
+    _ ↔ ∃ n, m = 1000 * n + 256 := exists_congr fun n ↦ Nat.sub_eq_iff_eq_add hm
+  -- Introduce our complementary definition of `u`.
+  generalize hu : {k | ∃ n, 1000 * n + 256 = k ^ 2} = u
+  replace hu := hu.symm
 
-  -- Now we have `s, t, u` in standard form.
-  -- We can write `s = f '' t = g '' u` with `f, g` strict monotone.
+  -- Now we have `s, t, u` in related form.
+  -- We can relate these as the images of strict monotone functions `s = f '' t = g '' u`.
   have hf_mono : StrictMono (fun n ↦ 1000 * n + 256) :=
     .add_const (.const_mul strictMono_id (by norm_num)) _
   have hg_mono : StrictMono (fun k : ℕ ↦ k ^ 2) := Nat.pow_left_strictMono two_ne_zero
   have hst : s = (1000 * · + 256) '' t := by
-    rw [hs, ht]
     ext m
-    simp only [Set.mem_setOf_eq, Set.mem_image]
+    simp only [hs, ht, Set.mem_setOf_eq, Set.mem_image]
     simp only [← exists_and_right, ← exists_and_left, eq_comm (b := m)]
     rw [exists_comm]
-    refine exists_congr fun n ↦ ?_
-    refine exists_congr fun k ↦ ?_
+    refine exists_congr fun n ↦ exists_congr fun k ↦ ?_
     rw [and_comm]
     refine and_congr_left fun hm ↦ ?_
     rw [hm]
   have hsu : s = (· ^ 2) '' u := by
-    rw [hs, hu]
     ext m
-    simp only [Set.mem_setOf_eq, Set.mem_image]
+    simp only [hs, hu, Set.mem_setOf_eq, Set.mem_image]
     simp only [← exists_and_right, ← exists_and_left, eq_comm (a := m)]
-    refine exists_congr fun k ↦ ?_
-    refine exists_congr fun n ↦ ?_
+    refine exists_congr fun k ↦ exists_congr fun n ↦ ?_
     refine and_congr_left fun hm ↦ ?_
     rw [hm]
 
-  -- Examine the condition for `k ∈ u`: `∃ n, 1000 * n + 256 = k ^ 2`.
+  -- Examine the condition for `k ∈ u`, that is, `∃ n, 1000 * n + 256 = k ^ 2`.
   -- Since 256 = 16 ^ 2, we can rewrite this as `1000 ∣ (k + 16) * (k - 16)` with `16 ≤ k`.
   -- Note that `1000 = (2 * 5) ^ 3` and the gap on the right is `(k + 16) - (k - 16) = 32`.
   -- We can consider the primes separately, meaning both 2 ^ 3 and 5 ^ 3 divide the product.
@@ -92,18 +79,10 @@ theorem number_theory_30933 (s t : Set ℕ)
   -- Since `¬5 ∣ 32`, exact one of `k + 16` and `k - 16` must be divisible by 5 ^ 3.
   -- Putting this together gives `k = 500n ± 16`, or `k % 500 ∈ {16, 484}`.
 
-  -- A coprime product divides a number iff each factor divides the number.
-  -- This will be needed several times.
-  have h_coprime_mul_dvd_iff {a b : ℕ} (hab : a.Coprime b) (x : ℕ) :
-      a * b ∣ x ↔ a ∣ x ∧ b ∣ x := by
-    constructor
-    · exact fun h ↦ ⟨dvd_of_mul_right_dvd h, dvd_of_mul_left_dvd h⟩
-    · exact fun ⟨ha, hb⟩ ↦ hab.mul_dvd_of_dvd_of_dvd ha hb
-
-  -- A prime power divides a product iff both factors are prime powers.
-  -- TODO: Excessive. Can this be obtained using `IsPrimePow` or `Nat.factorization`?
+  -- A prime power divides a product iff sufficient powers divide each factor.
   have h_prime_pow_dvd_iff {x y p k : ℕ} (hp : p.Prime) :
-      p ^ k ∣ x * y ↔ ∃ a b, p ^ a ∣ x ∧ p ^ b ∣ y ∧ k = a + b := by
+      p ^ k ∣ x * y ↔ ∃ a b, p ^ a ∣ x ∧ p ^ b ∣ y ∧ k ≤ a + b := by
+    -- Handle the zero cases which complicate the use of `Nat.factorization`.
     cases eq_or_ne x 0 with
     | inl hx =>
       simp only [hx, zero_mul, dvd_zero, true_and, true_iff]
@@ -114,52 +93,50 @@ theorem number_theory_30933 (s t : Set ℕ)
         simp only [hy, mul_zero, dvd_zero, true_and, true_iff]
         exact ⟨0, k, by simp⟩
       | inr hy =>
-        calc p ^ k ∣ x * y
-        _ ↔ k ≤ (x * y).factorization p := by
-          rw [hp.pow_dvd_iff_le_factorization (Nat.mul_ne_zero hx hy)]
-        _ ↔ k ≤ x.factorization p + y.factorization p := by
-          simp [Nat.factorization_mul hx hy]
-        _ ↔ ∃ a b, a ≤ x.factorization p ∧ b ≤ y.factorization p ∧ k = a + b := by
-          constructor
-          · intro hk
-            refine ⟨k ⊓ x.factorization p, k - k ⊓ x.factorization p, ?_, ?_, ?_⟩
-            · simp
-            · rw [tsub_le_iff_left, ← Nat.add_min_add_right]
-              simp [hk]
-            · simp
-          · simp only [exists_and_left, forall_exists_index, and_imp]
-            intro a ha b hb hk
-            rw [hk]
-            gcongr
-        _ ↔ _ := by
-          refine exists_congr fun a ↦ exists_congr fun b ↦ ?_
-          refine and_congr (hp.pow_dvd_iff_le_factorization hx).symm ?_
-          refine and_congr (hp.pow_dvd_iff_le_factorization hy).symm ?_
-          rfl
+        rw [hp.pow_dvd_iff_le_factorization (Nat.mul_ne_zero hx hy)]
+        simp only [hp.pow_dvd_iff_le_factorization hx, hp.pow_dvd_iff_le_factorization hy,
+          Nat.factorization_mul hx hy, Finsupp.coe_add, Pi.add_apply]
+        constructor
+        · exact fun h ↦ ⟨x.factorization p, y.factorization p, by simpa using h⟩
+        · exact fun ⟨a, b, ha, hb, h⟩ ↦ h.trans (Nat.add_le_add ha hb)
 
-  -- If a prime power divides a product, and the gap is not divisible by the prime,
-  -- then the prime power divides one or the other.
-  -- TODO: Excessive. Can this be obtained more easily?
+  -- The condition that we will use to establish
+  -- `5 ^ 3 ∣ (k - 16) * (k + 16) ↔ 5 ^ 3 ∣ k - 16 ∨ 5 ^ 3 ∣ k + 16`.
   have h_prime_pow_dvd_mul_add_of_not_dvd (x r k : ℕ) {p : ℕ} (hp : p.Prime) (hr : ¬p ∣ r) :
       p ^ k ∣ x * (x + r) ↔ p ^ k ∣ x ∨ p ^ k ∣ x + r := by
+    -- Reverse direction is straightforward.
+    refine ⟨?_, fun h ↦ h.elim (fun h ↦ h.mul_right (x + r)) (fun h ↦ h.mul_left x)⟩
+    intro h
+    rcases (h_prime_pow_dvd_iff hp).mp h with ⟨a, b, hx, hy, hab⟩
+    -- Eliminate the case `k = 0`, where `p ^ k` divides everything.
     cases k.eq_zero_or_pos with
     | inl hk => simp [hk]
     | inr hk =>
-      refine ⟨?_, fun h ↦ h.elim (fun h ↦ h.mul_right (x + r)) (fun h ↦ h.mul_left x)⟩
-      rw [h_prime_pow_dvd_iff hp]
-      simp only [forall_exists_index, and_imp]
-      intro a b hx hy hab
-      cases a.eq_zero_or_pos with
-      | inl ha => simp [hab, ha, hy]
-      | inr ha =>
-        cases b.eq_zero_or_pos with
-        | inl hb => simp [hab, hb, hx]
-        | inr hb =>
-          refine (hr ?_).elim
-          replace hx : p ∣ x := Nat.dvd_of_pow_dvd ha hx
-          replace hy : p ∣ x + r := Nat.dvd_of_pow_dvd hb hy
-          exact (Nat.dvd_add_iff_right hx).mpr hy
+      -- Since `¬p ∣ r`, exactly one of `x` and `x + r` is divisible by `p`.
+      have h_nand : ¬p ∣ x + r ∨ ¬p ∣ x := by
+        have h : p ∣ x * (x + r) := Nat.dvd_of_pow_dvd hk h
+        cases hp.dvd_mul.mp h with
+        | inl hx => exact .inl <| mt (fun h ↦ (Nat.dvd_add_iff_right hx).mpr h) hr
+        | inr hx => exact .inr <| mt (fun h ↦ (Nat.dvd_add_iff_right h).mpr hx) hr
+      cases h_nand with
+      | inl h =>
+        have h : b = 0 := Nat.eq_zero_of_not_pos <| mt (Nat.dvd_of_pow_dvd · hy) h
+        refine .inl (.trans ?_ hx)
+        simpa [h] using Nat.pow_dvd_pow p hab
+      | inr h =>
+        have h : a = 0 := Nat.eq_zero_of_not_pos <| mt (Nat.dvd_of_pow_dvd · hx) h
+        refine .inr (.trans ?_ hy)
+        simpa [h] using Nat.pow_dvd_pow p hab
 
+  -- A coprime product divides a number iff each factor divides the number.
+  -- This will be needed several times.
+  have h_coprime_mul_dvd_iff {a b : ℕ} (hab : a.Coprime b) (x : ℕ) :
+      a * b ∣ x ↔ a ∣ x ∧ b ∣ x := by
+    constructor
+    · exact fun h ↦ ⟨dvd_of_mul_right_dvd h, dvd_of_mul_left_dvd h⟩
+    · exact fun ⟨ha, hb⟩ ↦ hab.mul_dvd_of_dvd_of_dvd ha hb
+
+  -- Put these together to obtain the main result.
   have h_iff_mod (k) : (∃ n, 1000 * n + 256 = k ^ 2) ↔ k % 500 = 16 ∨ k % 500 = 484 := by
     -- Introduce the assumption that `16 ≤ k` by showing that it follows from both sides.
     suffices 16 ≤ k → ((∃ n, 1000 * n + 256 = k ^ 2) ↔ k % 500 = 16 ∨ k % 500 = 484) by
@@ -183,17 +160,22 @@ theorem number_theory_30933 (s t : Set ℕ)
       rw [← hk_sub_add]
       exact Nat.dvd_add_iff_left (Nat.pow_dvd_pow_iff_le_right'.mpr hm)
     have h2 : 2 ^ 3 ∣ (k - 16) * (k + 16) ↔ 2 ^ 2 ∣ k - 16 ∧ 2 ^ 2 ∣ k + 16 := by
-      -- The reverse direction is trivial.
+      -- Reverse direction is straightforward.
       refine ⟨?_, fun ⟨hx, hy⟩ ↦ .trans (by norm_num) (Nat.mul_dvd_mul hx hy)⟩
-      rw [h2_iff_of_le 2 (by norm_num), and_self]
       rw [h_prime_pow_dvd_iff Nat.prime_two]
-      simp only [forall_exists_index, and_imp]
-      intro a b hx hy hab
-      have ha : a = 3 - b := Nat.eq_sub_of_add_eq hab.symm
-      rw [ha, h2_iff_of_le (3 - b) (by linarith)] at hx
+      intro ⟨a, b, hx, hy, hab⟩
       cases le_or_lt 2 b with
-      | inl hb => exact .trans (Nat.pow_dvd_pow 2 hb) hy
-      | inr hb => exact .trans (Nat.pow_dvd_pow 2 (by linarith)) hx
+      | inl hb =>
+        rw [h2_iff_of_le 2 (by norm_num), and_self]
+        exact .trans (Nat.pow_dvd_pow 2 hb) hy
+      | inr hb =>
+        cases le_or_lt 2 a with
+        | inl ha =>
+          rw [← h2_iff_of_le 2 (by norm_num), and_self]
+          exact .trans (Nat.pow_dvd_pow 2 ha) hx
+        | inr ha =>
+          -- Contradiction! Cannot have `a < 2`, `b < 2` and `3 ≤ a + b`.
+          linarith
     have h5 : 5 ^ 3 ∣ (k - 16) * (k + 16) ↔ 5 ^ 3 ∣ k - 16 ∨ 5 ^ 3 ∣ k + 16 := by
       rw [← hk_sub_add]
       rw [h_prime_pow_dvd_mul_add_of_not_dvd _ _ _ Nat.prime_five (by norm_num)]
