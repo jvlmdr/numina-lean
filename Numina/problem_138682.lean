@@ -34,7 +34,7 @@ theorem algebra_138682 : ∀ x y : ℤ,
 
   -- If there does exist some `(x, y)`, then we can construct a `Finset`
   -- These must all be divisors of 33, and thus a subset of {±1, ±3, ±11, ±33}.
-  -- The product
+  -- We will prove that all subsets of this set have an absolute product greater than 33.
   have h_imp_exists_finset (hy : y ≠ 0)
       (h : (x + y) * (x - y) * (x + 2 * y) * (x - 2 * y) * (x + 3 * y) = 33) :
       ∃ s : Finset ℤ, s.card = 5 ∧ (∀ z ∈ s, z ∣ 33) ∧ |∏ z in s, z| = 33 := by
