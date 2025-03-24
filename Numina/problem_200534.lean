@@ -12,6 +12,6 @@ $$
 $$
  -/
 
-theorem inequalities_200534 (n : ℕ) (a b : Fin n → ℝ) (hb : ∀ i, 0 < b i) :
+theorem inequalities_200534 (a b : Fin 1987 → ℝ) (hb : ∀ i, 0 < b i) :
     (∑ i, a i) ^ 2 / ∑ i, b i ≤ ∑ i, a i ^ 2 / b i :=
   Finset.univ.sq_sum_div_le_sum_sq_div a fun i _ ↦ hb i
