@@ -21,7 +21,7 @@ theorem algebra_198296 {f : ℝ → ℝ} (hf : ∃ b c, f = fun x ↦ x ^ 2 + b 
   refine ne_of_lt ?_
   -- We have exactly two roots for `f x = 0`, and at most two roots for `f x - y = 0`.
   -- Use `Polynomial` to demonstrate this.
-  have h1_sub_card (y) : {x | f x = y}.encard ≤ 2 := by
+  have h1_sub_card (y) : {x | f x = y}.encard ≤ 2 :=
     calc _
     _ = {x | f x - y = 0}.encard := by simp [sub_eq_zero]
     _ = ((C 1 * X ^ 2 + C b * X + C (c - y)).roots.toFinset : Set ℝ).encard := by
