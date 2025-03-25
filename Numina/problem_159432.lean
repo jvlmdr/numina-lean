@@ -11,8 +11,10 @@ theorem inequalities_159432 (x y z : ℝ) (hx : 0 < x) (hy : 0 < y) (hz : 0 < z)
     (hsum : x + y + z = 1) :
     ((1 / x ^ 2 + x) * (1 / y ^ 2 + y) * (1 / z ^ 2 + z)) ≥ (28 / 3) ^ 3 := by
   simp only [ge_iff_le, one_div]
-  -- Note that `fun a ↦ log ((a ^ 2)⁻¹ + a)` is convex on `(0, ∞)`.
+  -- Note that `fun a ↦ log ((a ^ 2)⁻¹ + a)` is convex on `(0, 1]`.
   -- Re-arrange to apply Jensen's inequality to `(x + y + z) / 3`.
+  -- This will provide the lower bound we need since `(x + y + z) / 3 = 3⁻¹` and
+  -- `(3⁻¹ ^ 2)⁻¹ + 3⁻¹ = 3^2 + 1 / 3 = 28 / 3`.
   suffices log (28 / 3) ≤ 3⁻¹ * (log ((x ^ 2)⁻¹ + x) + log ((y ^ 2)⁻¹ + y) + log ((z ^ 2)⁻¹ + z)) by
     have h_pos {a : ℝ} (ha : 0 < a) : 0 < (a ^ 2)⁻¹ + a :=
       add_pos (by simp [sq_pos_of_pos ha]) ha
@@ -21,8 +23,7 @@ theorem inequalities_159432 (x y z : ℝ) (hx : 0 < x) (hy : 0 < y) (hz : 0 < z)
     convert (le_inv_mul_iff₀ (by norm_num)).mp this using 1
     rw [log_mul (mul_pos (h_pos hx) (h_pos hy)).ne' (h_pos hz).ne']
     rw [log_mul (h_pos hx).ne' (h_pos hy).ne']
-  -- Apply Jensen's inequality. This provides the inequality we need because
-  -- `3⁻¹ * (x + y + z) = 3⁻¹` and `(3⁻¹ ^ 2)⁻¹ + 3⁻¹ = 3^2 + 1 / 3 = 28 / 3`.
+  -- Apply Jensen's inequality.
   suffices ConvexOn ℝ (Set.Ioc 0 1) (fun x : ℝ ↦ log ((x ^ 2)⁻¹ + x)) by
     convert this.map_sum_le (p := fun i : Fin 3 ↦ match i with | 0 => x | 1 => y | 2 => z)
       (w := fun _ ↦ 3⁻¹) (t := .univ) ?_ ?_ ?_ using 1
@@ -86,5 +87,5 @@ theorem inequalities_159432 (x y z : ℝ) (hx : 0 < x) (hy : 0 < y) (hz : 0 < z)
   refine div_nonneg (mul_nonneg ?_ ?_) (sq_nonneg _)
   · linarith
   · rw [sub_nonneg]
-    -- x ^ 3 < 1 ^ 3 < 2
+    -- Show that `x < 1` satisfies `x ^ 3 ≤ 2`.
     exact le_trans (pow_le_pow_left₀ hx.1.le hx.2.le 3) (by norm_num)
