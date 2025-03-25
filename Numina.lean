@@ -15,6 +15,7 @@ import Numina.AMC_95209
 import Numina.AMC_95577
 import Numina.AMC_97963
 import Numina.problem_138682
+import Numina.problem_159432
 import Numina.problem_180196
 import Numina.problem_200534
 import Numina.problem_209992
