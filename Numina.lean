@@ -21,4 +21,5 @@ import Numina.problem_180196
 import Numina.problem_198296
 import Numina.problem_200534
 import Numina.problem_209992
+import Numina.problem_295444
 import Numina.problem_def
