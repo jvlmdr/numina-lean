@@ -1,6 +1,7 @@
 import Numina.AIME_30933
 import Numina.AIME_93450
 import Numina.AIME_96580
+import Numina.AIME_96952
 import Numina.AIME_97068
 import Numina.AIME_97639
 import Numina.AIME_97905
