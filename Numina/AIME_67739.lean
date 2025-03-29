@@ -10,7 +10,6 @@ $b \geq 0$ such that the polynomial $x^2 + a x + b$ can be factored into the pro
 (not necessarily distinct) linear factors with integer coefficients.
 Find the remainder when $S$ is divided by $1000$. -/
 
--- TODO: Use Set.Icc?
 theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 ∧ 0 ≤ b ∧
     ∃ u v : ℤ, X ^ 2 + C a * X + C b = (X + C u) * (X + C v)} % 1000 = 600 := by
 
@@ -56,8 +55,8 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
     simp only [Set.mem_iUnion, exists_prop]
     simp
 
-  _ = Set.ncard (⋃ a ∈ Finset.Icc 1 100, (a, ·) ''
-      ((fun u ↦ u * (a - u)) '' {u : ℤ | 0 ≤ u ∧ 2 * u ≤ a})) := by
+  _ = Set.ncard (⋃ a ∈ (.Icc 1 100 : Finset ℤ),
+      (a, ·) '' ((fun u ↦ u * (a - u)) '' Set.Icc 0 a)) := by
     congr
     refine Set.iUnion₂_congr ?_
     intro a ha
@@ -74,7 +73,6 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
       refine and_congr_left fun hb ↦ ?_
       rw [hb]
     _ = (fun u ↦ u * (a - u)) '' {u : ℤ | 0 ≤ u ∧ u ≤ a} := by
-      -- TODO: *This* is enough to show Finite!
       suffices ∀ u : ℤ, 0 ≤ u * (a - u) ↔ 0 ≤ u ∧ u ≤ a by simp only [this]
       intro u
       rw [mul_nonneg_iff]
@@ -85,48 +83,15 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
       exfalso
       simp only [Finset.mem_Icc] at ha
       linarith
-    _ = (fun u ↦ u * (a - u)) '' {u : ℤ | u ≤ a - u ∧ 0 ≤ u ∧ u ≤ a} := by
-      ext b
-      simp only [Set.mem_image, Set.mem_setOf_eq]
-      refine ⟨?_, fun ⟨u, ⟨hu, hb⟩⟩ ↦ ⟨u, hu.2, hb⟩⟩
-      intro ⟨u, ⟨hu, hb⟩⟩
-      cases le_or_lt u (a - u) with
-      | inl hua => exact ⟨u, ⟨hua, hu⟩, hb⟩
-      | inr hua =>
-        refine ⟨a - u, ⟨?_, ?_, ?_⟩, ?_⟩
-        · simpa using hua.le
-        · simpa using hu.2
-        · simpa using hu.1
-        · simpa [mul_comm] using hb
-    _ = _ := by
-      refine congrArg _ ?_
-      refine Set.ext fun u ↦ ?_
-      simp only [Set.mem_setOf_eq]
-      rw [and_comm, and_assoc]
-      refine and_congr_right fun hu ↦ ?_
-      calc _
-      _ ↔ u ≤ a ∧ u + u ≤ a := and_congr_right fun _ ↦ le_sub_iff_add_le'
-      _ ↔ u + u ≤ a := by
-        refine and_iff_right_of_imp fun h ↦ ?_
-        exact (le_add_of_nonneg_right hu).trans h
-      _ ↔ _ := by rw [two_mul]
 
-  _ = ∑ a ∈ Finset.Icc 1 100, {u : ℤ | 0 ≤ u ∧ 2 * u ≤ a}.ncard := by
-    -- Need the inner set as a `Finset` to rewrite cardinality of union as sum.
-    have ht (a) : {u : ℤ | 0 ≤ u ∧ 2 * u ≤ a}.Finite := by
-      -- Prove finite by showing equal to preimage of `Icc 0 a` under `fun u ↦ 2 * u`.
-      suffices {u : ℤ | 0 ≤ u ∧ 2 * u ≤ a} = (2 * ·) ⁻¹' Set.Icc 0 a from
-        this ▸ (Set.finite_Icc 0 a).preimage (mul_right_injective₀ two_ne_zero).injOn
-      ext u
-      simp
-
+  _ = ∑ a ∈ (.Icc 1 100 : Finset ℤ), ((fun u ↦ u * (a - u)) '' Set.Icc 0 a).ncard := by
     calc _
-    _ = Finset.card (.biUnion (.Icc 1 100) fun a : ℤ ↦
-        .map (.sectR a ℤ) ((ht a).image fun u ↦ u * (a - u)).toFinset) := by
+    _ = Finset.card (.biUnion (.Icc 1 100 : Finset ℤ) fun a ↦
+        .map (.sectR a ℤ) (.image (fun u ↦ u * (a - u)) (.Icc 0 a))) := by
       rw [← Set.ncard_coe_Finset]
       simp
-    _ = ∑ a ∈ .Icc 1 100, Finset.card
-        (.map (.sectR a ℤ) ((ht a).image fun u ↦ u * (a - u)).toFinset) := by
+    _ = ∑ a ∈ (.Icc 1 100 : Finset ℤ),
+        Finset.card (.map (.sectR a ℤ) (.image (fun u ↦ u * (a - u)) (.Icc 0 a))) := by
       refine Finset.card_biUnion ?_
       intro a₁ _ a₂ _ ha
       rw [Finset.disjoint_right]
@@ -134,27 +99,46 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
         forall_exists_index, and_imp, forall_apply_eq_imp_iff₂, Prod.mk.injEq]
       intro m₁ _ m₂ _ hm
       contradiction
-    _ = ∑ a ∈ .Icc 1 100, Finset.card (.map (.sectR a ℤ) (ht a).toFinset) := by
-      -- TODO: Nest calc?
-      suffices ∀ a, (ht a).toFinset.card = ((ht a).image fun u ↦ u * (a - u)).toFinset.card by
-        simp [this]
-      intro a
-      rw [← Set.ncard_eq_toFinset_card _ (ht a)]
-      rw [← Set.ncard_eq_toFinset_card _ ((ht a).image fun u ↦ u * (a - u))]
-      symm
-      refine Set.ncard_image_of_injOn ?_
-      refine StrictMonoOn.injOn ?_
-      intro u₁ hu₁ u₂ hu₂ h
-      simp only [Set.mem_setOf_eq] at hu₁ hu₂
-      refine lt_of_sub_pos ?_
-      calc u₂ * (a - u₂) - u₁ * (a - u₁)
-      _ = (u₂ - u₁) * (a - (u₁ + u₂)) := by ring
-      _ > 0 := mul_pos (sub_pos_of_lt h) (by omega)
     _ = _ := by
+      refine congrArg _ <| funext fun a ↦ ?_
       simp only [Finset.card_map]
-      congr
-      funext a
-      rw [Set.ncard_eq_toFinset_card _ (ht a)]
+      rw [← Set.ncard_coe_Finset]
+      simp
+
+  _ = ∑ a ∈ (.Icc 1 100 : Finset ℤ),
+      ((fun u ↦ u * (a - u)) '' {u : ℤ | 0 ≤ u ∧ u ≤ a - u}).ncard := by
+    refine congrArg _ <| funext fun a ↦ ?_
+    congr
+    ext b
+    simp only [Set.mem_image, Set.mem_Icc, Set.mem_setOf_eq]
+    refine ⟨?_, Exists.imp fun u ⟨⟨hu, hua⟩, hb⟩ ↦ ⟨⟨hu, le_trans hua (sub_le_self a hu)⟩, hb⟩⟩
+    intro ⟨u, ⟨⟨hu, hua⟩, hb⟩⟩
+    cases le_or_lt u (a - u) with
+    | inl h => exact ⟨u, ⟨hu, h⟩, hb⟩
+    | inr h =>
+      refine ⟨a - u, ⟨?_, ?_⟩, ?_⟩
+      · simpa using hua
+      · simpa using h.le
+      · simpa [mul_comm] using hb
+
+  _ = ∑ a ∈ (.Icc 1 100 : Finset ℤ),
+      ((fun u ↦ u * (a - u)) '' {u : ℤ | 0 ≤ u ∧ 2 * u ≤ a}).ncard := by
+    -- TODO: Nest above.
+    suffices ∀ a u : ℤ, u ≤ a - u ↔ 2 * u ≤ a by simp only [this]
+    intro a u
+    rw [two_mul]
+    exact le_sub_iff_add_le'
+
+  _ = ∑ a ∈ (.Icc 1 100 : Finset ℤ), {u : ℤ | 0 ≤ u ∧ 2 * u ≤ a}.ncard := by
+    refine congrArg _ <| funext fun a ↦ ?_
+    refine Set.ncard_image_of_injOn ?_
+    refine StrictMonoOn.injOn ?_
+    intro u₁ hu₁ u₂ hu₂ h
+    simp only [Set.mem_setOf_eq] at hu₁ hu₂
+    refine lt_of_sub_pos ?_
+    calc u₂ * (a - u₂) - u₁ * (a - u₁)
+    _ = (u₂ - u₁) * (a - (u₁ + u₂)) := by ring
+    _ > 0 := mul_pos (sub_pos_of_lt h) (by omega)
 
   -- Switch from `Finset.Icc` in `ℤ` to `Finset.range` in `ℕ`.
   -- First change the outer sum.
