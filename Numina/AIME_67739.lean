@@ -12,13 +12,16 @@ Find the remainder when $S$ is divided by $1000$. -/
 
 theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 ∧ 0 ≤ b ∧
     ∃ u v : ℤ, X ^ 2 + C a * X + C b = (X + C u) * (X + C v)} % 1000 = 600 := by
-
+  -- Re-state the problem without the modulo.
   suffices Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 ∧ 0 ≤ b ∧
-      ∃ u v : ℤ, X ^ 2 + C a * X + C b = (X + C u) * (X + C v)} = 2600 by
-    rw [this]
+      ∃ u v : ℤ, X ^ 2 + C a * X + C b = (X + C u) * (X + C v)} = 2600 by rw [this]
 
-  -- TODO: Put in `calc`?
-  have (a b u v : ℤ) : X ^ 2 + C a * X + C b = (X + C u) * (X + C v) ↔ a = u + v ∧ b = u * v :=
+  calc _
+  -- Use extensionality of polynomials to relate the coefficients directly.
+  _ = {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 ∧ 0 ≤ b ∧ ∃ u v, a = u + v ∧ b = u * v}.ncard := by
+    suffices ∀ a b u v : ℤ, X ^ 2 + C a * X + C b = (X + C u) * (X + C v) ↔
+        a = u + v ∧ b = u * v by simp_rw [this]
+    intro a b u v
     calc _
     -- Group the coefficients of the polynomial.
     _ ↔ X ^ 2 + C a * X + C b = X ^ 2 + C (u + v) * X + C (u * v) := by
@@ -28,26 +31,11 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
     _ ↔ _ := by
       -- Reverse direction is trivial by substitution.
       refine ⟨?_, fun ⟨ha, hb⟩ ↦ by rw [ha, hb]⟩
-      -- Use extensionality of polynomials to obtain the forward direction.
       rw [Polynomial.ext_iff]
-      intro h
-      exact ⟨by simpa [-eq_intCast] using h 1, by simpa [-eq_intCast] using h 0⟩
-  simp only [this]
-
-  calc {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 ∧ 0 ≤ b ∧ ∃ u v, a = u + v ∧ b = u * v}.ncard
-
-  -- We now need to count, for each `1 ≤ a ≤ 100`, the number of
-  -- unique products `u v ≥ 0` such that `u + v = a`.
-  -- Both `u` and `v` must be non-negative since their product is non-negative
-  -- and their sum is positive. We can set `v = a - u`.
-
-  -- `0 ≤ u * (a - u)` gives us `0 ≤ u` and `0 ≤ a - u`, equivalent to `0 ≤ u ≤ a`.
-  -- (We cannot have `u ≤ 0` and `a - u ≤ 0`.)
-  -- The unique elements of the set of `u * (a - u)` for `u ∈ [0, a]` are
-  -- those where `u ≤ a - u`; that is, `2 * u ≤ a`.
-
-  -- Split into even and odd cases, `a = 2 k` and `a = 2 k + 1`.
-
+      refine fun h ↦ ⟨?_, ?_⟩
+      · simpa [-eq_intCast] using h 1
+      · simpa [-eq_intCast] using h 0
+  -- Rewrite as a finite union of set.
   _ = Set.ncard (⋃ a ∈ Finset.Icc 1 100, (a, ·) ''
       {b : ℤ | 0 ≤ b ∧ ∃ u v, a = u + v ∧ b = u * v}) := by
     congr
@@ -55,11 +43,14 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
     simp only [Set.mem_iUnion, exists_prop]
     simp
 
-  _ = Set.ncard (⋃ a ∈ (.Icc 1 100 : Finset ℤ),
-      (a, ·) '' ((fun u ↦ u * (a - u)) '' Set.Icc 0 a)) := by
+  -- We can substitute `v = a - u` and `b = u * v`.
+  -- Note that, since `0 ≤ u * v`, they must be both nonnegative or both nonpositive.
+  -- Further, since `u + v = a > 0`, they cannot both be nonpositive.
+  -- Hence `0 ≤ u` and `0 ≤ a - u`, which is equivalent to `0 ≤ u ≤ a`.
+  _ = Set.ncard (⋃ a ∈ (.Icc 1 100 : Finset ℤ), (a, ·) ''
+      ((fun u ↦ u * (a - u)) '' Set.Icc 0 a)) := by
     congr
-    refine Set.iUnion₂_congr ?_
-    intro a ha
+    refine Set.iUnion₂_congr fun a ha ↦ ?_
     refine congrArg _ ?_
     calc _
     _ = {b | 0 ≤ b ∧ ∃ u v, a - u = v ∧ b = u * v} := by simp only [sub_eq_iff_eq_add']
@@ -84,8 +75,10 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
       simp only [Finset.mem_Icc] at ha
       linarith
 
+  -- The cardinality of the union is equal to the sum of the cardinalities.
   _ = ∑ a ∈ (.Icc 1 100 : Finset ℤ), ((fun u ↦ u * (a - u)) '' Set.Icc 0 a).ncard := by
     calc _
+    -- Pass via `Finset` in order to use `Finset.card_biUnion`.
     _ = Finset.card (.biUnion (.Icc 1 100 : Finset ℤ) fun a ↦
         .map (.sectR a ℤ) (.image (fun u ↦ u * (a - u)) (.Icc 0 a))) := by
       rw [← Set.ncard_coe_Finset]
@@ -105,6 +98,7 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
       rw [← Set.ncard_coe_Finset]
       simp
 
+  -- By symmetry of `u * v`, we only need consider pairs `(u, v)` with `u ≤ v`.
   _ = ∑ a ∈ (.Icc 1 100 : Finset ℤ),
       ((fun u ↦ u * (a - u)) '' {u : ℤ | 0 ≤ u ∧ u ≤ a - u}).ncard := by
     refine congrArg _ <| funext fun a ↦ ?_
@@ -113,6 +107,7 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
     simp only [Set.mem_image, Set.mem_Icc, Set.mem_setOf_eq]
     refine ⟨?_, Exists.imp fun u ⟨⟨hu, hua⟩, hb⟩ ↦ ⟨⟨hu, le_trans hua (sub_le_self a hu)⟩, hb⟩⟩
     intro ⟨u, ⟨⟨hu, hua⟩, hb⟩⟩
+    -- If we do not have `u ≤ a - u`, then use `(a - u, u)` instead of `(u, a - u)`.
     cases le_or_lt u (a - u) with
     | inl h => exact ⟨u, ⟨hu, h⟩, hb⟩
     | inr h =>
@@ -120,15 +115,15 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
       · simpa using hua
       · simpa using h.le
       · simpa [mul_comm] using hb
-
+  -- Rewrite `u ≤ a - u` as `2 * u ≤ a`.
   _ = ∑ a ∈ (.Icc 1 100 : Finset ℤ),
       ((fun u ↦ u * (a - u)) '' {u : ℤ | 0 ≤ u ∧ 2 * u ≤ a}).ncard := by
-    -- TODO: Nest above.
     suffices ∀ a u : ℤ, u ≤ a - u ↔ 2 * u ≤ a by simp only [this]
     intro a u
     rw [two_mul]
     exact le_sub_iff_add_le'
-
+  -- Now that we have restricted the set to `u ≤ a - u`, we can eliminate the image
+  -- since its cardinality is equal to that of the original set.
   _ = ∑ a ∈ (.Icc 1 100 : Finset ℤ), {u : ℤ | 0 ≤ u ∧ 2 * u ≤ a}.ncard := by
     refine congrArg _ <| funext fun a ↦ ?_
     refine Set.ncard_image_of_injOn ?_
@@ -138,7 +133,10 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
     refine lt_of_sub_pos ?_
     calc u₂ * (a - u₂) - u₁ * (a - u₁)
     _ = (u₂ - u₁) * (a - (u₁ + u₂)) := by ring
-    _ > 0 := mul_pos (sub_pos_of_lt h) (by omega)
+    _ > 0 := by
+      refine mul_pos (sub_pos_of_lt h) ?_
+      refine Int.sub_pos.mpr ?_
+      omega  -- `u₁ + u₂ < u₂ + u₂ = 2 u₂ ≤ a`
 
   -- Switch from `Finset.Icc` in `ℤ` to `Finset.range` in `ℕ`.
   -- First change the outer sum.
