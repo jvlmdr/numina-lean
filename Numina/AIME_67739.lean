@@ -35,7 +35,7 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
       refine fun h ↦ ⟨?_, ?_⟩
       · simpa [-eq_intCast] using h 1
       · simpa [-eq_intCast] using h 0
-  -- Rewrite as a finite union of set.
+  -- Rewrite as a (finite) union of sets.
   _ = Set.ncard (⋃ a ∈ Finset.Icc 1 100, (a, ·) ''
       {b : ℤ | 0 ≤ b ∧ ∃ u v, a = u + v ∧ b = u * v}) := by
     congr
@@ -76,6 +76,7 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
       linarith
 
   -- The cardinality of the union is equal to the sum of the cardinalities.
+  -- Note that this requires a finite union of finite sets.
   _ = ∑ a ∈ (.Icc 1 100 : Finset ℤ), ((fun u ↦ u * (a - u)) '' Set.Icc 0 a).ncard := by
     calc _
     -- Pass via `Finset` in order to use `Finset.card_biUnion`.
@@ -101,7 +102,7 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
   -- By symmetry of `u * v`, we only need consider pairs `(u, v)` with `u ≤ v`.
   _ = ∑ a ∈ (.Icc 1 100 : Finset ℤ),
       ((fun u ↦ u * (a - u)) '' {u : ℤ | 0 ≤ u ∧ u ≤ a - u}).ncard := by
-    refine congrArg _ <| funext fun a ↦ ?_
+    refine Finset.sum_congr rfl fun a ha ↦ ?_
     congr
     ext b
     simp only [Set.mem_image, Set.mem_Icc, Set.mem_setOf_eq]
@@ -122,8 +123,8 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
     intro a u
     rw [two_mul]
     exact le_sub_iff_add_le'
-  -- Now that we have restricted the set to `u ≤ a - u`, we can eliminate the image
-  -- since its cardinality is equal to that of the original set.
+  -- Now that we have restricted the set of `u` to `u ≤ a - u` due to symmetry, we can show
+  -- that the cardinality of the `u * (a - u)` is equal to the cardinality of the `u`.
   _ = ∑ a ∈ (.Icc 1 100 : Finset ℤ), {u : ℤ | 0 ≤ u ∧ 2 * u ≤ a}.ncard := by
     refine congrArg _ <| funext fun a ↦ ?_
     refine Set.ncard_image_of_injOn ?_
@@ -154,7 +155,7 @@ theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 
     | negSucc u => simp
   _ = ∑ a ∈ .Icc 1 100, {u | 2 * u ≤ a}.ncard := by
     simp_rw [Set.ncard_map Nat.castEmbedding]
-  -- Now swap the `Icc` for `range`.
+  -- Now swap `Icc` for `range`.
   _ = ∑ a ∈ .map (addRightEmbedding 1) (.Ico 0 100), {u | 2 * u ≤ a}.ncard := by
     rw [Finset.map_add_right_Ico, Nat.Ico_succ_right]
   _ = ∑ a ∈ .range 100, {u | 2 * u ≤ a + 1}.ncard := by simp
