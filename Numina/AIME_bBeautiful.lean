@@ -222,40 +222,34 @@ theorem number_theory_93241 :
   intro hb_lt
 
   calc _
-  _ ≤ Set.encard ((fun (z, m, n) ↦ z) '' {(z, m, n) : ℕ × ℕ × ℕ | z ∈ Set.Ico 2 b ∧
-      b - 1 = m * n ∧ m.Coprime n ∧ m ∣ z ∧ n ∣ z - 1}) := by
-    refine Set.encard_le_card fun z ↦ ?_
-    simp only [Set.mem_setOf_eq, Set.mem_image, Prod.exists, exists_and_right, exists_and_left,
-      exists_eq_right, and_imp]
-    refine fun hz h ↦ ⟨hz, ?_⟩  -- TODO: Avoid need for this?
-    rw [Set.mem_Ico] at hz
-    rw [dvd_mul] at h
-    rcases h with ⟨m, n, hm, hn, h⟩
-    use m, n
-    refine ⟨h, ?_, hm, hn⟩
+  -- Consider explicit factors `m * n = b - 1`.
+  _ = Set.encard ((fun (z, m, n) ↦ z) '' {(z, m, n) : ℕ × ℕ × ℕ | z ∈ Set.Ico 2 b ∧
+      m.Coprime n ∧ m ∣ z ∧ n ∣ z - 1 ∧ b - 1 = m * n}) := by
+    congr
+    ext z
+    simp only [Set.mem_Ico, Set.mem_setOf_eq, Set.mem_image, Prod.exists, exists_and_right,
+      exists_and_left, exists_eq_right, and_congr_right_iff]
+    intro hz
+    rw [dvd_mul]
+    refine exists_congr fun m ↦ ?_
+    refine exists_congr fun n ↦ ?_
+    simp only [iff_and_self, and_imp]
+    intro hm hn h_mul
     refine Nat.Coprime.of_dvd hm hn ?_
     refine (Nat.coprime_self_sub_right ?_).mpr ?_
     · linarith
     · exact Nat.coprime_one_right z
-
   _ ≤ Set.encard {(z, m, n) : ℕ × ℕ × ℕ | z ∈ Set.Ico 2 b ∧
-      b - 1 = m * n ∧ m.Coprime n ∧ m ∣ z ∧ n ∣ z - 1} :=
+      m.Coprime n ∧ m ∣ z ∧ n ∣ z - 1 ∧ b - 1 = m * n} :=
     Set.encard_image_le _ _
-
-  _ = Set.encard ((fun (z, m, n) ↦ m) '' {(z, m, n) : ℕ × ℕ × ℕ | z ∈ Set.Ico 2 b ∧
-      b - 1 = m * n ∧ m.Coprime n ∧ m ∣ z ∧ n ∣ z - 1}) := by
+  -- It suffices to consider the unique `(m, n)`, since there is at most one `z` for each.
+  _ = Set.encard ((fun (z, m, n) ↦ (m, n)) '' {(z, m, n) : ℕ × ℕ × ℕ | z ∈ Set.Ico 2 b ∧
+      m.Coprime n ∧ m ∣ z ∧ n ∣ z - 1 ∧ b - 1 = m * n}) := by
     refine (Set.InjOn.encard_image ?_).symm
     intro ⟨z, m, n⟩
     simp only [Set.mem_setOf_eq, and_imp, Prod.forall, Prod.mk.injEq]
-    intro hz h_mul h_coprime hm hn z' m' n' hz' h_mul' h_coprime' hm' hn' hm_eq
-    have hm_pos : 0 < m := by
-      suffices 0 < m * n from Nat.pos_of_mul_pos_right this
-      exact h_mul ▸ Nat.zero_lt_sub_of_lt hb
-    have hn_eq : n = n' := by
-      rw [← Nat.mul_right_inj hm_pos.ne', ← h_mul]
-      rw [h_mul', hm_eq]
+    intro hz h_coprime hm hn h_mul z' m' n' hz' h_coprime' hm' hn' h_mul' hm_eq hn_eq
     refine ⟨?_, hm_eq, hn_eq⟩
-    -- Eliminate m' and n'.
     simp only [← hm_eq, ← hn_eq] at hm' hn'
     clear h_mul' h_coprime' hm_eq hn_eq m' n'
     -- Without loss of generality, assume `z ≤ z'`.
@@ -286,18 +280,27 @@ theorem number_theory_93241 :
         · exact Nat.one_le_of_lt hz.1
         · exact Nat.le_mul_of_pos_right (b - 1) (Nat.succ_pos k)
       _ = z' := hk.symm
-
-  _ ≤ Set.encard {m : ℕ | ∃ n, b - 1 = m * n ∧ m.Coprime n} := by
+  -- Ignore the existence of `z` to obtain an upper bound.
+  _ ≤ Set.encard {(m, n) : ℕ × ℕ | m.Coprime n ∧ b - 1 = m * n} := by
+    refine Set.encard_le_card fun ⟨m, n⟩ ↦ ?_
+    simp only [Set.mem_image, Set.mem_setOf_eq, Prod.exists, exists_eq_right, forall_exists_index]
+    exact fun z ⟨_, h_coprime, _, _, h_mul⟩ ↦ ⟨h_coprime, h_mul⟩
+  -- We can easily compute `n` from `m`.
+  _ ≤ Set.encard ((fun m ↦ (m, (b - 1) / m)) '' {m | ∃ n, m.Coprime n ∧ b - 1 = m * n}) := by
+    refine Set.encard_le_card fun ⟨m, n⟩ ↦ ?_
+    simp only [Set.mem_setOf_eq, Set.mem_image, Prod.mk.injEq, and_left_comm, exists_eq_left]
+    intro ⟨h_coprime, h_mul⟩
+    refine ⟨⟨n, h_coprime, h_mul⟩, ?_⟩
+    refine Nat.div_eq_of_eq_mul_right ?_ h_mul
+    suffices 0 < m * n from Nat.pos_of_mul_pos_right this
+    exact h_mul ▸ Nat.zero_lt_sub_of_lt hb
+  _ ≤ Set.encard {m | ∃ n, m.Coprime n ∧ b - 1 = m * n} := Set.encard_image_le _ _
+  -- It suffices to consider partitions of the prime factors of (b - 1).
+  _ ≤ Set.encard ((fun a ↦ ∏ p in a, p ^ (b - 1).factorization p) ''
+      {a | a ⊆ (b - 1).primeFactors}) := by
     refine Set.encard_le_card fun m ↦ ?_
-    simp only [Set.mem_image, Set.mem_setOf_eq, Prod.exists, exists_and_right, exists_and_left,
-      exists_eq_right, forall_exists_index, and_imp]
-    exact fun z _ n h_mul h_coprime _ _ ↦ ⟨n, h_mul, h_coprime⟩
-
-  _ ≤ Set.encard {m : ℕ | ∃ a ⊆ (b - 1).primeFactors,
-      ∏ p in a, p ^ (b - 1).factorization p = m} := by
-    refine Set.encard_le_card fun m ↦ ?_
-    simp only [Set.mem_setOf_eq, forall_exists_index, and_imp]
-    intro n h_mul h_coprime
+    simp only [Set.mem_setOf_eq, Set.mem_image, forall_exists_index, and_imp]
+    intro n h_coprime h_mul
     rw [h_mul]
     use m.primeFactors
     have h_pos : 0 < m * n := h_mul ▸ Nat.zero_lt_sub_of_lt hb
@@ -311,24 +314,14 @@ theorem number_theory_93241 :
     _ = _ := by
       refine Nat.factorization_prod_pow_eq_self ?_
       exact (Nat.pos_of_mul_pos_right h_pos).ne'
-
-  -- TODO: Use directly above?
-  _ = Set.encard ((fun a ↦ ∏ p in a, p ^ (b - 1).factorization p) ''
-      {a | a ⊆ (b - 1).primeFactors}) :=
-    rfl
-
+  -- This provides a simple upper bound using the size of the powerset (2 ^ card).
   _ ≤ Set.encard {a | a ⊆ (b - 1).primeFactors} := Set.encard_image_le _ _
-
   _ = Set.encard {a | a ∈ (b - 1).primeFactors.powerset} := by simp
-
-  -- _ = (b - 1).primeFactors.powerset.toSet.encard := rfl
-
   _ = (b - 1).primeFactors.powerset.card := Set.encard_coe_eq_coe_finsetCard _
   _ = 2 ^ (b - 1).primeFactors.card := by simp
-
   _ ≤ 2 ^ 3 := by
     refine pow_le_pow_right₀ one_le_two ?_
-    -- Now we need to show that any number less than 2 * 3 * 5 * 7 has less than 4 prime factors.
+    -- We must now show that any number less than 2 * 3 * 5 * 7 has less than 4 prime factors.
     suffices (b - 1).primeFactors.card < 4 from Nat.le_of_lt_succ this
     replace hb_lt : b - 1 < 210 := Nat.sub_lt_left_of_lt_add (Nat.one_le_of_lt hb) hb_lt
     revert hb_lt
