@@ -5,9 +5,6 @@ import Mathlib
 
 open Real
 
-def is_bBeautiful (b : ℕ) (n : ℕ) :=
-  n > 0 ∧ (Nat.digits b n).length = 2 ∧ (Nat.digits b n).sum = sqrt n
-
 /- Let $b\ge 2$ be an integer.
 Call a positive integer $n$ $b$-eautiful if it has exactly two digits
 when expressed in base $b$ and these two digits sum to $\sqrt n$.
@@ -15,103 +12,145 @@ For example, $81$ is $13$-eatiful because $81 = 63_{13}$ and $6 + 3 = \sqrt{81}$
 Find the least integer $b \ge 2$ for which there are more than ten $b$-eautiful integers. -/
 
 theorem number_theory_93241 :
-    IsLeast {b | 2 ≤ b ∧ {n | is_bBeautiful b n}.encard > 10} 211 := by
-
-  simp only [gt_iff_lt]
-
+    IsLeast {b | 2 ≤ b ∧
+      {n | (Nat.digits b n).length = 2 ∧ (Nat.digits b n).sum = sqrt n}.encard > 10} 211 := by
   suffices IsLeast {b | 2 ≤ b ∧ 10 < {z | z ∈ Set.Ico 2 b ∧ b - 1 ∣ z * (z - 1)}.encard} 211 by
     convert this using 3 with b
     refine and_congr_right fun hb ↦ ?_
-    suffices {n | is_bBeautiful b n}.encard = {z | z ∈ Set.Ico 2 b ∧ b - 1 ∣ z * (z - 1)}.encard by
+    suffices {n | (Nat.digits b n).length = 2 ∧ (Nat.digits b n).sum = sqrt n}.encard =
+        {z | z ∈ Set.Ico 2 b ∧ b - 1 ∣ z * (z - 1)}.encard by
       rw [this]
 
-    have hb_neZero : NeZero b := .of_gt hb  -- For `Nat.divModEquiv b`.
     calc _
-    -- Rewrite condition on Nat.digits using arithmetic.
-    _ = Set.encard {n : ℕ | ∃ x ∈ Set.Ico 1 b, ∃ y < b, (x + y) ^ 2 = n ∧ x * b + y = n} := by
-      -- TODO: Fuck around with `Nat.digits`.
-      sorry
-
-    -- Use `y : Fin b` rather than `y < b` to enable use of `Nat.divModEquiv b`.
-    _ = Set.encard ((Nat.divModEquiv b).symm ''
-        {(x, y) : ℕ × Fin b | x ∈ Set.Ico 1 b ∧ (x + y) ^ 2 = x * b + y}) := by
-      refine congrArg Set.encard ?_
-      ext n
-      simp only [and_assoc, Set.mem_setOf_eq, Set.mem_image, Prod.exists, exists_and_left]
-      refine exists_congr fun x ↦ and_congr_right fun hx ↦ ?_
-      simp only [Fin.exists_iff, Nat.divModEquiv_symm_apply, exists_prop, Set.mem_Iio]
-      refine exists_congr fun y ↦ and_congr_right fun hy ↦ ?_
-      exact and_congr_left fun hn ↦ Eq.congr_right hn.symm
-    _ = Set.encard {(x, y) : ℕ × Fin b | x ∈ Set.Ico 1 b ∧ (x + y) ^ 2 = x * b + y} :=
-      (Equiv.injective _).injOn.encard_image
-    -- Return to `y : ℕ` with `y < b` for the remainder of the proof.
-    _ = Set.encard ((Prod.map id Fin.val) ''
-        {(x, y) : ℕ × Fin b | x ∈ Set.Ico 1 b ∧ (x + y) ^ 2 = x * b + y}) := by
-      refine (Function.Injective.injOn ?_).encard_image.symm
-      exact Prod.map_injective.mpr ⟨Function.injective_id, Fin.val_injective⟩
-    _ = Set.encard {(x, y) : ℕ × ℕ | x ∈ Set.Ico 1 b ∧ (x + y) ^ 2 = x * b + y ∧ y < b} := by
+    -- Parameterize using digits `x, y`.
+    _ = Set.encard ((fun (x, y) ↦ Nat.ofDigits b [y, x]) ''
+        {(x, y) : ℕ × ℕ | x ∈ Set.Ico 1 b ∧ y < b ∧ (x + y) ^ 2 = x * b + y}) := by
       congr
-      ext ⟨x, y⟩
-      simp [Fin.exists_iff, ← and_assoc]
+      ext n
+      simp only [Set.mem_setOf_eq, Set.mem_image, Prod.exists]
+      calc _
+      -- Move square root constraint from `ℝ` to `ℕ`.
+      _ ↔ (Nat.digits b n).length = 2 ∧ (Nat.digits b n).sum ^ 2 = n := by
+        suffices ∀ (u v : ℕ), u = √v ↔ u ^2 = v by simp only [this]
+        intro u v
+        calc _
+        _ ↔ √v = u := eq_comm
+        _ ↔ (v : ℝ) = u ^ 2 := sqrt_eq_iff_eq_sq (Nat.cast_nonneg' v) (Nat.cast_nonneg' u)
+        _ ↔ (v : ℝ) = ↑(u ^ 2) := by simp
+        _ ↔ v = u ^ 2 := Nat.cast_inj
+        _ ↔ _ := eq_comm
+
+      -- Obtain the two elements in the list explicitly.
+      _ ↔ ∃ y x, (y + x) ^ 2 = n ∧ Nat.digits b n = [y, x] := by
+        generalize hl : b.digits n = l
+        cases l with
+        | nil => simp  -- Contradiction on both sides: length is not 0.
+        | cons y l =>
+          simp only [List.cons.injEq, and_assoc, exists_and_left, exists_eq_left']
+          cases l with
+          | nil => simp  -- Contradiction on both sides: length is not 1.
+          | cons x l =>
+            simp only [List.cons.injEq, and_assoc, exists_and_left, exists_eq_left']
+            cases l with
+            | cons w l => simp  -- Contradiction on both sides: length is not 3.
+            | nil => simp
+
+      -- Parameterize by the digits (x, y) rather than the number n.
+      _ ↔ ∃ y x, (y + x) ^ 2 = n ∧ y < b ∧ x < b ∧ x ≠ 0 ∧ Nat.ofDigits b [y, x] = n := by
+        refine exists_congr fun y ↦ exists_congr fun x ↦ and_congr_right fun _ ↦ ?_
+        refine Iff.intro ?_ ?_
+        · intro h
+          refine ⟨?_, ?_, ?_, ?_⟩
+          · suffices y ∈ b.digits n from Nat.digits_lt_base hb this
+            simp [h]
+          · suffices x ∈ b.digits n from Nat.digits_lt_base hb this
+            simp [h]
+          · convert Nat.getLast_digit_ne_zero b (?_ : n ≠ 0)
+            · simp [h]
+            · suffices b.digits n ≠ [] from Nat.digits_ne_nil_iff_ne_zero.mp this
+              simp [h]
+          · exact h ▸ Nat.ofDigits_digits b n
+        · intro ⟨hy, hx, hx_ne, hn⟩
+          rw [← hn]
+          refine Nat.digits_ofDigits b hb _ ?_ ?_
+          · simpa using ⟨hy, hx⟩
+          · simpa using hx_ne
+
+      -- Put everything in its final form.
+      _ ↔ _ := by
+        rw [exists_comm]
+        refine exists_congr fun x ↦ exists_congr fun y ↦ ?_
+        simp only [← and_assoc (c := _ = n)]
+        refine and_congr_left fun hn ↦ ?_
+        -- Normalize the forms of the constraints.
+        replace hn : x * b + y = n :=
+          calc _
+          _ = y + b * x := by ring
+          _ = Nat.ofDigits b [y, x] := by simp [Nat.ofDigits_cons]
+          _ = _ := hn
+        simp only [add_comm y x, hn, Set.mem_Ico, Nat.one_le_iff_ne_zero]
+        refine ⟨?_, ?_⟩
+        · exact fun ⟨h_sq, hy, hx, hx_ne⟩ ↦ ⟨⟨hx_ne, hx⟩, hy, h_sq⟩
+        · exact fun ⟨⟨hx_ne, hx⟩, hy, h_sq⟩ ↦ ⟨h_sq, hy, hx, hx_ne⟩
+
+    -- Use injectivity of `Nat.ofDigits` to eliminate the image.
     _ = Set.encard {(x, y) : ℕ × ℕ | x ∈ Set.Ico 1 b ∧ y < b ∧ (x + y) ^ 2 = x * b + y} := by
-      simp only [and_comm]
+      refine Set.InjOn.encard_image ?_
+      -- Note: More recent versions of Mathlib have `Nat.ofDigits_inj_of_len_eq`.
+      simp only [Set.InjOn, Set.mem_setOf_eq, and_imp, Prod.forall, Prod.mk.injEq]
+      intro x y _ hy hxy x' y' _ hy' _
+      simp only [Nat.ofDigits_cons, Nat.ofDigits_nil, mul_zero, add_zero]
+      intro h
+      -- Use `ℕ × Fin b` from `Nat.divModEquiv`.
+      suffices (x, (⟨y, hy⟩ : Fin b)) = (x', ⟨y', hy'⟩) by simpa using this
+      have _ : NeZero b := .of_gt hb
+      refine (Nat.divModEquiv b).symm.injective ?_
+      simp only [Nat.divModEquiv_symm_apply]
+      refine (Eq.congr ?_ ?_).mpr h <;> ring
 
-    -- _ = Set.encard ((fun (x, y) ↦ x * b + y) ''
-    --     {(x, y) : ℕ × ℕ | x ∈ Set.Ico 1 b ∧ y < b ∧ (x + y) ^ 2 = x * b + y}) := by
-    --   refine congrArg Set.encard ?_
-    --   ext n
-    --   simp only [and_assoc, Set.mem_setOf_eq, Set.mem_image, Prod.exists, exists_and_left]
-    --   refine exists_congr fun x ↦ and_congr_right fun hx ↦ ?_
-    --   refine exists_congr fun y ↦ and_congr_right fun hy ↦ ?_
-    --   exact and_congr_left fun hn ↦ Eq.congr_right hn.symm
-    -- _ = {(x, y) : ℕ × ℕ | x ∈ Set.Ico 1 b ∧ y < b ∧ (x + y) ^ 2 = x * b + y}.encard := by
-    --   refine Set.InjOn.encard_image ?_
-    --   -- Suffices to consider arbitrary `x` and `y < b`.
-    --   suffices Set.InjOn (fun m : ℕ × ℕ ↦ m.1 * b + m.2) (Set.univ ×ˢ Set.Iio b) from
-    --     this.mono fun m ⟨_, hy, _⟩ ↦ by simpa using hy
-    --   intro ⟨x, y⟩ hy ⟨x', y'⟩ hy'
-    --   simp only [Set.mem_prod, Set.mem_univ, Set.mem_Iio, true_and] at hy hy'
-    --   simp only [Prod.mk.injEq]
-    --   refine fun h ↦ ⟨?_, ?_⟩
-    --   · simp only [mul_comm _ b] at h
-    --     simpa [Nat.mul_add_div (Nat.zero_lt_of_lt hb), Nat.div_eq_of_lt hy, Nat.div_eq_of_lt hy']
-    --       using congrArg (· / b) h
-    --   · simpa [Nat.mul_add_mod_of_lt hy, Nat.mul_add_mod_of_lt hy'] using congrArg (· % b) h
-
-    _ = Set.encard ((fun m : ℕ × ℕ ↦ (m.1, m.1 + m.2)) ''
+    -- Consider the set of `(x, x + y)` rather than that of `(x, y)`.
+    -- Cardinality is preserved by injectivity.
+    _ = Set.encard ((fun m ↦ (m.1, m.1 + m.2)) ''
         {(x, y) : ℕ × ℕ | x ∈ Set.Ico 1 b ∧ y < b ∧ (x + y) ^ 2 = x * b + y}) := by
       refine (Function.Injective.encard_image ?_ _).symm
       simp only [Function.Injective, Prod.mk.injEq, and_imp, Prod.forall]
       exact fun x y x' y' hx hz ↦ ⟨hx, Nat.add_left_cancel (hx ▸ hz)⟩
 
-    _ = Set.encard {(x, z) : ℕ × ℕ |
-        x ∈ Set.Ico 1 b ∧ ∃ y < b, (x + y) ^ 2 = x * b + y ∧ z = x + y} := by
+    -- Remove the explicit constraints on the range of `x`.
+    _ = Set.encard {(x, z) : ℕ × ℕ | z ∈ Set.Ico 2 b ∧ z * (z - 1) = x * (b - 1)} := by
       congr
       ext ⟨x, z⟩
-      simp only [Set.mem_image, Set.mem_setOf_eq, Prod.exists, Prod.mk.injEq]
-      simp only [and_left_comm (b := _ = x), eq_comm (b := z)]
-      simp [and_assoc]
-
-    _ = Set.encard {(x, z) : ℕ × ℕ |
-        x ∈ Set.Ico 1 b ∧ z ∈ Set.Ico 2 b ∧ z * (z - 1) = x * (b - 1)} := by
-      congr
-      ext ⟨x, z⟩
-      simp only [Set.mem_setOf_eq]
-      refine and_congr_right fun hx ↦ ?_
-      refine ⟨?_, ?_⟩
-      · intro ⟨y, hy, h, hz⟩
-        rw [hz]
+      simp only [Set.mem_image, Set.mem_setOf_eq, Prod.mk.injEq, Prod.exists]
+      simp only [and_left_comm (b := _ = x), exists_and_left, exists_eq_left]
+      simp only [and_assoc, exists_and_left]
+      simp only [Set.mem_Ico]
+      -- The b-eautiful condition is equivalent to `z (z - 1) = x (b - 1)` with `z = x + y`.
+      have h_beautifful (y) : (x + y) ^ 2 = x * b + y ↔ (x + y) * (x + y - 1) = x * (b - 1) := by
+        calc _
+        _ ↔ (x + y) ^ 2 = x * b - x + x + y := by
+          rw [Nat.sub_add_cancel]
+          refine Nat.le_mul_of_pos_right x ?_
+          linarith
+        _ ↔ (x + y) ^ 2 = x * b - x + (x + y) := by simp [add_assoc]
+        _ ↔ (x + y) ^ 2 - (x + y) = x * b - x := by
+          refine (Nat.sub_eq_iff_eq_add ?_).symm
+          refine Nat.le_self_pow ?_ _
+          norm_num
+        _ ↔ (x + y) * (x + y - 1) = x * (b - 1) := by simp [mul_tsub, sq]
+      refine Iff.intro ?_ ?_
+      · intro ⟨hx, y, hy, h_eq, hz⟩
+        rw [← hz]
         refine ⟨?_, ?_⟩
         · refine ⟨?_, ?_⟩
           · -- Cannot have `x + y = 1` as it implies `1 ^ 2 = x * b + y` with `x ≠ 0` and `1 < b`.
             suffices 1 ^ 2 < (x + y) ^ 2 from lt_of_pow_lt_pow_left' 2 this
-            suffices 2 ≤ x * b + y by simpa [h] using this
+            suffices 2 ≤ x * b + y by simpa [h_eq] using this
             refine Nat.le_add_right_of_le ?_
             exact le_mul_of_one_le_of_le hx.1 hb
           · -- Must have `x + y < b` since `(x + y) ^ 2 = x * b + y < b ^ 2` (two-digit numbers).
             suffices (x + y) ^ 2 < b ^ 2 from lt_of_pow_lt_pow_left' 2 this
             calc (x + y) ^ 2
-            _ = x * b + y := h
+            _ = x * b + y := h_eq
             _ ≤ (b - 1) * b + (b - 1) := by
               refine add_le_add (Nat.mul_le_mul_right b ?_) ?_
               · exact Nat.le_sub_one_of_lt hx.2
@@ -121,75 +160,53 @@ theorem number_theory_93241 :
             _ < b ^ 2 := by
               refine Nat.sub_lt ?_ one_pos
               exact Nat.pow_pos (Nat.zero_lt_of_lt hb)
-        · calc _
-          _ = (x + y) ^ 2 - (x + y) := by simp [sq, mul_tsub]
-          _ = x * b + y - (x + y) := by rw [h]
-          _ = x * b + y - y - x := by rw [Nat.sub_sub, add_comm x y]
-          _ = _ := by simp [mul_tsub]
-      · intro ⟨hz, h⟩
+        · exact (h_beautifful y).mp h_eq
+      · intro ⟨hz, h_eq⟩
+        -- Must have `x ≤ z = x + y`.
         cases lt_or_le z x with
         | inl hzx =>
-          -- Contradiction: Cannot have z (z - 1) = x (b - 1) since z < x and z < b.
-          refine h.not_lt.elim ?_
+          exfalso
+          refine h_eq.not_lt ?_
           refine Nat.mul_lt_mul'' hzx ?_
-          exact Nat.sub_lt_sub_right (one_le_two.trans hz.1) hz.2
+          refine Nat.sub_lt_sub_right ?_ ?_ <;> linarith
         | inr hxz =>
+          refine ⟨⟨?_, ?_⟩, ?_⟩
+          · suffices 0 < x * (b - 1) from Nat.pos_of_mul_pos_right this
+            rw [← h_eq]
+            refine Nat.mul_pos ?_ (Nat.zero_lt_sub_of_lt ?_) <;> linarith
+          · linarith
           use z - x
-          refine ⟨tsub_lt_of_lt hz.2, ?_, (add_tsub_cancel_of_le hxz).symm⟩
-          · calc _
-            _ = z ^ 2 := by rw [Nat.add_sub_cancel' hxz]
-            _ = z * (z - 1 + 1) := by rw [sq, Nat.sub_add_cancel (Nat.one_le_of_lt hz.1)]
-            _ = x * b - x + z := by simp [h, mul_add, mul_tsub]
-            _ = x * b + z - x := by
-              refine (Nat.sub_add_comm ?_).symm
-              exact Nat.le_mul_of_pos_right x (Nat.zero_lt_of_lt hb)
-            _ = _ := Nat.add_sub_assoc hxz (x * b)
+          refine ⟨tsub_lt_of_lt hz.2, ?_, Nat.add_sub_of_le hxz⟩
+          refine (h_beautifful (z - x)).mpr ?_
+          simpa [Nat.add_sub_of_le hxz] using h_eq
 
-    -- Eliminate the constraint on `x`.
-    -- TODO: Move into above?
-    _ = Set.encard {(x, z) : ℕ × ℕ | z ∈ Set.Ico 2 b ∧ z * (z - 1) = x * (b - 1)} := by
+    -- Suffices to consider `z` since `x` is determined by `z`.
+    _ = Set.encard (Prod.snd ''
+        {(x, z) : ℕ × ℕ | z ∈ Set.Ico 2 b ∧ z * (z - 1) = x * (b - 1)}) := by
+      refine (Set.InjOn.encard_image ?_).symm
+      simp only [Set.InjOn, Set.mem_setOf_eq, and_imp, Prod.forall, Prod.mk.injEq]
+      intro x z hz h_eq x' z' hz' h_eq'
+      refine fun h ↦ ⟨?_, h⟩
+      suffices x * (b - 1) = x' * (b - 1) by
+        refine Nat.eq_of_mul_eq_mul_right ?_ this
+        exact Nat.zero_lt_sub_of_lt hb
+      rw [← h_eq, ← h_eq', ← h]
+
+    -- Replace the existence of some `x` with divisibility.
+    _ = Set.encard {z | z ∈ Set.Ico 2 b ∧ b - 1 ∣ z * (z - 1)} := by
       congr
-      ext ⟨x, z⟩
-      simp only [Set.mem_setOf_eq, and_iff_right_iff_imp, and_imp]
-      intro hz h
-      rw [Set.mem_Ico] at hz ⊢
-      refine ⟨?_, ?_⟩
-      · suffices x ≠ 0 from Nat.one_le_iff_ne_zero.mpr this
-        intro hx
-        revert h
-        simp [hx]
-        omega  -- TODO
-      · suffices x * (b - 1) < b * (b - 1) from Nat.lt_of_mul_lt_mul_right this
-        rw [← h]
-        refine mul_lt_mul ?_ ?_ ?_ ?_
-        · exact hz.2
-        · omega  -- TODO
-        · omega  -- TODO
-        · exact Nat.zero_le b
-
-    _ = Set.encard ((fun z ↦ (z * (z - 1) / (b - 1), z)) ''
-        {z | z ∈ Set.Ico 2 b ∧ b - 1 ∣ z * (z - 1)}) := by
-      congr
-      ext ⟨x, z⟩
-      simp only [Set.mem_setOf_eq, Set.mem_image, Prod.mk.injEq, exists_eq_right_right]
-      simp only [and_assoc, and_congr_right_iff]
-      intro hz
-      refine ⟨?_, ?_⟩
-      · intro h
-        refine ⟨?_, ?_⟩
-        · exact Dvd.intro_left x h.symm
-        · refine (Nat.eq_div_of_mul_eq_left ?_ h.symm).symm
-          exact (Nat.zero_lt_sub_of_lt hb).ne'
-      · intro ⟨h, hx⟩
-        exact Nat.eq_mul_of_div_eq_left h hx
-
-    _ = Set.encard {z | z ∈ Set.Ico 2 b ∧ b - 1 ∣ z * (z - 1)} :=
-      Function.Injective.encard_image (fun z z' ↦ by simp) _
-
+      ext z
+      simp [dvd_iff_exists_eq_mul_left]
 
   refine ⟨?_, ?_⟩
-  · simp only [Set.mem_setOf_eq, Nat.reduceLeDiff, Nat.add_one_sub_one, true_and]
-    -- TODO: Rewrite `Finset.filter` as below?
+  · -- As will be shown below, it suffices to consider `z = c * m` and `z - 1 = d * m`
+    -- where `m` and `n` are coprime and `b - 1 = m * n`.
+    -- That is, `m` and `n` correspond to a partition of the prime factors of `b - 1`.
+    -- To find `c` and `d`, we require `1 = c * m - d * n` with `0 ≤ c, d`.
+    -- Since `m` and `n` are coprime, the extended Euclidean algorithm can be used.
+    -- Here, we simply check all `z` in the range `2 ≤ z < b` exhaustively.
+    simp only [Set.mem_setOf_eq]
+    refine ⟨by norm_num, ?_⟩
     calc _
     _ = {z ∈ Finset.Ico 2 211 | 210 ∣ z * (z - 1)}.toSet.encard := by simp
     _ > 10 := by
@@ -199,11 +216,10 @@ theorem number_theory_93241 :
 
   rw [mem_lowerBounds]
   simp only [Set.mem_setOf_eq, and_imp]
-
   intro b hb
+  -- Prove the contrapositive.
   suffices b < 211 → {z | z ∈ Set.Ico 2 b ∧ b - 1 ∣ z * (z - 1)}.encard ≤ 10 by simpa using mt this
   intro hb_lt
-
 
   calc _
   _ ≤ Set.encard ((fun (z, m, n) ↦ z) '' {(z, m, n) : ℕ × ℕ × ℕ | z ∈ Set.Ico 2 b ∧
@@ -343,7 +359,6 @@ theorem number_theory_93241 :
         refine Finset.prod_le_prod' fun p hp ↦ Nat.le_self_pow ?_ p
         exact Finsupp.mem_support_iff.mp hp
       _ = _ := Nat.factorization_prod_pow_eq_self (Nat.zero_lt_sub_of_lt hb).ne'
-
 
     -- Perform induction on the size of the set.
     -- We will remove the largest element from each set and recurse on the remainder.

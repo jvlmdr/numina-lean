@@ -7,6 +7,7 @@ import Numina.AIME_97068
 import Numina.AIME_97639
 import Numina.AIME_97905
 import Numina.AIME_98439
+import Numina.AIME_bBeautiful
 import Numina.AMC_65302
 import Numina.AMC_93411
 import Numina.AMC_93855
