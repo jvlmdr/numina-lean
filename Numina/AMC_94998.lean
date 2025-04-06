@@ -53,7 +53,7 @@ theorem number_theory_94998 (r : ℕ → ℕ) (hr : ∀ n, r n = ∑ k in .Icc 2
   _ = Finset.card {n ∈ .Ioc 10 100 | ∑ k ∈ .Icc 2 10, (if k ∣ n then k else 0) = 9} := by
     simp [Nat.Ico_succ_succ]
 
-  _ = Finset.card {n ∈ .Ioc 10 100 | (2 ∣ n) ∧ ¬(3 ∣ n) ∧ ¬(4 ∣ n) ∧ ¬(5 ∣ n) ∧ (7 ∣ n)} := by
+  _ = Finset.card {n ∈ .Ioc 10 100 | 2 ∣ n ∧ ¬3 ∣ n ∧ ¬4 ∣ n ∧ ¬5 ∣ n ∧ 7 ∣ n} := by
     congr
     ext n
     -- If `2 ∣ n`, then some subset of [3, 10] must equal 7.
@@ -171,15 +171,50 @@ theorem number_theory_94998 (r : ℕ → ℕ) (hr : ∀ n, r n = ∑ k in .Icc 2
         suffices ∀ s ∈ Finset.powerset {3, 5, 7}, ∑ k ∈ s, k ≠ 9 from this _ (by simp)
         decide
 
-  _ = Finset.card {n ∈ .Ioc 10 100 | n.factorization 2 = 1 ∧ n.factorization 3 = 0 ∧
-      n.factorization 5 = 0 ∧ 1 ≤ n.factorization 7} := by
-    sorry
-
-  -- _ = Set.ncard {k : ℕ | 14 * k ∈ Finset.Ioc 10 100 ∧ ¬2 ∣ k ∧ ¬3 ∣ k ∧ ¬5 ∣ k} := by
-  --   sorry
-
-  _ = Finset.card {2 * 7, 2 * 7 * 7} := by
+  _ = Finset.card (.image (2 * 7 * ·) {k ∈ .Icc 1 7 | ¬2 ∣ k ∧ ¬3 ∣ k ∧ ¬5 ∣ k}) := by
     refine congrArg Finset.card ?_
-    sorry
+    ext n
+    simp only [Finset.mem_filter, Finset.mem_Ioc, Finset.mem_image, Finset.mem_Icc]
+    refine ⟨?_, ?_⟩
+    · refine fun ⟨hn, h2, h3, h4, h5, h7⟩ ↦ ?_
+      obtain ⟨k, hk⟩ : 2 * 7 ∣ n := Nat.Coprime.mul_dvd_of_dvd_of_dvd (by norm_num) h2 h7
+      refine ⟨k, ⟨?_, ?_⟩, hk.symm⟩
+      · refine ⟨?_, ?_⟩ <;> linarith
+      · refine ⟨?_, ?_, ?_⟩
+        · contrapose! h4
+          exact hk ▸ Nat.mul_dvd_mul (Nat.dvd_mul_right 2 7) h4
+        · contrapose! h3
+          exact hk ▸ h3.trans (Nat.dvd_mul_left k _)
+        · contrapose! h5
+          exact hk ▸ h5.trans (Nat.dvd_mul_left k _)
+    · refine fun ⟨k, ⟨hk, ⟨h2, h3, h5⟩⟩, hn⟩ ↦ ⟨?_, ?_⟩
+      · rw [← hn]
+        refine ⟨?_, ?_⟩ <;> linarith
+      · rw [← hn]
+        refine ⟨?_, ?_, ?_, ?_, ?_⟩
+        · convert Nat.dvd_mul_right 2 (7 * k) using 1
+          ring
+        · contrapose! h3
+          exact Nat.Coprime.dvd_of_dvd_mul_left (by norm_num) h3
+        · suffices ¬2 ∣ 7 * k by
+            contrapose! this
+            refine (Nat.mul_dvd_mul_iff_left two_pos).mp ?_
+            convert this using 1
+            ring
+          contrapose! h2
+          exact Nat.Coprime.dvd_of_dvd_mul_left (by norm_num) h2
+        · contrapose! h5
+          exact Nat.Coprime.dvd_of_dvd_mul_left (by norm_num) h5
+        · convert Nat.dvd_mul_right 7 (2 * k) using 1
+          ring
 
+  --
+  _ = Finset.card {k ∈ .Icc 1 7 | ¬2 ∣ k ∧ ¬3 ∣ k ∧ ¬5 ∣ k} := by
+    refine Finset.card_image_of_injective _ ?_
+    refine mul_right_injective₀ ?_
+    norm_num
+  --
+  _ = Finset.card {1, 7} := by
+    refine congrArg Finset.card ?_
+    rfl
   _ = 2 := rfl
