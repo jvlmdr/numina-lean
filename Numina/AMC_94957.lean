@@ -24,65 +24,49 @@ theorem algebra_94957 {p : ℝ → ℂ}
   suffices ∀ x, p x ≠ 0 by simp [this]
   intro x
 
-  -- Rewrite as intersection of complex cubic with unit circle.
-  suffices ∀ a : ℂ, ‖a‖ = 1 → 1 + a - a ^ 2 + a ^ 3 ≠ 0 from
+  -- Rewrite as intersection of a complex cubic with the unit circle.
+  suffices ∀ a, abs a = 1 → 1 + a - a ^ 2 + a ^ 3 ≠ 0 from
     calc _
     _ = 1 + exp (x * I) - exp (2 * x * I) + exp (3 * x * I) := by
       simp only [hp, exp_mul_I]
       ring
     _ = 1 + exp (x * I) - exp (x * I) ^ 2 + exp (x * I) ^ 3 := by
       simp [← exp_nat_mul, mul_assoc]
-    _ ≠ 0 := this (cexp (x * I)) (norm_exp_ofReal_mul_I x)
+    _ ≠ 0 := this (cexp (x * I)) (abs_exp_ofReal_mul_I x)
   intro a ha
 
+  -- Note that we can re-write `a^3 + a = a^2 (a + a⁻¹)` with `a + a⁻¹ = 2 * a.re` for `|a| = 1`.
+  -- This means that we have `r • a ^ 2 = -1` with `r = 2 * a.re - 1` real.
   intro h
-
-  have h_alt : 1 - a ^ 2 + a * (a ^ 2 + 1) = 0 := .trans (by ring) h
-  revert h_alt
-  simp only [imp_false]
-
-  have h : 1 + a ^ 2 * (a + a⁻¹ - 1) = 0 :=
+  obtain ⟨r, hra⟩ : ∃ r : ℝ, r • a ^ 2 = -1 := by
+    use 2 * a.re - 1
+    suffices 1 + (2 * a.re - 1) • a ^ 2 = 0 from (neg_eq_of_add_eq_zero_right this).symm
     calc _
-    _ = 1 + (a ^ 3 + a - a ^ 2) := by
-      rw [mul_sub, mul_add, mul_one]
-      congr
-      simp [sq]
+    _ = 1 + a ^ 2 * (a + a⁻¹ - 1) := by
+      suffices a + a⁻¹ = 2 * a.re by simp [this, mul_comm (a ^ 2)]
+      -- Use `a⁻¹ = conj a / |a| ^ 2` and `|a| = 1`.
+      calc _
+      _ = a + starRingEnd ℂ a := by
+        rw [inv_def]
+        simp [Complex.normSq_eq_abs, ha]
+      _ = _ := by simp [Complex.add_conj]
+    -- Expand the factored expression.
+    _ = 1 + (a ^ 3 + a - a ^ 2) := by simp [mul_sub, mul_add, pow_succ]
     _ = 1 + a - a ^ 2 + a ^ 3 := by ring
     _ = 0 := h
 
-  have h_re : (a + a⁻¹) = 2 * a.re :=
-    calc _
-    _ = a + starRingEnd ℂ a := by simp [inv_def, Complex.normSq_eq_norm_sq, ha]
-    _ = _ := by simp [Complex.add_conj]
-
-  have h : ∃ r : ℝ, 1 + a ^ 2 * r = 0 := by
-    use 2 * a.re - 1
-    calc _
-    _ = 1 + a ^ 2 * (a + a⁻¹ - 1) := by simp [h_re]
-    _ = _ := h
-
-  have h : ∃ r : ℝ, r • a ^ 2 = -1 := by
-    simp
-    refine h.imp fun r hr ↦ ?_
-    suffices r * a ^ 2 + 1 = 0 from (neg_eq_of_add_eq_zero_left this).symm
-    convert hr using 1
-    ring
-
-  rcases h with ⟨r, h⟩
-
-  have : r = 1 ∨ r = -1 := by
-    simp [norm_eq_abs] at ha  -- TODO: Revise!
+  -- Since `a` has norm 1 and `|r| |a|^2 = 1`, we have `r = 1` or `r = -1`.
+  have hr : r = 1 ∨ r = -1 := by
     refine eq_or_eq_neg_of_abs_eq ?_
-    simpa [ha] using congrArg (‖·‖) h
+    simpa [ha] using congrArg abs hra
 
-  cases this with
+  suffices 1 + a * (a ^ 2 + 1) - a ^ 2 ≠ 0 from this (.trans (by ring) h)
+  cases hr with
   | inl hr =>
-    simp [hr] at h
-    simp [h]
+    have ha : a ^ 2 = -1 := by simpa [hr] using hra
+    simp [ha]
   | inr hr =>
-    rw [hr] at h
-    simp only [neg_smul, one_smul, neg_inj] at h
-    simp [h]
-
-    suffices ‖a‖ ≠ 0 by simpa using this
+    suffices ‖a‖ ≠ 0 by
+      have ha : a ^ 2 = 1 := by simpa [hr] using hra
+      simpa [ha] using this
     simp [ha]
