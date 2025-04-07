@@ -1,3 +1,5 @@
+
+
 import Mathlib
 
 /- For $n$ a positive integer, let $R(n)$ be the sum of the remainders when $n$ is divided by
@@ -7,8 +9,8 @@ How many two-digit positive integers $n$ satisfy $R(n) = R(n+1)$?
 (A) 0, (B) 1, (C) 2, (D) 3, (E) 4 -/
 
 theorem number_theory_94998 (r : ℕ → ℕ) (hr : ∀ n, r n = ∑ k in .Icc 2 10, n % k) :
-    Finset.card {n ∈ .Icc 10 99 | r n = r (n + 1)} = 2 := by
-  -- We could obtain this proof directly using `decide`.
+    Finset.card {n ∈ .Ico 10 100 | r n = r (n + 1)} = 2 := by
+  -- Note that we could obtain this proof directly using `decide`.
   -- However, we prefer to obtain a proof that provides some insight into the problem.
 
   -- Note that we can add $9$ to $R(n)$ to get $R(n + 1)$, but must subtract $k$ for all $k|n+1$.
@@ -32,24 +34,22 @@ theorem number_theory_94998 (r : ℕ → ℕ) (hr : ∀ n, r n = ∑ k in .Icc 2
       · abel
     _ = _ := by simp [hr, Finset.sum_add_distrib]
 
-  have h_succ' (n) : r n = r (n + 1) ↔ (∑ k in .Icc 2 10, if k ∣ n + 1 then k else 0) = 9 :=
-    calc _
-    _ ↔ r (n + 1) + ∑ k in .Icc 2 10, (if k ∣ n + 1 then k else 0) = r (n + 1) + 9 := by
-      rw [h_succ, Nat.add_left_inj]
-    _ ↔ _ := by
-      rw [Nat.add_right_inj]
-  simp only [h_succ'] -- TODO: Suffices?
-
   calc _
-  _ = Finset.card {n ∈ .Ico 10 100 | ∑ k ∈ .Icc 2 10, (if k ∣ n + 1 then k else 0) = 9} :=
-    rfl  -- TODO: Rephrase earlier to eliminate.
+  _ = Finset.card {n ∈ .Ico 10 100 | (∑ k ∈ .Icc 2 10, if k ∣ n + 1 then k else 0) = 9} := by
+    congr 1
+    refine Finset.filter_congr ?_
+    intro n hn
+    calc _
+    _ ↔ r n + 9 = r (n + 1) + 9 := by rw [Nat.add_left_inj]
+    _ ↔ r (n + 1) + ∑ k in .Icc 2 10, (if k ∣ n + 1 then k else 0) = r (n + 1) + 9 := by
+      rw [h_succ]
+    _ ↔ _ := by rw [Nat.add_right_inj]
+
   -- Express in terms of `n + 1` rather than `n`.
-  -- TODO: Could happen earlier?
   _ = Finset.card {n ∈ .map (addRightEmbedding 1) (.Ico 10 100) |
       ∑ k ∈ .Icc 2 10, (if k ∣ n then k else 0) = 9} := by
     rw [Finset.filter_map]
     simp [Function.comp_def]
-  -- TODO: Merge with above if it doesn't get moved?
   _ = Finset.card {n ∈ .Ioc 10 100 | ∑ k ∈ .Icc 2 10, (if k ∣ n then k else 0) = 9} := by
     simp [Nat.Ico_succ_succ]
 
@@ -74,57 +74,55 @@ theorem number_theory_94998 (r : ℕ → ℕ) (hr : ∀ n, r n = ∑ k in .Icc 2
           simp [h2, add_comm 2, Nat.Icc_succ_left]
         · simp [h2]
       by_cases h3 : 3 ∣ n
-      · -- Extract 3 from the sum. TODO: Combine?
-        suffices ∑ a ∈ .filter (· ∣ n) (.Icc 3 10), a ≠ 7 by simpa [h3] using this
+      · -- Extract 3 from the sum; prove that sum cannot be achieved.
         suffices ∑ a ∈ .filter (· ∣ n) (.Icc 4 10), a ≠ 4 by
           rw [Finset.sum_filter] at this ⊢
           rw [Finset.Icc_eq_cons_Ioc (by norm_num), Finset.sum_cons]
           simpa [h3, add_comm 3] using this
-        calc _
         -- Extract 6 from the sum.
-        _ = ∑ a ∈ insert 6 (.filter (· ∣ n) (.erase (.Icc 4 10) 6)), a := by
-          congr 1
-          calc _
-          _ = .filter (· ∣ n) (insert 6 (.erase (.Icc 4 10) 6)) := by
-            rw [Finset.insert_erase]
-            norm_num
-          _ = _ := by
-            rw [Finset.filter_insert]
-            have h6 : 6 ∣ n := Nat.Coprime.mul_dvd_of_dvd_of_dvd rfl h2 h3
-            simp [h6]
+        have h6 : 6 ∣ n := Nat.Coprime.mul_dvd_of_dvd_of_dvd rfl h2 h3
+        calc _
+        _ = ∑ a ∈ .filter (· ∣ n) (insert 6 (.erase (.Icc 4 10) 6)), a := by
+          rw [Finset.insert_erase (by norm_num)]
+        _ = 6 + ∑ a ∈ .filter (· ∣ n) (.erase (.Icc 4 10) 6), a := by
+          rw [Finset.filter_insert]
+          simp [h6]
         _ ≠ 4 := by simp [add_comm 6]
       · by_cases h7 : 7 ∣ n
-        · suffices ∑ a ∈ .filter (fun x ↦ x ∣ n) (.Icc 3 10), a = 7 ↔ ¬3 ∣ n ∧ ¬4 ∣ n ∧ ¬5 ∣ n by
+        · -- Eliminate 7 from the right-hand side.
+          suffices ∑ a ∈ .filter (fun x ↦ x ∣ n) (.Icc 3 10), a = 7 ↔ ¬3 ∣ n ∧ ¬4 ∣ n ∧ ¬5 ∣ n by
             simpa [h7] using this
-          -- Extract 7 from the sum.
-          suffices ∑ a ∈ insert 7 (.filter (· ∣ n) (.erase (.Icc 3 10) 7)), a = 7 ↔
+          -- Extract 7 from the sum on the left-hand side.
+          suffices ∑ a ∈ .filter (· ∣ n) (.Icc 3 6 ∪ .Icc 8 10), a = 0 ↔
               ¬3 ∣ n ∧ ¬4 ∣ n ∧ ¬5 ∣ n by
-            convert this using 3
             calc _
-            _ = .filter (· ∣ n) (insert 7 (.erase (.Icc 3 10) 7)) := by
-              rw [Finset.insert_erase]
-              norm_num
-            _ = _ := by
+            _ ↔ ∑ a ∈ .filter (· ∣ n) (insert 7 (.erase (.Icc 3 10) 7)), a = 7 := by
+              rw [Finset.insert_erase (by norm_num)]
+            _ ↔ ∑ a ∈ insert 7 (.filter (· ∣ n) (.erase (.Icc 3 10) 7)), a = 7 := by
               rw [Finset.filter_insert]
               simp [h7]
-          suffices ∑ a ∈ .filter (· ∣ n) (.erase (.Icc 3 10) 7), a = 0 ↔
-              ¬3 ∣ n ∧ ¬4 ∣ n ∧ ¬5 ∣ n by simpa using this
-          change ∑ a ∈ .filter (· ∣ n) (.Icc 3 6 ∪ .Icc 8 10), a = 0 ↔ ¬3 ∣ n ∧ ¬4 ∣ n ∧ ¬5 ∣ n
+            _ ↔ ∑ a ∈ .filter (· ∣ n) (.erase (.Icc 3 10) 7), a = 0 := by
+              simp [add_comm 7]
+            _ ↔ ∑ a ∈ .filter (· ∣ n) (.Icc 3 6 ∪ .Icc 8 10), a = 0 := Iff.rfl
+            _ ↔ _ := this
           rw [Finset.sum_filter]
           rw [Finset.sum_union (Finset.disjoint_iff_inter_eq_empty.mpr rfl)]
+          -- For all terms of the sum to be zero, none of the remaining `k` can divide `n`.
+          -- For 6, 8, 9, 10, this follows from 3, 4, 5.
           suffices ¬3 ∣ n → ¬4 ∣ n → ¬5 ∣ n → ¬6 ∣ n ∧ ¬8 ∣ n ∧ ¬9 ∣ n ∧ ¬10 ∣ n by
             simpa [Finset.sum_Icc_succ_top (Nat.le_add_left 3 _),
               Finset.sum_Icc_succ_top (Nat.le_add_left 8 _), and_assoc] using this
           intro h3 h4 h5
           refine ⟨?_, ?_, ?_, ?_⟩
-          · change ¬2 * 3 ∣ n
+          · suffices ¬2 * 3 ∣ n by simpa using this
             exact mt dvd_of_mul_left_dvd h3
-          · change ¬2 * 4 ∣ n
+          · suffices ¬2 * 4 ∣ n by simpa using this
             exact mt dvd_of_mul_left_dvd h4
-          · change ¬3 * 3 ∣ n
+          · suffices ¬3 * 3 ∣ n by simpa using this
             exact mt dvd_of_mul_left_dvd h3
-          · change ¬2 * 5 ∣ n
+          · suffices ¬2 * 5 ∣ n by simpa using this
             exact mt dvd_of_mul_left_dvd h5
+
         · suffices ∑ a ∈ .filter (· ∣ n) (.Icc 3 10), a ≠ 7 by simpa [h7] using this
           calc _
           -- Exclude multiples of 3 and 7 from the sum.
@@ -142,35 +140,39 @@ theorem number_theory_94998 (r : ℕ → ℕ) (hr : ∀ n, r n = ∑ k in .Icc 2
             suffices ∀ s ∈ Finset.powerset {4, 5, 8, 10}, ∑ k ∈ s, k ≠ 7 from this _ (by simp)
             decide
 
-    · suffices ∑ a ∈ .filter (· ∣ n) (.Icc 2 10), a ≠ 9 by simpa [h2] using this
+    · -- Prove that sum cannot be achieved.
+      suffices ∑ a ∈ .filter (· ∣ n) (.Icc 2 10), a ≠ 9 by simpa [h2] using this
       -- Exclude all k such that `2 ∣ k`.
-      suffices ∑ a ∈ .filter (fun k ↦ ¬2 ∣ k ∧ k ∣ n) (.Icc 2 10), a ≠ 9 by
+      suffices ∑ a ∈ .filter (fun k ↦ ¬2 ∣ k ∧ k ∣ n) (.Icc 3 9), a ≠ 9 by
         convert this using 2
-        ext k
-        simp only [Finset.mem_filter, and_congr_right_iff, iff_and_self]
-        exact fun _ hk ↦ mt (fun h2 ↦ h2.trans hk) h2
+        calc _
+        _ = Finset.filter (fun k ↦ ¬2 ∣ k ∧ k ∣ n) (.Icc 2 10) := by
+          ext k
+          simp only [Finset.mem_filter, and_congr_right_iff, iff_and_self]
+          intro _ hkn
+          contrapose! h2
+          exact h2.trans hkn
+        _ = _ := rfl
       -- It now remains to find a subset of {3, 5, 7, 9} whose sum is 9.
-      change ∑ a ∈ .filter (fun k ↦ ¬2 ∣ k ∧ k ∣ n) (.Icc 3 9), a ≠ 9
       by_cases h9 : 9 ∣ n
       · -- If `9 ∣ n` then `3 ∣ n` also, and the sum exceeds 9.
         have h3 : 3 ∣ n := .trans (by norm_num) h9
         simp [Finset.sum_filter, Finset.sum_Icc_succ_top (Nat.le_add_left 3 _), h3, h9]
-      · -- Eliminate 9 from the sum.
-        suffices ∑ a ∈ .filter (fun k ↦ ¬2 ∣ k ∧ k ∣ n) (.Icc 3 7), a ≠ 9 by
-          convert this using 2
-          ext k
-          simp only [Finset.mem_filter, and_congr_left_iff, and_imp]
-          intro hk2 hk
-          have hk9 : ¬9 ∣ k := mt (fun h9 ↦ h9.trans hk) h9
-          simp only [Finset.mem_Icc, and_congr_right_iff]
-          intro _
-          omega
-        rw [← Finset.filter_filter]
-        change ∑ a ∈ .filter (fun k ↦ k ∣ n) {3, 5, 7}, a ≠ 9
-        -- There does not exist a subset of {3, 5, 7} that sums to 9.
-        suffices ∀ s ∈ Finset.powerset {3, 5, 7}, ∑ k ∈ s, k ≠ 9 from this _ (by simp)
-        decide
+      · calc _
+        -- Eliminate 9 from the sum.
+        _ = ∑ a ∈ .filter (fun k ↦ ¬2 ∣ k ∧ k ∣ n) (.Icc 3 8), a := by
+          simp [Finset.sum_filter, Finset.sum_Icc_succ_top (by norm_num : 3 ≤ 9), h9]
+        -- The filter will give a subset of {3, 5, 7}.
+        _ = ∑ a ∈ .filter (· ∣ n) (.filter (¬2 ∣ ·) (.Icc 3 8)), a := by
+          rw [Finset.filter_filter]
+        _ = ∑ a ∈ .filter (· ∣ n) {3, 5, 7}, a := rfl
+        _ ≠ _ := by
+          -- There does not exist a subset of {3, 5, 7} that sums to 9.
+          suffices ∀ s ∈ Finset.powerset {3, 5, 7}, ∑ k ∈ s, k ≠ 9 from this _ (by simp)
+          decide
 
+  -- Re-parameterize `n = 2 * 7 * k` where `k` has no factors of 2, 3, 5.
+  -- 10 < n ≤ 100 is equivalent to 1 ≤ k ≤ 7
   _ = Finset.card (.image (2 * 7 * ·) {k ∈ .Icc 1 7 | ¬2 ∣ k ∧ ¬3 ∣ k ∧ ¬5 ∣ k}) := by
     refine congrArg Finset.card ?_
     ext n
@@ -208,12 +210,10 @@ theorem number_theory_94998 (r : ℕ → ℕ) (hr : ∀ n, r n = ∑ k in .Icc 2
         · convert Nat.dvd_mul_right 7 (2 * k) using 1
           ring
 
-  --
   _ = Finset.card {k ∈ .Icc 1 7 | ¬2 ∣ k ∧ ¬3 ∣ k ∧ ¬5 ∣ k} := by
     refine Finset.card_image_of_injective _ ?_
     refine mul_right_injective₀ ?_
     norm_num
-  --
   _ = Finset.card {1, 7} := by
     refine congrArg Finset.card ?_
     rfl
