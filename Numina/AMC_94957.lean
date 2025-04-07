@@ -48,8 +48,8 @@ theorem algebra_94957 {p : ℝ → ℂ}
       calc _
       _ = a + starRingEnd ℂ a := by
         rw [inv_def]
-        simp [Complex.normSq_eq_abs, ha]
-      _ = _ := by simp [Complex.add_conj]
+        simp [normSq_eq_abs, ha]
+      _ = _ := by simp [add_conj]
     -- Expand the factored expression.
     _ = 1 + (a ^ 3 + a - a ^ 2) := by simp [mul_sub, mul_add, pow_succ]
     _ = 1 + a - a ^ 2 + a ^ 3 := by ring
@@ -60,13 +60,14 @@ theorem algebra_94957 {p : ℝ → ℂ}
     refine eq_or_eq_neg_of_abs_eq ?_
     simpa [ha] using congrArg abs hra
 
+  -- Having derived this constraint on `a ^ 2`, we restore the negative goal.
+  -- Collect terms of `a ^ 2` to simplify the solution.
   suffices 1 + a * (a ^ 2 + 1) - a ^ 2 ≠ 0 from this (.trans (by ring) h)
   cases hr with
   | inl hr =>
-    have ha : a ^ 2 = -1 := by simpa [hr] using hra
-    simp [ha]
+    have ha_eq : a ^ 2 = -1 := by simpa [hr] using hra
+    simp [ha_eq]
   | inr hr =>
-    suffices ‖a‖ ≠ 0 by
-      have ha : a ^ 2 = 1 := by simpa [hr] using hra
-      simpa [ha] using this
+    have ha_eq : a ^ 2 = 1 := by simpa [hr] using hra
+    suffices ‖a‖ ≠ 0 by simpa [ha_eq] using this
     simp [ha]
