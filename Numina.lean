@@ -30,5 +30,6 @@ import Numina.problem_205729
 import Numina.problem_209992
 import Numina.problem_221516
 import Numina.problem_247723
+import Numina.problem_289784
 import Numina.problem_295444
 import Numina.problem_def
