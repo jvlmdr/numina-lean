@@ -7,7 +7,7 @@ open Polynomial
 /- If both solutions of the equations $x^2 + p x + q = 0$ and $x^2 + p x - q = 0$ are integers,
 prove that there exist integers $a$ and $b$ such that $p^2 = a^2 + b^2$. -/
 
-theorem algebra_221516' {p q : ℝ}
+theorem algebra_221516 {p q : ℝ}
     (h₁ : ∃ x₁ x₂ : ℤ, (X ^ 2 + C p * X + C q : ℝ[X]).roots = {↑x₁, ↑x₂})
     (h₂ : ∃ y₁ y₂ : ℤ, (X ^ 2 + C p * X - C q : ℝ[X]).roots = {↑y₁, ↑y₂}) :
     ∃ a b : ℤ, p ^ 2 = a ^ 2 + b ^ 2 := by
