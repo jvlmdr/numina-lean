@@ -50,7 +50,7 @@ theorem algebra_117773 {f g : ℝ → ℝ} (hf : ∃ c, ∀ x, f x = x ^ 2 + c)
       convert this using 1
       ring
     refine .sub ?_ ?_
-    · simp only [funext hg]
+    · rw [funext hg]
       refine .comp x ?_ (hf' x)
       rw [hf x]
       exact hf' (x ^ 2 + 1)
