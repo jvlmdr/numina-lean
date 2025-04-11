@@ -25,6 +25,7 @@ import Numina.problem_117773
 import Numina.problem_138682
 import Numina.problem_139053
 import Numina.problem_159432
+import Numina.problem_178166
 import Numina.problem_180196
 import Numina.problem_198296
 import Numina.problem_200534
