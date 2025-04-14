@@ -5,12 +5,12 @@ import Mathlib
 open Real
 
 /- For any real numbers $a, b, c$, prove that there exists a real number $x$ such that
-$a \cos x + b \cos 3x + c \cos 9x \ge \frac{1}{2}(|a| + |b| + |c|)$. -/
+$a \cos x + b \cos 3 x + c \cos 9 x \ge \frac{1}{2}(|a| + |b| + |c|)$. -/
 
 theorem inequalities_129966 (a b c : ℝ) :
     ∃ x, a * cos x + b * cos (3 * x) + c * cos (9 * x) ≥ (|a| + |b| + |c|) / 2 := by
   -- Rewrite the condition as separate inequalities.
-  -- TODO: Write as something times k?
+  -- Write as a multiple of `π` to simplify use of `norm_num`.
   suffices ∃ k, |a| / 2 ≤ a * cos (k * π) ∧ |b| / 2 ≤ b * cos (3 * k * π) ∧
       |c| / 2 ≤ c * cos (9 * k * π) by
     refine this.imp' (· * π) fun k ⟨hxa, hxb, hxc⟩ ↦ ?_
@@ -67,6 +67,8 @@ theorem inequalities_129966 (a b c : ℝ) :
     convert mul_le_mul_of_nonpos_left (h_cos_odd_add_neg_half hk hr) ha using 1
     simp [neg_div, div_eq_mul_inv]
 
+  -- Now it suffices to find an angle `x` such that `x`, `3 x`, `9 x` have the
+  -- desired value modulo `2 π` for each of the cases.
   cases le_or_lt 0 a with
   | inl ha =>
     cases le_or_lt 0 b with
