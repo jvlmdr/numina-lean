@@ -36,8 +36,7 @@ theorem algebra_113877 {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) (h : A^3 = A +
     _ = A + 1 + A ^ 2 := by rw [h]
     _ = _ := by noncomm_ring
 
-  -- Factorize `A ^ 2 + A + I` into `A^2 + A + I = (A - z I)(A - z* I)`.
-  -- The roots are the conjugate pair of `z = (-1+i√3)/2 = e^(2π/3 i)`.
+  -- Factorize `A^2 + A + I = (A - z I)(A - z* I)` with `z = (-1+i√3)/2 = e^(2π/3 i)`.
   -- Then show that the determinant is non-negative since
   -- `det(A^2 + A + I) = det(A - z I) det(A - z I)*`.
   let r := 2 * π / 3
