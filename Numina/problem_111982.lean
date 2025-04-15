@@ -12,18 +12,20 @@ b) $f(n) ∈ \mathbb{R} \setminus \mathbb{Q}$ for all $n \in \mathbb{N}^{*}$. -/
 theorem calculus_111982 (f : ℝ → ℝ) (hf : ∀ x, f x = x + logb 3 (1 + 3 ^ x)) :
     (∃ g : ℝ → ℝ, (g.LeftInverse f ∧ g.RightInverse f) ∧ ∀ x, g x < f x) ∧
     ∀ n : ℕ, n ≠ 0 → Irrational (f n) := by
-  -- y = f x = x + log_3 (1 + 3^x)
-  -- 3^y = (3^x)^2 + (3^x)
-  -- 0 = (3^x)^2 + (3^x) - 3^y where 0 < 3^x, 3^y.
-  -- 3^x = (-1 ± √(1 + 4 * 3^y)) / 2
-  -- x = log_3 (√(1 + 4 * 3^y) - 1) - log_3 2
   constructor
-  · let g : ℝ → ℝ := fun y ↦ logb 3 ((√(4 * 3^y + 1) - 1) / 2)
-    -- TODO: More comments; restructure?
-    have h_inv (x y : ℝ) : y = f x ↔ x = g y := by
+  · -- Find `g` such that `f x = y ↔ g y = x`:
+    -- y = f x = x + log_3 (1 + 3^x)
+    -- 3^y = (3^x)^2 + (3^x)
+    -- 0 = (3^x)^2 + (3^x) - 3^y where 0 < 3^x, 3^y
+    -- 3^x = (-1 ± √(1 + 4 * 3^y)) / 2
+    -- x = log_3 (√(1 + 4 * 3^y) - 1) - log_3 2 = g x
+    let g : ℝ → ℝ := fun y ↦ logb 3 ((√(4 * 3^y + 1) - 1) / 2)
+    use g
+    have h_inv (x y : ℝ) : f x = y ↔ g y = x := by
       rw [hf]
       unfold g
-      calc y = x + logb 3 (1 + 3 ^ x)
+      calc x + logb 3 (1 + 3 ^ x) = y
+      _ ↔ y = x + logb 3 (1 + 3 ^ x) := eq_comm
       _ ↔ (3 ^ y : ℝ) = 3 ^ (x + logb 3 (1 + 3 ^ x)) :=
         (strictMono_rpow_of_base_gt_one (by norm_num)).injective.eq_iff.symm
       _ ↔ (3 ^ y : ℝ) = 3 ^ x * (1 + 3 ^ x) := by
@@ -59,40 +61,26 @@ theorem calculus_111982 (f : ℝ → ℝ) (hf : ∀ x, f x = x + logb 3 (1 + 3 ^
         suffices √1 < √(4 * 3 ^ y + 1) by simpa using this
         refine sqrt_lt_sqrt one_pos.le ?_
         simpa using rpow_pos_of_pos three_pos y
-      _ ↔ _ := eq_comm
 
-    use g
-    refine ⟨⟨?_, ?_⟩, ?_⟩
-    · exact fun x ↦ .symm <| (h_inv x _).mp rfl
-    · exact fun y ↦ .symm <| (h_inv _ y).mpr rfl
-    · -- Since x < f x, we have g x < x.
-      -- The inverse function is a reflection about y = x.
-      suffices ∀ x, x < f x by
-        suffices hg_mono : StrictMono g by
-          intro x
-          calc _
-          _ < g (f x) := hg_mono (this x)
-          _ = x := ((h_inv x _).mp rfl).symm
-          _ < _ := this x
-        unfold g
-        intro a b hab
-        refine logb_lt_logb (by norm_num) ?_ ?_
-        · suffices √1 < √(4 * 3 ^ a + 1) by simpa using this
-          refine sqrt_lt_sqrt one_pos.le ?_
-          simpa using rpow_pos_of_pos three_pos a
-        refine div_lt_div_of_pos_right ?_ two_pos
-        rw [sub_lt_sub_iff_right]
-        refine sqrt_lt_sqrt ?_ ?_
-        · refine add_nonneg ?_ zero_le_one
-          simpa using rpow_nonneg three_pos.le a
-        simpa using hab
+    have h_leftInv : g.LeftInverse f := fun x ↦ (h_inv x (f x)).mp rfl
+    have h_rightInv : g.RightInverse f := fun y ↦ (h_inv (g y) y).mpr rfl
+    refine ⟨⟨h_leftInv, h_rightInv⟩, ?_⟩
+    -- The inverse function is a reflection about y = x.
+    -- Therefore, x < f x implies g x < x < f x.
+    suffices ∀ x, x < f x by
       intro x
-      rw [hf, lt_add_iff_pos_right]
-      refine logb_pos (by norm_num) ?_
-      rw [lt_add_iff_pos_right]
-      exact rpow_pos_of_pos three_pos x
+      calc _
+      _ < f (g x) := this (g x)
+      _ = x := h_rightInv x
+      _ < _ := this x
+    intro x
+    rw [hf, lt_add_iff_pos_right]
+    refine logb_pos (by norm_num) ?_
+    rw [lt_add_iff_pos_right]
+    exact rpow_pos_of_pos three_pos x
 
-  · intro n hn
+  · -- Prove that `f n` is irrational for `n` a positive natural number.
+    intro n hn
     suffices Irrational (logb 3 (1 + 3 ^ n)) by simpa [hf] using this
     suffices ∀ (q : ℚ), ↑q ≠ logb 3 (1 + 3 ^ n) by simpa [Irrational] using this
     intro q hq
