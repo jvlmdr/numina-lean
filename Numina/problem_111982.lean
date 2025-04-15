@@ -25,8 +25,10 @@ theorem calculus_111982 (f : ℝ → ℝ) (hf : ∀ x, f x = x + logb 3 (1 + 3 ^
       rw [hf]
       unfold g
       calc x + logb 3 (1 + 3 ^ x) = y
+      -- Take `3 ^` of both sides.
       _ ↔ 3 ^ (x + logb 3 (1 + 3 ^ x)) = (3 ^ y : ℝ) :=
         (strictMono_rpow_of_base_gt_one (by norm_num)).injective.eq_iff.symm
+      -- Re-arrange as quadratic and complete the square.
       _ ↔ 3 ^ x * (1 + 3 ^ x) = (3 ^ y : ℝ) := by
         refine Eq.congr_left ?_
         rw [rpow_add three_pos, rpow_logb three_pos (by norm_num)]
@@ -36,6 +38,7 @@ theorem calculus_111982 (f : ℝ → ℝ) (hf : ∀ x, f x = x + logb 3 (1 + 3 ^
         refine Eq.congr_left ?_
         ring
       _ ↔ (3 ^ x + 2⁻¹) ^ 2 = (3 ^ y + 4⁻¹ : ℝ) := sub_eq_iff_eq_add
+      -- Take `√` of both sides.
       _ ↔ √((3 ^ x + 2⁻¹) ^ 2) = √(3 ^ y + 4⁻¹) := by
         symm
         refine sqrt_inj (sq_nonneg _) ?_
@@ -45,6 +48,8 @@ theorem calculus_111982 (f : ℝ → ℝ) (hf : ∀ x, f x = x + logb 3 (1 + 3 ^
         refine sqrt_sq ?_
         refine add_nonneg (rpow_nonneg ?_ x) ?_ <;> norm_num
       _ ↔ 3 ^ x = √(3 ^ y + 4⁻¹) - 2⁻¹ := eq_sub_iff_add_eq.symm
+      -- Pull out factor of `2⁻¹` on right side.
+      -- This makes more immediate the fact that the `√(_) - _` expression is positive.
       _ ↔ 3 ^ x = 2⁻¹ * (√(4 * 3 ^ y + 1) - 1) := by
         refine Eq.congr_right ?_
         simp only [mul_sub, mul_one]
@@ -52,6 +57,7 @@ theorem calculus_111982 (f : ℝ → ℝ) (hf : ∀ x, f x = x + logb 3 (1 + 3 ^
         calc _
         _ = √(2⁻¹ ^ 2 * (4 * 3 ^ y + 1)) := congrArg sqrt (by ring)
         _ = _ := by simp
+      -- Take `logb 3` of both sides.
       _ ↔ 3 ^ x = (√(4 * 3 ^ y + 1) - 1) / 2 := by rw [inv_mul_eq_div]
       _ ↔ logb 3 ((√(4 * 3 ^ y + 1) - 1) / 2) = x := by
         symm
