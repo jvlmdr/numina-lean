@@ -15,7 +15,7 @@ theorem calculus_132790 (x : ℝ) (hx : x ≠ 2) (hx' : x ≠ -1) (C : ℝ) :
       ((2 * x^3 + 6 * x^2 + 5 * x + 4) / ((x - 2) * (x + 1)^3)) x := by
   -- The Lebesgue integral is not defined for intervals containing 2 and -1.
   -- Therefore we seek a function whose derivative is the desired function.
-  refine .add_const ?_ _
+  refine .add_const ?_ C
   simp only [log_abs, one_div]
 
   -- Decompose the proper rational fraction into partial fractions using
