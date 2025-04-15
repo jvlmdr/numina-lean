@@ -11,7 +11,7 @@ b) $f(n) ∈ \mathbb{R} \setminus \mathbb{Q}$ for all $n \in \mathbb{N}^{*}$. -/
 
 theorem calculus_111982 (f : ℝ → ℝ) (hf : ∀ x, f x = x + logb 3 (1 + 3 ^ x)) :
     (∃ g : ℝ → ℝ, (g.LeftInverse f ∧ g.RightInverse f) ∧ ∀ x, g x < f x) ∧
-    ∀ n, 0 < n → ¬∃ q : ℚ, f n = q := by
+    ∀ n : ℕ, n ≠ 0 → Irrational (f n) := by
 
   -- y = f x = x + log_3 (1 + 3^x)
   -- 3^y = (3^x)^2 + (3^x)
@@ -78,29 +78,70 @@ theorem calculus_111982 (f : ℝ → ℝ) (hf : ∀ x, f x = x + logb 3 (1 + 3 ^
     refine ⟨⟨?_, ?_⟩, ?_⟩
     · exact fun x ↦ .symm <| (h_inv x _).mp rfl
     · exact fun y ↦ .symm <| (h_inv _ y).mpr rfl
-    · suffices hg_mono : StrictMono g by
-        suffices ∀ x, x < f x by
+    · -- Since x < f x, we have g x < x.
+      -- The inverse function is a reflection about y = x.
+      suffices ∀ x, x < f x by
+        suffices hg_mono : StrictMono g by
           intro x
           calc _
           _ < g (f x) := hg_mono (this x)
           _ = x := ((h_inv x _).mp rfl).symm
           _ < _ := this x
-        intro x
-        rw [hf, lt_add_iff_pos_right]
-        refine logb_pos (by norm_num) ?_
-        rw [lt_add_iff_pos_right]
-        exact rpow_pos_of_pos three_pos x
-      unfold g
-      intro a b hab
-      refine logb_lt_logb (by norm_num) ?_ ?_
-      · suffices √1 < √(4 * 3 ^ a + 1) by simpa using this
-        refine sqrt_lt_sqrt one_pos.le ?_
-        simpa using rpow_pos_of_pos three_pos a
-      refine div_lt_div_of_pos_right ?_ two_pos
-      rw [sub_lt_sub_iff_right]
-      refine sqrt_lt_sqrt ?_ ?_
-      · refine add_nonneg ?_ zero_le_one
-        simpa using rpow_nonneg three_pos.le a
-      simpa using hab
+        unfold g
+        intro a b hab
+        refine logb_lt_logb (by norm_num) ?_ ?_
+        · suffices √1 < √(4 * 3 ^ a + 1) by simpa using this
+          refine sqrt_lt_sqrt one_pos.le ?_
+          simpa using rpow_pos_of_pos three_pos a
+        refine div_lt_div_of_pos_right ?_ two_pos
+        rw [sub_lt_sub_iff_right]
+        refine sqrt_lt_sqrt ?_ ?_
+        · refine add_nonneg ?_ zero_le_one
+          simpa using rpow_nonneg three_pos.le a
+        simpa using hab
+      intro x
+      rw [hf, lt_add_iff_pos_right]
+      refine logb_pos (by norm_num) ?_
+      rw [lt_add_iff_pos_right]
+      exact rpow_pos_of_pos three_pos x
 
-  · sorry
+  · intro n hn
+    suffices Irrational (logb 3 (1 + 3 ^ n)) by simpa [hf] using this
+    suffices ∀ (q : ℚ), ↑q ≠ logb 3 (1 + 3 ^ n) by simpa [Irrational] using this
+    intro q hq
+    -- Need to find a contradiction in:
+    --   a / b = log_3 (1 + 3 ^ n)
+    --   3 ^ (a / b) = 1 + 3 ^ n
+    --   3 ^ a = (1 + 3 ^ n) ^ b
+    -- This is not possible, since 3 divides the left but not the right.
+    -- We will need to establish that `a` is positive; follows from `q` being positive.
+    have hq_pos : 0 < q := by
+      suffices 0 < (q : ℝ) from Rat.cast_pos.mp this
+      rw [hq]
+      exact logb_pos (by norm_num) (by simp)
+    -- Establish contradiction given the equality.
+    suffices 3 ^ q.num.natAbs = (1 + 3 ^ n) ^ q.den by
+      -- Start from `3 ∣ 3 ^ n` and `¬3 ∣ 1`.
+      suffices 3 ∣ (1 + 3 ^ n) by
+        simpa using (Nat.dvd_add_iff_left (dvd_pow_self 3 hn)).mpr this
+      suffices 3 ∣ (1 + 3 ^ n) ^ q.den from Nat.prime_three.dvd_of_dvd_pow this
+      rw [← this]
+      refine dvd_pow_self 3 ?_
+      simpa using hq_pos.ne'
+    -- Now establish the equality.
+    -- Move from `ℕ` back to `ℝ` to use `logb`.
+    suffices ((3 ^ q.num.natAbs : ℕ) : ℝ) = ↑((1 + 3 ^ n) ^ q.den : ℕ) from Nat.cast_inj.mp this
+    -- Take power of `1 / q.den` on both sides.
+    suffices (3 : ℝ) ^ (q.num.natAbs / q.den * q.den : ℝ) = (1 + 3 ^ n) ^ (q.den : ℝ) by
+      simpa using this
+    rw [rpow_mul three_pos.le]
+    congr
+    -- Compare to condition from `logb`.
+    convert (logb_eq_iff_rpow_eq three_pos (by norm_num) ?_).mp hq.symm
+    rotate_left
+    · refine add_pos ?_ ?_ <;> simp
+    -- Move back to `ℚ` and compare to `q.num / q.den`.
+    suffices q.num.natAbs / q.den = q by simpa using congrArg (Rat.cast : ℚ → ℝ) this
+    convert Rat.num_div_den q
+    suffices q.num.natAbs = q.num from congrArg (Int.cast : ℤ → ℚ) this
+    simpa using hq_pos.le
