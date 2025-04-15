@@ -25,36 +25,34 @@ theorem calculus_111982 (f : ℝ → ℝ) (hf : ∀ x, f x = x + logb 3 (1 + 3 ^
       rw [hf]
       unfold g
       calc x + logb 3 (1 + 3 ^ x) = y
-      _ ↔ y = x + logb 3 (1 + 3 ^ x) := eq_comm
-      _ ↔ (3 ^ y : ℝ) = 3 ^ (x + logb 3 (1 + 3 ^ x)) :=
+      _ ↔ 3 ^ (x + logb 3 (1 + 3 ^ x)) = (3 ^ y : ℝ) :=
         (strictMono_rpow_of_base_gt_one (by norm_num)).injective.eq_iff.symm
-      _ ↔ (3 ^ y : ℝ) = 3 ^ x * (1 + 3 ^ x) := by
-        refine Eq.congr_right ?_
+      _ ↔ 3 ^ x * (1 + 3 ^ x) = (3 ^ y : ℝ) := by
+        refine Eq.congr_left ?_
         rw [rpow_add three_pos, rpow_logb three_pos (by norm_num)]
         refine add_pos_of_pos_of_nonneg one_pos ?_
         exact rpow_nonneg (by norm_num) x
-      _ ↔ (3 ^ y : ℝ) = (3 ^ x + 2⁻¹) ^ 2 - 4⁻¹ := by
-        refine Eq.congr_right ?_
+      _ ↔ (3 ^ x + 2⁻¹) ^ 2 - 4⁻¹ = (3 ^ y : ℝ) := by
+        refine Eq.congr_left ?_
         ring
-      _ ↔ (3 ^ y + 4⁻¹ : ℝ) = (3 ^ x + 2⁻¹) ^ 2 := eq_sub_iff_add_eq
-      _ ↔ √(3 ^ y + 4⁻¹ : ℝ) = √((3 ^ x + 2⁻¹) ^ 2) := by
+      _ ↔ (3 ^ x + 2⁻¹) ^ 2 = (3 ^ y + 4⁻¹ : ℝ) := sub_eq_iff_eq_add
+      _ ↔ √((3 ^ x + 2⁻¹) ^ 2) = √(3 ^ y + 4⁻¹) := by
         symm
-        refine sqrt_inj ?_ (sq_nonneg _)
+        refine sqrt_inj (sq_nonneg _) ?_
         refine add_nonneg (rpow_nonneg ?_ y) ?_ <;> norm_num
-      _ ↔ √(3 ^ y + 4⁻¹ : ℝ) = 3 ^ x + 2⁻¹ := by
-        refine Eq.congr_right ?_
+      _ ↔ 3 ^ x + 2⁻¹ = √(3 ^ y + 4⁻¹) := by
+        refine Eq.congr_left ?_
         refine sqrt_sq ?_
         refine add_nonneg (rpow_nonneg ?_ x) ?_ <;> norm_num
-      _ ↔ √(3 ^ y + 4⁻¹) - 2⁻¹ = (3 ^ x : ℝ) := sub_eq_iff_eq_add.symm
-      _ ↔ 2⁻¹ * (√(4 * 3 ^ y + 1) - 1) = (3 ^ x : ℝ) := by
-        refine Eq.congr_left ?_
+      _ ↔ 3 ^ x = √(3 ^ y + 4⁻¹) - 2⁻¹ := eq_sub_iff_add_eq.symm
+      _ ↔ 3 ^ x = 2⁻¹ * (√(4 * 3 ^ y + 1) - 1) := by
+        refine Eq.congr_right ?_
         simp only [mul_sub, mul_one]
         congr
         calc _
         _ = √(2⁻¹ ^ 2 * (4 * 3 ^ y + 1)) := congrArg sqrt (by ring)
         _ = _ := by simp
-      _ ↔ (√(4 * 3 ^ y + 1) - 1) / 2 = (3 ^ x : ℝ) := by rw [inv_mul_eq_div]
-      _ ↔ (3 ^ x : ℝ) = (√(4 * 3 ^ y + 1) - 1) / 2 := eq_comm
+      _ ↔ 3 ^ x = (√(4 * 3 ^ y + 1) - 1) / 2 := by rw [inv_mul_eq_div]
       _ ↔ logb 3 ((√(4 * 3 ^ y + 1) - 1) / 2) = x := by
         symm
         refine logb_eq_iff_rpow_eq three_pos (by norm_num) ?_
