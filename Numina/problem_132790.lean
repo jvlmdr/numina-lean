@@ -2,7 +2,7 @@
 
 import Mathlib
 
-open Real MeasureTheory
+open Real
 
 /- Calculate the indefinite integral:
 $$
@@ -10,15 +10,14 @@ $$
 $$
 -/
 
-theorem calculus_132790 (a x : ℝ) :
-    ∃ C, ∫ x in a..x, (2 * x^3 + 6 * x^2 + 5 * x + 4) / ((x - 2) * (x + 1)^3) =
-      2 * log |x - 2| + 1 / (2 * (x + 1)^2) + C := by
+theorem calculus_132790 (x : ℝ) (hx : x ≠ 2) (hx' : x ≠ -1) (C : ℝ) :
+    HasDerivAt (fun x ↦ 2 * log |x - 2| + 1 / (2 * (x + 1)^2) + C)
+      ((2 * x^3 + 6 * x^2 + 5 * x + 4) / ((x - 2) * (x + 1)^3)) x := by
+  -- The Lebesgue integral is not defined for intervals containing 2 and -1.
+  -- Therefore we seek a function whose derivative is the desired function.
+  refine .add_const ?_ _
+  simp only [log_abs, one_div]
 
-  -- Use `-f a` as the constant.
-  use -((2 * log |a - 2|) + (1 / (2 * (a + 1)^2)))
-  simp only [log_abs, one_div, ← sub_eq_add_neg]
-
-  calc _
   -- Decompose the proper rational fraction into partial fractions using
   -- the method of undetermined coefficients.
   --   (2 x^3 + 6 x^2 + 5 x + 4) / (x - 2) (x + 1)^3
@@ -34,38 +33,27 @@ theorem calculus_132790 (a x : ℝ) :
   --   3 A - 3 B₁ - B₂ + B₃ = 5
   --   A - 2 B₁ - 2 B₂ - 2 B₃ = 4
   -- Putting this together we obtain A = 2, B₁ = 0, B₂ = 0, B₃ = -1.
-  _ = ∫ x in a..x, 2 / (x - 2) - 1 / (x + 1) ^ 3 := by
-    -- Must consider ae-equality to avoid the singularities at `x = 2` and `x = -1`.
-    refine intervalIntegral.integral_congr_ae ?_
-    refine ae_iff.mpr ?_
-    refine nonpos_iff_eq_zero.mp ?_
+  suffices HasDerivAt (fun x ↦ 2 * log (x - 2) + (2 * (x + 1) ^ 2)⁻¹)
+      (2 / (x - 2) - 1 / (x + 1) ^ 3) x by
+    convert this using 1
+    symm
     calc _
-    -- Discard the `uIcc a x` condition.
-    _ ≤ volume {x : ℝ | (2 * x ^ 3 + 6 * x ^ 2 + 5 * x + 4) / ((x - 2) * (x + 1) ^ 3) ≠
-        2 / (x - 2) - 1 / (x + 1) ^ 3} := measure_mono fun u ↦ by simp
-    -- Show that the inequality holds for all x except `x = 2` and `x = -1`.
-    _ ≤ volume ({2, -1} : Set ℝ) := by
-      refine measure_mono fun x hx ↦ ?_
-      contrapose hx
-      replace hx : x ≠ 2 ∧ x ≠ -1 := by simpa using hx
-      suffices (2 * x ^ 3 + 6 * x ^ 2 + 5 * x + 4) / ((x - 2) * (x + 1) ^ 3) =
-          2 / (x - 2) - 1 / (x + 1) ^ 3 by simpa using this
-      symm
-      calc _
-      _ = _ := div_sub_div _ _ (sub_ne_zero_of_ne hx.1) (by simpa using sub_ne_zero_of_ne hx.2)
-      _ = _ := by
-        congr 1
-        ring
-    -- Show that this set has measure zero.
-    _ ≤ volume ({2} : Set ℝ) + volume ({-1} : Set ℝ) := measure_union_le {2} {-1}
-    _ = 0 := by simp
+    _ = _ := div_sub_div _ _ (sub_ne_zero_of_ne hx) (by simpa using sub_ne_zero_of_ne hx')
+    _ = _ := by
+      congr 1
+      ring
 
-  _ = _ := by
-
-    refine intervalIntegral.integral_eq_sub_of_hasDerivAt ?_ ?_
-      (f := fun x ↦ 2 * log (x - 2) + (2 * (x + 1) ^ 2)⁻¹)
-    · -- Should be easy.
-      sorry
-    · -- Oh shit. Not valid for Lebesgue integral?
-      -- Need to work with limit?
-      sorry
+  -- Take out common factors and rewrite using zpow.
+  suffices HasDerivAt (fun x ↦ 2 * log (x - 2) + 2⁻¹ * (x + 1) ^ (-2 : ℤ))
+      (2 * (1 / (x - 2)) + 2⁻¹ * (-2 * (x + 1) ^ (-3 : ℤ))) x by
+    convert this using 1
+    · funext x
+      rw [zpow_neg, zpow_ofNat, mul_inv]
+    · rw [zpow_neg, zpow_ofNat]
+      ring
+  refine .add (.const_mul 2 ?_) (.const_mul 2⁻¹ ?_)
+  · refine .log ?_ (sub_ne_zero_of_ne hx)
+    exact .sub_const (hasDerivAt_id' x) 2
+  · convert HasDerivAt.comp x (hasDerivAt_zpow (-2) _ ?_) (.add_const (hasDerivAt_id' x) 1) using 1
+    · simp
+    · simpa using sub_ne_zero_of_ne hx'

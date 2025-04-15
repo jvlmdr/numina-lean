@@ -23,6 +23,7 @@ import Numina.problem_110877
 import Numina.problem_113877
 import Numina.problem_117773
 import Numina.problem_129966
+import Numina.problem_132790
 import Numina.problem_138682
 import Numina.problem_139053
 import Numina.problem_159432
