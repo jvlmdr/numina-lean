@@ -12,16 +12,14 @@ b) $f(n) ∈ \mathbb{R} \setminus \mathbb{Q}$ for all $n \in \mathbb{N}^{*}$. -/
 theorem calculus_111982 (f : ℝ → ℝ) (hf : ∀ x, f x = x + logb 3 (1 + 3 ^ x)) :
     (∃ g : ℝ → ℝ, (g.LeftInverse f ∧ g.RightInverse f) ∧ ∀ x, g x < f x) ∧
     ∀ n : ℕ, n ≠ 0 → Irrational (f n) := by
-
   -- y = f x = x + log_3 (1 + 3^x)
   -- 3^y = (3^x)^2 + (3^x)
   -- 0 = (3^x)^2 + (3^x) - 3^y where 0 < 3^x, 3^y.
   -- 3^x = (-1 ± √(1 + 4 * 3^y)) / 2
   -- x = log_3 (√(1 + 4 * 3^y) - 1) - log_3 2
   constructor
-  · -- use fun y ↦ logb 3 ((-1 + √(1 + 4 * 3^y)) / 2)
-    let g : ℝ → ℝ := fun y ↦ logb 3 ((√(4 * 3^y + 1) - 1) / 2)
-    -- let g : ℝ → ℝ := fun y ↦ logb 3 (√(3 ^ y + 4⁻¹ : ℝ) - 2⁻¹)
+  · let g : ℝ → ℝ := fun y ↦ logb 3 ((√(4 * 3^y + 1) - 1) / 2)
+    -- TODO: More comments; restructure?
     have h_inv (x y : ℝ) : y = f x ↔ x = g y := by
       rw [hf]
       unfold g
@@ -53,7 +51,6 @@ theorem calculus_111982 (f : ℝ → ℝ) (hf : ∀ x, f x = x + logb 3 (1 + 3 ^
         calc _
         _ = √(2⁻¹ ^ 2 * (4 * 3 ^ y + 1)) := congrArg sqrt (by ring)
         _ = _ := by simp
-
       _ ↔ (√(4 * 3 ^ y + 1) - 1) / 2 = (3 ^ x : ℝ) := by rw [inv_mul_eq_div]
       _ ↔ (3 ^ x : ℝ) = (√(4 * 3 ^ y + 1) - 1) / 2 := eq_comm
       _ ↔ logb 3 ((√(4 * 3 ^ y + 1) - 1) / 2) = x := by
@@ -62,16 +59,6 @@ theorem calculus_111982 (f : ℝ → ℝ) (hf : ∀ x, f x = x + logb 3 (1 + 3 ^
         suffices √1 < √(4 * 3 ^ y + 1) by simpa using this
         refine sqrt_lt_sqrt one_pos.le ?_
         simpa using rpow_pos_of_pos three_pos y
-
-      -- _ ↔ 3 ^ x = √(3 ^ y + 4⁻¹ : ℝ) - 2⁻¹ := eq_comm
-      -- _ ↔ logb 3 (√(3 ^ y + 4⁻¹ : ℝ) - 2⁻¹) = x := by
-      --   symm
-      --   refine logb_eq_iff_rpow_eq three_pos (by norm_num) ?_
-      --   rw [sub_pos, lt_sqrt (by norm_num)]
-      --   convert lt_add_of_pos_left 4⁻¹ (rpow_pos_of_pos three_pos y)
-      --   norm_num
-      -- _ ↔ _ := eq_comm
-
       _ ↔ _ := eq_comm
 
     use g
