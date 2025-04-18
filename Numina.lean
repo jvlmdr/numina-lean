@@ -46,3 +46,4 @@ import Numina.problem_289784
 import Numina.problem_295444
 import Numina.problem_99850
 import Numina.problem_def
+import Numina.problem_interesting
