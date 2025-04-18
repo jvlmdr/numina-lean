@@ -12,6 +12,7 @@ theorem inequalities_290058 :
       2 * √n - m ∈ Set.Ioo √(m^2 - 4) √(m^2 - 2)} =
     {(m, n) : ℕ × ℕ | 2 ≤ m ∧ n = m^2 - 2} := by
 
+  -- Isolate the condition that there is a unique `n = m^2 - 2` for each `m`.
   suffices ∀ m n : ℕ, 2 ≤ m → 0 < n →
       (2 * √n - m ∈ Set.Ioo √(m^2 - 4) √(m^2 - 2) ↔ n = m^2 - 2) by
     ext ⟨m, n⟩
@@ -41,27 +42,51 @@ theorem inequalities_290058 :
         exact Nat.pow_le_pow_of_le_left hm 2
 
   intro m n hm hn
+  have hm_sq : 4 ≤ m ^ 2 := Nat.pow_le_pow_left hm 2
+  have hm_sq_re : (4 : ℝ) ≤ m ^ 2 := by
+    suffices (4 : ℝ) ≤ m ^ 2 by simpa [Fin.forall_fin_two] using this
+    simpa using (Nat.cast_le (α := ℝ)).mpr hm_sq
+
   calc _
+  -- First re-arrange to obtain real interval in which `n` lies given `m`.
   _ ↔ 2 * √n ∈ Set.Ioo (√(m^2 - 4) + m) (√(m^2 - 2) + m) := by
     rw [Set.sub_mem_Ioo_iff_left]
-
-  _ ↔ 4 * ↑n ∈ Set.Ioo ((m + √(m^2 - 4)) ^ 2) ((m + √(m^2 - 2)) ^ 2) := by
-    simp
-    refine and_congr ?_ ?_
-    · sorry
-    · sorry
-
-  _ ↔ 4 * ↑n ∈ Set.Ioo (2 * m^2 - 4 + 2 * m * √(m^2 - 4)) (2 * m^2 - 2 + 2 * m * √(m^2 - 2)) := by
-    sorry
-
   _ ↔ ↑n ∈ Set.Ioo ((m^2 - 2 + m * √(m^2 - 4)) / 2) ((m^2 - 1 + m * √(m^2 - 2)) / 2) := by
-    sorry
+    refine and_congr ?_ ?_
+    · calc √(m^2 - 4) + m < 2 * √n
+      _ ↔ m + √(m^2 - 4) < 2 * √n := by rw [add_comm]
+      _ ↔ (m + √(m^2 - 4)) ^ 2 < (2 * √n) ^ 2 := by
+        symm
+        refine pow_lt_pow_iff_left₀ (add_nonneg ?_ ?_) ?_ two_ne_zero <;> simp
+      _ ↔ m^2 + (m^2 - 4) + 2 * m * √(m^2 - 4) < 4 * n := by
+        simp only [add_sq', mul_pow, sq_sqrt, Nat.cast_nonneg]
+        rw [sq_sqrt (by linarith)]
+        norm_num
+      _ ↔ _ := by
+        refine propext_iff.mp ?_
+        congr 1 <;> ring
+      _ ↔ m^2 - 2 + m * √(m^2 - 4) < 2 * n := mul_lt_mul_iff_of_pos_left two_pos
+      _ ↔ (m^2 - 2 + m * √(m^2 - 4)) / 2 < n := (div_lt_iff₀' two_pos).symm
+    · calc 2 * √n < √(m^2 - 2) + m
+      _ ↔ 2 * √n < m + √(m^2 - 2) := by rw [add_comm]
+      _ ↔ (2 * √n) ^ 2 < (m + √(m^2 - 2)) ^ 2 := by
+        symm
+        refine pow_lt_pow_iff_left₀ ?_ (add_nonneg ?_ ?_) two_ne_zero <;> simp
+      _ ↔ 4 * n < m^2 + (m^2 - 2) + 2 * m * √(m^2 - 2) := by
+        simp only [add_sq', mul_pow, sq_sqrt, Nat.cast_nonneg]
+        rw [sq_sqrt (by linarith)]
+        norm_num
+      _ ↔ _ := by
+        refine propext_iff.mp ?_
+        congr 1 <;> ring
+      _ ↔ 2 * n < m^2 - 1 + m * √(m^2 - 2) := mul_lt_mul_iff_of_pos_left two_pos
+      _ ↔ n < (m^2 - 1 + m * √(m^2 - 2)) / 2 := (lt_div_iff₀' two_pos).symm
 
   _ ↔ n = m^2 - 2 := by
     generalize ha : (m^2 - 2 + m * √(m^2 - 4)) / 2 = a
     generalize hb : (m^2 - 1 + m * √(m^2 - 2)) / 2 = b
-    -- If `a < n < b` and `a < m^2 - 2 < b` then, in order to obtain `n = m^2 - 2`, it suffices
-    -- to show that `m^2 - 3` and `m^2 - 1` are not in `Set.Ioo a b`.
+    -- If `a < n < b` and `a < m^2 - 2 < b` then, in order to obtain `n = m^2 - 2`,
+    -- it suffices to show that `m^2 - 3` and `m^2 - 1` are not in `Set.Ioo a b`.
     -- That is, there is only one natural number between `a` and `b`.
     suffices ↑(m^2 - 2 : ℕ) ∈ Set.Ioo a b ∧ ↑(m^2 - 2 - 1 : ℕ) ≤ a ∧ b ≤ ↑(m^2 - 2 + 1 : ℕ) by
       generalize hx_eq : m^2 - 2 = x at this ⊢
@@ -74,7 +99,6 @@ theorem inequalities_290058 :
       · refine Nat.le_of_pred_lt ?_
         exact Nat.cast_lt.mp (hx_pred.trans_lt hna)
     -- Move the subtraction from `ℕ` (truncated subtraction) to `ℝ`.
-    have hm_sq : 4 ≤ m ^ 2 := Nat.pow_le_pow_left hm 2
     suffices (m ^ 2 - 2 : ℝ) ∈ Set.Ioo a b ∧ m ^ 2 - 3 ≤ a ∧ b ≤ m ^ 2 - 1 by
       convert this
       · rw [Nat.cast_sub (by linarith : 2 ≤ m^2)]
@@ -85,15 +109,12 @@ theorem inequalities_290058 :
         rw [Nat.add_one_sub_one, Nat.cast_sub (by linarith : 1 ≤ m^2)]
         simp
 
-    have hm_sq_re : (4 : ℝ) ≤ m ^ 2 := by
-      suffices (4 : ℝ) ≤ m ^ 2 by simpa [Fin.forall_fin_two] using this
-      simpa using (Nat.cast_le (α := ℝ)).mpr hm_sq
-
     rw [Set.mem_Ioo, ← ha, ← hb]
     refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
     · rw [div_lt_iff₀' two_pos]
-      -- m^2 - 2 + m √(m^2 - 4) < 2 (m^2 - 2)
-      -- m √(m^2 - 4) < m^2 - 2
+      -- Need to show:
+      -- `m^2 - 2 + m √(m^2 - 4) < 2 (m^2 - 2)`
+      -- `m √(m^2 - 4) < m^2 - 2`
       rw [two_mul]
       gcongr
       -- This is the (strict) AM-GM inequality:
@@ -117,8 +138,9 @@ theorem inequalities_290058 :
         simp
 
     · rw [lt_div_iff₀' two_pos]
-      -- 2 (m^2 - 2) < m^2 - 1 + m √(m^2 - 2)
-      -- Use `m^2 - 2 < m^2 - 1` and `m^2 - 2 < m √(m^2 - 2)`.
+      -- Need to show:
+      -- `2 (m^2 - 2) < m^2 - 1 + m √(m^2 - 2)`
+      -- Treat as two terms; use `m^2 - 2 < m^2 - 1` and `m^2 - 2 < m √(m^2 - 2)`.
       -- Alternatively, could reduce to `m^2 - 3 < m * √(m^2 - 2)`.
       rw [two_mul]
       refine add_lt_add_of_lt_of_le (by simp) ?_
@@ -131,8 +153,9 @@ theorem inequalities_290058 :
       _ = m * √(m^2 - 2) := by simp
 
     · rw [le_div_iff₀' two_pos]
-      -- 2 (m^2 - 3) ≤ m^2 - 2 + m √(m^2 - 4)
-      -- m^2 - 4 ≤ m √(m^2 - 4)
+      -- Need to show:
+      -- `2 (m^2 - 3) ≤ m^2 - 2 + m √(m^2 - 4)`
+      -- `m^2 - 4 ≤ m √(m^2 - 4)`
       suffices m ^ 2 - 4 ≤ m * √(m^2 - 4) by
         refine le_add_of_sub_left_le ?_
         calc _
@@ -147,7 +170,10 @@ theorem inequalities_290058 :
       _ = _ := by simp
 
     · rw [div_le_iff₀' two_pos]
-      -- m^2 - 1 + m √(m^2 - 2) ≤ 2 (m^2 - 1)
+      -- Need to show:
+      -- `m^2 - 1 + m √(m^2 - 2) ≤ 2 (m^2 - 1)`
+      -- `m √(m^2 - 2) ≤ m^2 - 1`
+      -- Use AM-GM inequality again (non-strict version this time).
       rw [two_mul]
       gcongr
       convert geom_mean_le_arith_mean2_weighted one_half_pos.le one_half_pos.le (sq_nonneg (m : ℝ))
