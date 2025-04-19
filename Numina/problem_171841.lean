@@ -27,6 +27,7 @@ theorem inequalities_171841 (n : ℕ) (a : ℕ → ℝ) : ∃ k : ℕ,
 
     intro b hb_zero hb_one hb_anti
 
+    -- Define an extended version of `b` taking zero beyond the range.
     let b₀ : ℕ → ℝ := fun i ↦ if hi : i < n + 1 then b ⟨i, hi⟩ else 0
     -- TODO: Use in definition of k?
     let A : ℕ → ℝ := fun i ↦ ∑ j ∈ range i, a j
@@ -48,6 +49,7 @@ theorem inequalities_171841 (n : ℕ) (a : ℕ → ℝ) : ∃ k : ℕ,
       --   sorry
 
       _ = ∑ i ∈ range n, b₀ (i + 1) * (A (i + 2) - A (i + 1)) + b₀ 0 * A 1 := by
+        -- Extract the term on the left and eliminate `A 0` term.
         rw [Finset.sum_range_succ']
         suffices A 0 = 0 by simp [this]
         simp [A]
@@ -61,10 +63,31 @@ theorem inequalities_171841 (n : ℕ) (a : ℕ → ℝ) : ∃ k : ℕ,
         congr 1
         · -- Extract the term on the left.
           rw [Finset.sum_range_succ']
-        · -- Eliminate the term on the right.
+        · -- Eliminate the term on the right since `b₀ (n + 1) = 0`.
           rw [Finset.sum_range_succ]
           suffices b₀ (n + 1) = 0 by simp [this]
           simp [b₀]
       _ = _ := by simp [sub_mul]
+
+    _ ≤ _ := Finset.abs_sum_le_sum_abs _ _
+    _ = ∑ i ∈ range (n + 1), |b₀ i - b₀ (i + 1)| * |A (i + 1)| := by simp [abs_mul]
+    _ ≤ ∑ i ∈ range (n + 1), |b₀ i - b₀ (i + 1)| * |A k| := by
+      refine Finset.sum_le_sum fun i hi ↦ ?_
+      rw [mem_range] at hi
+      refine mul_le_mul_of_nonneg_left ?_ (abs_nonneg _)
+      unfold A
+      refine hk_max (i + 1) hi
+    _ = (∑ i ∈ range (n + 1), |b₀ i - b₀ (i + 1)|) * |A k| := .symm <| sum_mul _ _ _
+    _ = (∑ i ∈ range (n + 1), (b₀ i - b₀ (i + 1))) * |A k| := by
+      suffices Antitone b₀ by
+        congr
+        funext i
+        simpa using this i.le_succ
+      intro u v huv
+      unfold b₀
+      by_cases hv : v < n + 1
+      · have hu : u < n + 1 := huv.trans_lt hv
+        simpa [hu, hv] using @hb_anti ⟨u, hu⟩ ⟨v, hv⟩ huv
+      · simpa [hv] using dite_nonneg (fun hu ↦ hb_zero _) fun _ ↦ le_refl 0
 
     _ ≤ _ := by sorry
