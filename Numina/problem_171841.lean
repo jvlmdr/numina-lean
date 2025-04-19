@@ -78,7 +78,8 @@ theorem inequalities_171841 (n : ℕ) (a : ℕ → ℝ) : ∃ k : ℕ,
       unfold A
       refine hk_max (i + 1) hi
     _ = (∑ i ∈ range (n + 1), |b₀ i - b₀ (i + 1)|) * |A k| := .symm <| sum_mul _ _ _
-    _ = (∑ i ∈ range (n + 1), (b₀ i - b₀ (i + 1))) * |A k| := by
+    _ = |A k| * ∑ i ∈ range (n + 1), |b₀ i - b₀ (i + 1)| := mul_comm _ _
+    _ = |A k| * ∑ i ∈ range (n + 1), (b₀ i - b₀ (i + 1)) := by
       suffices Antitone b₀ by
         congr
         funext i
@@ -90,4 +91,11 @@ theorem inequalities_171841 (n : ℕ) (a : ℕ → ℝ) : ∃ k : ℕ,
         simpa [hu, hv] using @hb_anti ⟨u, hu⟩ ⟨v, hv⟩ huv
       · simpa [hv] using dite_nonneg (fun hu ↦ hb_zero _) fun _ ↦ le_refl 0
 
-    _ ≤ _ := by sorry
+    _ = |A k| * (b₀ 0 - b₀ (n + 1)) := by
+      rw [Finset.sum_range_sub']
+
+    _ ≤ |A k| := by
+      unfold b₀
+      simpa using mul_le_of_le_one_right (abs_nonneg (A k)) (hb_one 0)
+
+    _ = _ := rfl
