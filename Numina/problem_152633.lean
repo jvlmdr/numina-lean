@@ -6,11 +6,11 @@ import Mathlib
 Find the maximum value of their product. -/
 
 theorem number_theory_152633 :
-    IsGreatest (Multiset.prod '' {s | s.sum = 2019}) (3 ^ 673) := by
+    IsGreatest (Multiset.prod '' {s | 0 ∉ s ∧ s.sum = 2019}) (3 ^ 673) := by
   -- It will suffice to show that the maximum product for any `n > 1` can be obtained
   -- using 2s and 3s, with at most two 2s.
   suffices ∀ n ≥ 2, ∃ a b, a < 3 ∧ 2 * a + 3 * b = n ∧
-      IsGreatest (Multiset.prod '' {s | s.sum = n}) (2 ^ a * 3 ^ b) by
+      IsGreatest (Multiset.prod '' {s | 0 ∉ s ∧ s.sum = n}) (2 ^ a * 3 ^ b) by
     specialize this 2019 (by norm_num)
     rcases this with ⟨a, b, ha, h_sum, h_prod⟩
     -- The desired result can be obtained by showing that `a = 0`.
@@ -29,7 +29,7 @@ theorem number_theory_152633 :
 
   intro n hn
   suffices ∃ s : Multiset ℕ, s.toFinset ⊆ {2, 3} ∧ s.sum = n ∧
-      IsGreatest (Multiset.prod '' {s | s.sum = n}) s.prod by
+      IsGreatest (Multiset.prod '' {s | 0 ∉ s ∧ s.sum = n}) s.prod by
     rcases this with ⟨s, hs_elem, hs_sum, hs_prod⟩
     use s.count 2, s.count 3
     refine ⟨?_, ?_, ?_⟩
@@ -43,12 +43,19 @@ theorem number_theory_152633 :
     rcases hs_prod with ⟨_, hs_max⟩  -- TODO?
     contrapose hs_max with hs2
     rw [not_lt] at hs2
-    suffices ∃ t : Multiset ℕ, t.sum = n ∧ s.prod < t.prod by simpa [mem_upperBounds] using this
+    suffices ¬∀ (y : ℕ) (t : Multiset ℕ), (0 ∉ t ∧ t.sum = n) → t.prod = y → y ≤ s.prod by
+      simpa [mem_upperBounds] using this
+    rw [forall_apply_eq_imp_iff₂]
+    suffices ∃ t : Multiset ℕ, 0 ∉ t ∧ t.sum = n ∧ s.prod < t.prod by simpa using this
+
     obtain ⟨t, rfl⟩ : ∃ t, s = t + Multiset.replicate 3 2 := by
       refine le_iff_exists_add'.mp ?_
       exact Multiset.le_count_iff_replicate_le.mp hs2
     use t + Multiset.replicate 2 3
-    refine ⟨?_, ?_⟩
+    refine ⟨?_, ?_, ?_⟩
+    · simp
+      simp at hs_elem
+      sorry
     · convert hs_sum using 1
       simp only [Multiset.sum_add]
       simp
@@ -67,7 +74,7 @@ theorem number_theory_152633 :
 
   -- Any 4 can be replaced with 2s; same sum, same product.
   suffices ∃ s : Multiset ℕ, s.toFinset ⊆ {2, 3, 4} ∧ s.sum = n ∧
-      IsGreatest (Multiset.prod '' {s | s.sum = n}) s.prod by
+      IsGreatest (Multiset.prod '' {s | 0 ∉ s ∧ s.sum = n}) s.prod by
     rcases this with ⟨s, hs_elem, hs_sum, hs_prod⟩
     use Multiset.replicate (s.count 2 + 2 * s.count 4) 2 + Multiset.replicate (s.count 3) 3
     refine ⟨?_, ?_⟩
@@ -97,15 +104,18 @@ theorem number_theory_152633 :
 
   -- Now it suffices to show that any solution must use only {2, 3, 4},
   -- since it can be demonstrated that there is a greatest element.
-  suffices ∀ s : Multiset ℕ, s.sum = n → IsGreatest (Multiset.prod '' {s | s.sum = n}) s.prod →
+  suffices ∀ s : Multiset ℕ, 0 ∉ s → s.sum = n →
+      IsGreatest (Multiset.prod '' {s | 0 ∉ s ∧ s.sum = n}) s.prod →
       s.toFinset ⊆ {2, 3, 4} by
-    suffices ∃ y, IsGreatest (Multiset.prod '' {s | s.sum = n}) y by
+    suffices ∃ y, IsGreatest (Multiset.prod '' {s | 0 ∉ s ∧ s.sum = n}) y by
       rcases this with ⟨y, hy⟩
-      obtain ⟨t, ⟨ht_sum, rfl⟩⟩ : ∃ s : Multiset ℕ, s.sum = n ∧ s.prod = y := by simpa using hy.1
-      have h : ∀ s : Multiset ℕ, s.sum = n → s.prod ≤ t.prod := by
-        simpa [mem_upperBounds] using hy.2
+      obtain ⟨t, ⟨⟨ht_zero, ht_sum⟩, rfl⟩⟩ : ∃ s : Multiset ℕ, (0 ∉ s ∧ s.sum = n) ∧ s.prod = y := by
+        simpa using hy.1
+      have h : ∀ s : Multiset ℕ, 0 ∉ s → s.sum = n → s.prod ≤ t.prod := by
+        sorry
+        -- simpa [mem_upperBounds] using hy.2
       use t
-      exact ⟨this t ht_sum hy, ht_sum, hy⟩
+      refine ⟨this t ht_zero ht_sum hy, ht_sum, hy⟩
 
     -- Establish existence of a maximum using boundedness and that sets are not empty.
     refine BddAbove.exists_isGreatest_of_nonempty ?_ ?_
