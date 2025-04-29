@@ -8,7 +8,7 @@ Find the maximum value of their product. -/
 theorem number_theory_152633 :
     IsGreatest (Multiset.prod '' {s | s.sum = 2019}) (3 ^ 673) := by
   -- It will suffice to show that the maximum product for any `n > 1` can be obtained
-  -- using 2s and 3s, with at most two 2s.
+  -- using 2s and 3s, where there are at most two 2s.
   suffices ∀ n ≥ 2, ∃ a b, a < 3 ∧ 2 * a + 3 * b = n ∧
       IsGreatest (Multiset.prod '' {s | s.sum = n}) (2 ^ a * 3 ^ b) by
     specialize this 2019 (by norm_num)
@@ -26,27 +26,38 @@ theorem number_theory_152633 :
     suffices 2 * a % 3 = 0 by simpa using this
     have := congrArg (· % 3) h_sum
     simpa using this
-
   intro n hn
-  suffices ∃ s : Multiset ℕ, s.toFinset ⊆ {2, 3} ∧ s.sum = n ∧
+
+  -- Rephrase condition using Multiset.
+  suffices ∃ s : Multiset ℕ, s.count 2 < 3 ∧ s.toFinset ⊆ {2, 3} ∧ s.sum = n ∧
       IsGreatest (Multiset.prod '' {s | s.sum = n}) s.prod by
-    rcases this with ⟨s, hs_elem, hs_sum, hs_prod⟩
+    rcases this with ⟨s, hs_count, hs_elem, hs_sum, hs_prod⟩
     use s.count 2, s.count 3
-    refine ⟨?_, ?_, ?_⟩
-    rotate_left
+    refine ⟨hs_count, ?_, ?_⟩
     · convert hs_sum
       rw [Finset.sum_multiset_count_of_subset _ _ hs_elem]
       simp [mul_comm (s.count _)]
     · convert hs_prod
       rw [Finset.prod_multiset_count_of_subset _ _ hs_elem]
       simp
-    rcases hs_prod with ⟨_, hs_max⟩  -- TODO?
+
+  -- It suffices to prove the existence of an optimal set using {2, 3}, since
+  -- the constraint that there are less than three 2s follows from `2^3 < 3^2`.
+  suffices ∃ s : Multiset ℕ, s.toFinset ⊆ {2, 3} ∧ s.sum = n ∧
+      IsGreatest (Multiset.prod '' {s | s.sum = n}) s.prod by
+    refine this.imp fun s hs ↦ ⟨?_, hs⟩
+    rcases hs with ⟨hs_elem, hs_sum, hs_max⟩
+    replace hs_max : ∀ t : Multiset ℕ, t.sum = n → t.prod ≤ s.prod := by
+      simpa [mem_upperBounds] using hs_max.2
+    -- Show that if we have three 2s, we can obtain a greater product using 3s.
     contrapose hs_max with hs2
+    suffices ∃ t : Multiset ℕ, t.sum = n ∧ s.prod < t.prod by simpa using this
     rw [not_lt] at hs2
-    suffices ∃ t : Multiset ℕ, t.sum = n ∧ s.prod < t.prod by simpa [mem_upperBounds] using this
+    -- Obtain a set without three 2s removed.
     obtain ⟨t, rfl⟩ : ∃ t, s = t + Multiset.replicate 3 2 := by
       refine le_iff_exists_add'.mp ?_
       exact Multiset.le_count_iff_replicate_le.mp hs2
+    -- Replace with two 3s.
     use t + Multiset.replicate 2 3
     refine ⟨?_, ?_⟩
     · convert hs_sum using 1
@@ -54,40 +65,37 @@ theorem number_theory_152633 :
       simp
     · simp only [Multiset.prod_add]
       gcongr
-      · -- TODO: Might be an easier way to implement this?
-        refine Nat.zero_lt_of_ne_zero ?_
+      · refine Nat.zero_lt_of_ne_zero ?_
         suffices 0 ∉ t.toFinset by simpa using this
-        have ht_elem : t.toFinset ⊆ {2, 3} := by
-          rw [Multiset.toFinset_add] at hs_elem
-          exact Finset.union_subset_left hs_elem
-        suffices 0 ∉ ({2, 3} : Finset ℕ) from fun h ↦ this (ht_elem h)
-        norm_num
-      · -- `2 ^ 3 < 3 ^ 2`
+        suffices t.toFinset ⊆ {2, 3} from Finset.not_mem_mono this (by norm_num)
+        refine .trans ?_ hs_elem
+        simp
+      -- `2 ^ 3 < 3 ^ 2`
+      · simp only [Multiset.prod_replicate]
         norm_num
 
-  -- Any 4 can be replaced with 2s; same sum, same product.
-  suffices ∃ s : Multiset ℕ, s.toFinset ⊆ {2, 3, 4} ∧ s.sum = n ∧
+  -- Any 4 can be replaced with 2s: same sum, same product.
+  suffices ∃ s : Multiset ℕ, s.toFinset ⊆ Finset.Icc 2 4 ∧ s.sum = n ∧
       IsGreatest (Multiset.prod '' {s | s.sum = n}) s.prod by
     rcases this with ⟨s, hs_elem, hs_sum, hs_prod⟩
+    -- Replace each 4 with two 2s.
     use Multiset.replicate (s.count 2 + 2 * s.count 4) 2 + Multiset.replicate (s.count 3) 3
     refine ⟨?_, ?_⟩
-    · -- TODO: Use Multiset subset?
-      suffices Multiset.replicate (s.count 2 + 2 * s.count 4) 2 +
-          Multiset.replicate (s.count 3) 3 ⊆ {2, 3} by
-        rw [← Multiset.toFinset_subset] at this
-        simpa using this
-      rw [Multiset.subset_iff]
-      intro x hx
-      rw [Multiset.mem_add] at hx
-      simpa using hx.imp Multiset.eq_of_mem_replicate Multiset.eq_of_mem_replicate
-
+    · rw [Multiset.toFinset_add]
+      refine Finset.union_subset ?_ ?_
+      · refine .trans (Multiset.toFinset_subset.mpr (Multiset.replicate_subset_singleton _ _)) ?_
+        simp
+      · refine .trans (Multiset.toFinset_subset.mpr (Multiset.replicate_subset_singleton _ _)) ?_
+        simp
     refine ⟨?_, ?_⟩
+    -- Prove that sums are equal.
     · convert hs_sum using 1
       calc _
       _ = (s.count 2 + 2 * s.count 4) * 2 + s.count 3 * 3 := by simp
       _ = s.count 2 * 2 + s.count 3 * 3 + s.count 4 * 4 := by ring
       _ = ∑ x ∈ {2, 3, 4}, s.count x * x := by simp [add_assoc]
       _ = _ := (Finset.sum_multiset_count_of_subset _ _ hs_elem).symm
+    -- Prove that products are equal.
     · convert hs_prod using 1
       calc _
       _ = 2 ^ s.count 2 * 4 ^ s.count 4 * 3 ^ s.count 3 := by simp [pow_add, pow_mul]
@@ -95,10 +103,10 @@ theorem number_theory_152633 :
       _ = ∏ x ∈ {2, 3, 4}, x ^ s.count x := by simp [mul_assoc]
       _ = _ := (Finset.prod_multiset_count_of_subset _ _ hs_elem).symm
 
-  -- Now it suffices to show that any solution must use only {2, 3, 4},
-  -- since it can be demonstrated that there is a greatest element.
+  -- Now it suffices to show that any solution must use only {2, 3, 4}
+  -- (since it can be demonstrated that there does exist a maximal multiset).
   suffices ∀ s : Multiset ℕ, s.sum = n → IsGreatest (Multiset.prod '' {s | s.sum = n}) s.prod →
-      s.toFinset ⊆ {2, 3, 4} by
+      s.toFinset ⊆ Finset.Icc 2 4 by
     suffices ∃ y, IsGreatest (Multiset.prod '' {s | s.sum = n}) y by
       rcases this with ⟨y, hy⟩
       obtain ⟨t, ⟨ht_sum, rfl⟩⟩ : ∃ s : Multiset ℕ, s.sum = n ∧ s.prod = y := by simpa using hy.1
@@ -106,13 +114,15 @@ theorem number_theory_152633 :
         simpa [mem_upperBounds] using hy.2
       use t
       exact ⟨this t ht_sum hy, ht_sum, hy⟩
-
-    -- Establish existence of a maximum using boundedness and that sets are not empty.
+    -- Establish existence of a maximal element since set is bounded and nonempty.
     refine BddAbove.exists_isGreatest_of_nonempty ?_ ?_
     · refine bddAbove_def.mpr ?_
+      -- Use a trivial but finite bound.
+      -- The multiset could be anything between n • {1} and 1 • {n}, hence n ^ n is a bound.
       use n ^ n
       suffices ∀ s : Multiset ℕ, s.sum = n → s.prod ≤ n ^ n by simpa using this
       intro s hs_sum
+      -- Need to establish that there are no 0s in order to have at most n elements.
       by_cases hs_zero : 0 ∈ s
       · simp [Multiset.prod_eq_zero hs_zero]
       · calc _
@@ -133,34 +143,28 @@ theorem number_theory_152633 :
     · refine .image Multiset.prod ?_
       exact Set.nonempty_of_mem (by simp : {n} ∈ _)
 
-  -- TODO: Avoid re-proving `0 ∉ s`? (Is it being proved twice?)
   intro s hs_sum hs_max
   replace hs_max : ∀ t : Multiset ℕ, t.sum = n → t.prod ≤ s.prod := by
     simpa [mem_upperBounds] using hs_max.2
 
-  -- TODO: Unpack this?
-  -- rcases hs with ⟨hs_elem, hs_max⟩
+  -- First prove that none of the elements are zero.
   have h_zero : 0 ∉ s := by
     have : n ≤ s.prod := by simpa using hs_max {n} rfl
     refine mt (fun h ↦ ?_) (Nat.not_lt.mpr this)
     rw [Multiset.prod_eq_zero h]
     exact Nat.zero_lt_of_lt hn
 
-  intro x hx_mem
-  rw [Multiset.mem_toFinset] at hx_mem
-  change x ∈ Finset.Icc 2 4
-  refine Finset.mem_Icc.mpr ⟨?_, ?_⟩
-  -- We already know that there cannot be a 0 in the set.
-  -- Furthermore, for `n > 1`, there cannot be a 1 in the set, since the product
-  -- could be increased by adding 1 to one of the other numbers in the set.
+  suffices ∀ x ∈ s, 2 ≤ x ∧ x ≤ 4 from fun x ↦ by simpa using this x
+  refine fun x hx_mem ↦ ⟨?_, ?_⟩
+
+  -- For `n > 1`, there cannot be a 1 in the set, since the product could be increased
+  -- by adding 1 to another member of the set.
   · suffices x ≠ 1 by
       refine Nat.one_lt_iff_ne_zero_and_ne_one.mpr ⟨?_, this⟩
       exact ne_of_mem_of_not_mem hx_mem h_zero
-
     suffices x = 1 → ∃ (t : Multiset ℕ), t.sum = n ∧ s.prod < t.prod by
       refine mt this ?_
       simpa using hs_max
-    -- Substitute `x = 1`.
     rintro rfl
     -- Obtain any another element of the multiset `s`.
     obtain ⟨y, hy⟩ : ∃ y, y ∈ s.erase 1 := by
