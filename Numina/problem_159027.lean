@@ -25,10 +25,8 @@ theorem algebra_159027 {x y : ℝ}
   replace : 8 * (x - 2) ^ 2 + 3 * (y - 1) ^ 2 = 0 := by
     convert this using 1
     ring
-  have : 8 * (x - 2) ^ 2 = 0 ∧ 3 * (y - 1) ^ 2 = 0 := by
-    refine (add_eq_zero_iff_of_nonneg ?_ ?_).mp this
-    · simpa using sq_nonneg (x - 2)
-    · simpa using sq_nonneg (y - 1)
-  refine this.imp (fun h ↦ ?_) fun h ↦ ?_
-  · simpa [sub_eq_zero] using h
-  · simpa [sub_eq_zero] using h
+  suffices 8 * (x - 2) ^ 2 = 0 ∧ 3 * (y - 1) ^ 2 = 0 by
+    simpa [sub_eq_zero] using this
+  refine (add_eq_zero_iff_of_nonneg ?_ ?_).mp this
+  · simpa using sq_nonneg (x - 2)
+  · simpa using sq_nonneg (y - 1)
