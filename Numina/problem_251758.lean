@@ -42,34 +42,11 @@ theorem algebra_251758 :
     · refine mul_lt_of_lt_one_left pi_pos ?_
       norm_num
 
-  have h_sin54_sin18 : sin (54 / 180 * π) - sin (18 / 180 * π) = 1 / 2 := by
-    calc
-    _ = _ := sin_sub_sin _ _
-    _ = 2 * sin (π / 10) * cos (π / 5) := by
-      simp only [mul_assoc]
-      congr 3 <;> ring
-    _ = 2 * ((√5 - 1) / 4) * ((1 + √5) / 4) := by
-      congr
-      · sorry
-      · exact cos_pi_div_five
-    _ = (√5 ^ 2 - 1) / 8 := by ring
-    _ = (5 - 1) / 8 := by simp
-    _ = _ := by ring
-
   calc _
-  -- _ = (tan (8 / 15 * π) - tan (1 / 15 * π) * (1 + 1 / sin (1 / 30 * π))) /
-  --     (1 + tan (8 / 15 * π) * tan (1 / 15 * π) * (1 + 1 / sin (1 / 30 * π))) := by
-  --   congr <;> ring
-
   -- Multiply top and bottom by `(cos 96) (cos 12) (sin 6)`.
   _ = _ := Eq.symm <| mul_div_mul_left _ _
     (c := cos (96 / 180 * π) * cos (12 / 180 * π) * sin (6 / 180 * π)) <| by
-      suffices cos (96 / 180 * π) ≠ 0 ∧ cos (12 / 180 * π) ≠ 0 ∧ sin (6 / 180 * π) ≠ 0 by
-        simpa [and_assoc] using this
-      refine ⟨?_, ?_, ?_⟩
-      · exact h_cos96
-      · exact h_cos12
-      · exact h_sin6
+      simpa [and_assoc] using ⟨h_cos96, h_cos12, h_sin6⟩
 
   _ = (sin (96 / 180 * π) * cos (12 / 180 * π) * sin (6 / 180 * π) -
         cos (96 / 180 * π) * sin (12 / 180 * π) * (sin (6 / 180 * π) + 1)) /
@@ -96,6 +73,7 @@ theorem algebra_251758 :
         -sin (6 / 180 * π) * sin (12 / 180 * π) * (sin (6 / 180 * π) + 1)) /
       (-sin (6 / 180 * π) * cos (12 / 180 * π) * sin (6 / 180 * π) +
         cos (6 / 180 * π) * sin (12 / 180 * π) * (sin (6 / 180 * π) + 1)) := by
+    -- TODO?
     have h_sin96' : sin (96 / 180 * π) = cos (6 / 180 * π) := by
       convert sin_add_pi_div_two (6 / 180 * π) using 2
       ring
@@ -158,7 +136,35 @@ theorem algebra_251758 :
     suffices sin (3 * π / 10) - sin (π / 10) = 1 / 2 by
       rw [this]
       congr 1 <;> ring
-    sorry
+
+    suffices sin (π / 10) = (√5 - 1) / 4 by
+      calc
+      _ = _ := sin_sub_sin _ _
+      _ = 2 * sin (π / 10) * cos (π / 5) := by
+        simp only [mul_assoc]
+        congr 3 <;> ring
+      _ = 2 * ((√5 - 1) / 4) * ((1 + √5) / 4) := by rw [this, cos_pi_div_five]
+      _ = (√5 ^ 2 - 1) / 8 := by ring
+      _ = (5 - 1) / 8 := by simp
+      _ = _ := by ring
+
+    suffices sin (π / 10) ^ 2 = ((√5 - 1) / 4) ^ 2 by
+      refine (pow_left_inj₀ ?_ ?_ two_ne_zero).mp this
+      · refine sin_nonneg_of_mem_Icc ⟨?_, ?_⟩
+        · exact div_nonneg pi_nonneg (by norm_num)
+        · exact div_le_self pi_nonneg (by norm_num)
+      · simp [div_nonneg_iff]
+
+    calc _
+    _ = _ := sin_sq_eq_half_sub _
+    _ = 1 / 2 - cos (π / 5) / 2 := by
+      congr 3
+      ring
+    _ = 1 / 2 - (1 + √5) / 4 / 2 := by rw [cos_pi_div_five]
+    _ = (3 - √5) / 8 := by ring
+    _ = (5 + 1 - 2 * √5) / 16 := by ring
+    _ = ((√5) ^ 2 + 1 - 2 * √5) / 16 := by simp
+    _ = _ := by ring
 
   _ = (1/2 * (cos (3 * π / 10) + cos (π / 10)) + √3/4) /
       (√3/2 * (cos (3 * π / 10) + cos (π / 10)) + √3^2/4) := by simp
