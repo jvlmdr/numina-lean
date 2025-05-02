@@ -14,7 +14,8 @@ $$
 theorem algebra_251758 :
     (tan (96 / 180 * π) - tan (12 / 180 * π) * (1 + 1 / sin (6 / 180 * π))) /
     (1 + tan (96 / 180 * π) * tan (12 / 180 * π) * (1 + 1 / sin (6 / 180 * π))) = √3 / 3 := by
-
+  -- First step will be to multiply top and bottom by `(cos 96) (cos 12) (sin 6)` and
+  -- then replace `cos * tan` with `sin`. Establish that these factors are non-zero.
   have h_cos96 : cos (96 / 180 * π) ≠ 0 := by
     refine ne_of_lt ?_
     refine cos_neg_of_pi_div_two_lt_of_lt ?_ ?_
@@ -24,7 +25,6 @@ theorem algebra_251758 :
     · calc _
       _ < π := mul_lt_of_lt_one_left pi_pos (by norm_num)
       _ < _ := by simp [pi_pos]
-
   have h_cos12 : cos (12 / 180 * π) ≠ 0 := by
     refine ne_of_gt ?_
     refine cos_pos_of_mem_Ioo ⟨?_, ?_⟩
@@ -34,7 +34,6 @@ theorem algebra_251758 :
     · calc _
       _ < (1 / 2) * π := mul_lt_mul_of_pos_right (by norm_num) pi_pos
       _ = _ := by ring
-
   have h_sin6 : sin (6 / 180 * π) ≠ 0 := by
     refine ne_of_gt ?_
     refine sin_pos_of_pos_of_lt_pi ?_ ?_
@@ -46,8 +45,8 @@ theorem algebra_251758 :
   -- Multiply top and bottom by `(cos 96) (cos 12) (sin 6)`.
   _ = _ := Eq.symm <| mul_div_mul_left _ _
     (c := cos (96 / 180 * π) * cos (12 / 180 * π) * sin (6 / 180 * π)) <| by
-      simpa [and_assoc] using ⟨h_cos96, h_cos12, h_sin6⟩
-
+    simpa [and_assoc] using ⟨h_cos96, h_cos12, h_sin6⟩
+  -- Replace `cos * tan` with `sin`; eliminate divisor of `sin 6`.
   _ = (sin (96 / 180 * π) * cos (12 / 180 * π) * sin (6 / 180 * π) -
         cos (96 / 180 * π) * sin (12 / 180 * π) * (sin (6 / 180 * π) + 1)) /
       (cos (96 / 180 * π) * cos (12 / 180 * π) * sin (6 / 180 * π) +
@@ -67,13 +66,11 @@ theorem algebra_251758 :
       · rw [← tan_mul_cos h_cos96, ← tan_mul_cos h_cos12]
         ring
       · simp [mul_add, h_sin6]
-
-  -- Replace all 96 terms with 6 terms.
+  -- Replace all 96° terms with 6° terms using 96 = 90 + 6.
   _ = (cos (6 / 180 * π) * cos (12 / 180 * π) * sin (6 / 180 * π) -
         -sin (6 / 180 * π) * sin (12 / 180 * π) * (sin (6 / 180 * π) + 1)) /
       (-sin (6 / 180 * π) * cos (12 / 180 * π) * sin (6 / 180 * π) +
         cos (6 / 180 * π) * sin (12 / 180 * π) * (sin (6 / 180 * π) + 1)) := by
-    -- TODO?
     have h_sin96' : sin (96 / 180 * π) = cos (6 / 180 * π) := by
       convert sin_add_pi_div_two (6 / 180 * π) using 2
       ring
@@ -82,8 +79,8 @@ theorem algebra_251758 :
       ring
     rw [h_sin96', h_cos96']
 
-  -- Nearly have a term of `sin 6` to cancel from top and bottom.
-  -- Replace `sin 12 = 2 sin 6 cos 6`.
+  -- We nearly have a term of `sin 6` to cancel from top and bottom.
+  -- Replace `sin 12 = 2 sin 6 cos 6` for the one term that does not.
   _ = (cos (6 / 180 * π) * cos (12 / 180 * π) * sin (6 / 180 * π) -
         -sin (6 / 180 * π) * sin (12 / 180 * π) * (sin (6 / 180 * π) + 1)) /
       (-sin (6 / 180 * π) * cos (12 / 180 * π) * sin (6 / 180 * π) + cos (6 / 180 * π) *
@@ -101,7 +98,7 @@ theorem algebra_251758 :
         cos (6 / 180 * π) * sin (12 / 180 * π) + 2 * cos (6 / 180 * π) ^ 2) := by
     convert mul_div_mul_left _ _ h_sin6 using 2 <;> ring
 
-  -- Use difference identities (12 - 6 = 6) where possible.
+  -- Use difference identities with 12 - 6 = 6 where possible.
   _ = (sin (12 / 180 * π) + cos (12 / 180 * π - 6 / 180 * π)) /
       (sin (12 / 180 * π - 6 / 180 * π) + 2 * cos (6 / 180 * π) ^ 2) := by
     rw [cos_sub, sin_sub]
@@ -110,9 +107,9 @@ theorem algebra_251758 :
       (sin (6 / 180 * π) + 2 * cos (6 / 180 * π) ^ 2) := by
     congr <;> ring
 
-  -- Now phrase in terms of angles that have known sin, cos.
+  -- Re-phrase in terms of angles that have known sin, cos.
   -- We will make use of sin 54 - sin 18 = 1/2.
-  -- Hence use 12 = 30 - 18, 90 - 6 = 30 + 54, 6 = 60 - 54.
+  -- Hence replace 12 = 30 - 18, 90 - 6 = 30 + 54, 6 = 60 - 54.
   _ = (sin (12 / 180 * π) + sin (π / 2 - 6 / 180 * π)) /
       (sin (6 / 180 * π) + (1 + cos (2 * (6 / 180 * π)))) := by
     congr
@@ -131,12 +128,14 @@ theorem algebra_251758 :
     simp only [sin_pi_div_six, cos_pi_div_six, sin_pi_div_three, cos_pi_div_three]
     congr 1 <;> ring
 
+  -- Use the property that `sin (3 * π / 10) - sin (π / 10) = 1 / 2` to obtain common factor.
   _ = (1/2 * (cos (3 * π / 10) + cos (π / 10)) + √3/4) /
       (√3/2 * (cos (3 * π / 10) + cos (π / 10)) + 3/4) := by
     suffices sin (3 * π / 10) - sin (π / 10) = 1 / 2 by
       rw [this]
       congr 1 <;> ring
-
+    -- Use difference of sines to obtain factors of `sin (π / 10)` and `cos (π / 5)`.
+    -- While `cos (π / 5)` is found in Mathlib, we will need to prove `sin (π / 10)`.
     suffices sin (π / 10) = (√5 - 1) / 4 by
       calc
       _ = _ := sin_sub_sin _ _
@@ -147,33 +146,32 @@ theorem algebra_251758 :
       _ = (√5 ^ 2 - 1) / 8 := by ring
       _ = (5 - 1) / 8 := by simp
       _ = _ := by ring
-
-    suffices sin (π / 10) ^ 2 = ((√5 - 1) / 4) ^ 2 by
-      refine (pow_left_inj₀ ?_ ?_ two_ne_zero).mp this
-      · refine sin_nonneg_of_mem_Icc ⟨?_, ?_⟩
-        · exact div_nonneg pi_nonneg (by norm_num)
-        · exact div_le_self pi_nonneg (by norm_num)
-      · simp [div_nonneg_iff]
-
+    -- Take the square of both sides.
+    refine (pow_left_inj₀ ?_ ?_ two_ne_zero).mp ?_
+    · refine sin_nonneg_of_mem_Icc ⟨?_, ?_⟩
+      · exact div_nonneg pi_nonneg (by norm_num)
+      · exact div_le_self pi_nonneg (by norm_num)
+    · simp [div_nonneg_iff]
     calc _
-    _ = _ := sin_sq_eq_half_sub _
+    -- Employ the identity `sin^2 (x) = 1/2 (1 - cos (2 x))`.
     _ = 1 / 2 - cos (π / 5) / 2 := by
-      congr 3
+      convert sin_sq_eq_half_sub _ using 4
       ring
     _ = 1 / 2 - (1 + √5) / 4 / 2 := by rw [cos_pi_div_five]
+    -- Simple manipulation gives the desired result.
     _ = (3 - √5) / 8 := by ring
     _ = (5 + 1 - 2 * √5) / 16 := by ring
     _ = ((√5) ^ 2 + 1 - 2 * √5) / 16 := by simp
     _ = _ := by ring
 
+  -- Factor common term from top and bottom.
+  -- It cannot be zero since all terms are positive.
   _ = (1/2 * (cos (3 * π / 10) + cos (π / 10)) + √3/4) /
       (√3/2 * (cos (3 * π / 10) + cos (π / 10)) + √3^2/4) := by simp
-
   _ = (1/2 * (cos (3 * π / 10) + cos (π / 10)) + √3/4) /
       (√3 * (1/2 * (cos (3 * π / 10) + cos (π / 10)) + √3/4)) := by
     congr 1
     ring
-
   _ = (√3)⁻¹ := by
     refine div_mul_cancel_right₀ ?_ _
     refine ne_of_gt ?_
@@ -196,5 +194,5 @@ theorem algebra_251758 :
           gcongr
           norm_num
         _ = _ := by ring
-
+  -- Rationalize the denominator.
   _ = _ := sqrt_div_self.symm
