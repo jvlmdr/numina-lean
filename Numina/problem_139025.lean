@@ -58,7 +58,7 @@ theorem algebra_139025 {a b c α β γ : ℝ}
     refine (mul_le_mul_iff_of_pos_right three_pos).mp ?_
     suffices 3 * (γ - α) ^ 2 ≤ 4 * (a ^ 2 - 3 * b) by
       convert this using 1 <;> ring
-    -- Gather the terms into two squares, which are non-negative.
+    -- Gather the terms into a square, which is non-negative.
     refine sub_nonneg.mp ?_
     rw [this]
     calc _
