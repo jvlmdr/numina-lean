@@ -8,15 +8,27 @@ open Real Polynomial
 Show that √(a 2 - 3b) < (γ - α) ≤ 2 √(a 2 /3 - b). -/
 
 theorem algebra_139025 {a b c α β γ : ℝ}
-    (hαβ : α < β) (hβγ : β < γ)
-    (h : X ^ 3 + C a * X ^ 2 + C b * X + C c = (X - C α) * (X - C β) * (X - C γ)) :
+    (h : (X ^ 3 + C a * X ^ 2 + C b * X + C c).roots = {α, β, γ}) (hαβ : α < β) (hβγ : β < γ) :
     √(a ^ 2 - 3 * b) < (γ - α) ∧ (γ - α) ≤ 2 * √(a ^ 2 / 3 - b) := by
-  -- Expand the root-product form to obtain the canonical form.
+  -- Re-write polynomial as product of roots and expand.
   have h : X ^ 3 + C a * X ^ 2 + C b * X + C c =
-      X ^ 3 - C (α + β + γ) * X ^ 2 + C (α * β + β * γ + γ * α) * X - C (α * β * γ) := by
-    rw [h]
-    simp only [map_add, map_mul]
-    ring
+      X ^ 3 - C (α + β + γ) * X ^ 2 + C (α * β + β * γ + γ * α) * X - C (α * β * γ) :=
+    calc _
+    _ = (X - C α) * (X - C β) * (X - C γ) := by
+      convert eq_prod_roots_of_monic_of_splits_id ?_ ?_
+      · simp [h, mul_assoc]
+      · simpa [Cubic.toPoly] using Cubic.monic_of_a_eq_one (P := {a := 1, b := a, c := b, d := c})
+      · refine splits_iff_card_roots.mpr ?_
+        calc _
+        _ = 3 := by simp [h]
+        -- Insert `C 1 * X ^ 3` for `natDegree_cubic`.
+        _ = (C 1 * X ^ 3 + C a * X ^ 2 + C b * X + C c).natDegree :=
+          (natDegree_cubic one_ne_zero).symm
+        _ = _ := by simp
+    _ = _ := by
+      simp only [map_add, map_mul]
+      ring
+
   -- Use extensionality of polynomials to relate the coefficients to the roots.
   have ha : a = -(α + β + γ) := by simpa [coeff_mul_X_pow'] using ext_iff.mp h 2
   have hb : b = α * β + β * γ + γ * α := by simpa [coeff_mul_X_pow'] using ext_iff.mp h 1
