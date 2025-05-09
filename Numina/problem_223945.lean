@@ -7,32 +7,74 @@ not the product of two prime numbers. -/
 
 theorem number_theory_223945 (n : ℕ) (hn : 2 ≤ n) :
     ¬∃ p q, 2 ^ (4 * n + 2) + 1 = p * q ∧ p.Prime ∧ q.Prime := by
+  simp only [not_exists]
+  intro p q ⟨hpq, hp, hq⟩
 
-  suffices ∃ a b, 2 ^ (4 * n + 2) + 1 = a * b ∧ ∃ c d, 2 ^ (4 * n + 2) + 1 = c * d ∧
-      ({a, b} : Multiset ℕ) ≠ {c, d} by
-    simp only [not_exists]
-    intro p q
-    rcases this with ⟨a, b, hab, c, d, hcd, h⟩
-    refine mt (fun ⟨hpq, hp, hq⟩ ↦ ?_) h
-    generalize 2 ^ (4 * n + 2) + 1 = x at hpq hab hcd
-    rcases hpq with rfl
+  suffices ∃ a b, a ≠ 1 ∧ b ≠ 1 ∧ a * b = p * q ∧ ∃ c d, c ≠ 1 ∧ d ≠ 1 ∧ c * d = p * q ∧
+      ¬[a, b].Perm [c, d] by
+    -- TODO: move to outer?
+    suffices h_perm : ∀ u v, u ≠ 1 → v ≠ 1 → u * v = p * q → [u, v].Perm [p, q] by
+      rcases this with ⟨a, b, ha, hb, hab, c, d, hc, hd, hcd, h⟩
+      refine h ?_
+      exact .trans (h_perm a b ha hb hab) (h_perm c d hc hd hcd).symm
 
-    -- calc _
-    -- _ = ((a * b).primeFactorsList : Multiset ℕ) := by sorry
-    -- _ = (x.primeFactorsList : Multiset ℕ) := by rw [hab]
-    -- _ = ((c * d).primeFactorsList : Multiset ℕ) := by rw [hcd]
-    -- _ = _ := by sorry
+    intro a b ha hb h
+    have ⟨ha_zero, hb_zero⟩ : a ≠ 0 ∧ b ≠ 0 := by
+      suffices a * b ≠ 0 by simpa using this
+      suffices p ≠ 0 ∧ q ≠ 0 by simpa [h] using this
+      exact ⟨hp.ne_zero, hq.ne_zero⟩
+    replace ha : 1 < a := (Nat.two_le_iff a).mpr ⟨ha_zero, ha⟩
+    replace hb : 1 < b := (Nat.two_le_iff b).mpr ⟨hb_zero, hb⟩
 
-    have := congrArg Nat.factorization hab
-    rw [Nat.factorization_mul hp.ne_zero hq.ne_zero] at this
-    rw [hp.factorization, hq.factorization] at this
+    have hab := Nat.perm_primeFactorsList_mul (Nat.not_eq_zero_of_lt ha) (Nat.not_eq_zero_of_lt hb)
+    have hpq := Nat.perm_primeFactorsList_mul hp.ne_zero hq.ne_zero
+    rw [Nat.primeFactorsList_prime hp, Nat.primeFactorsList_prime hq] at hpq
+    simp at hpq  -- Was there an easier way to get this?
 
-    -- Check that it is convenient to prove {a, b} ≠ {c, d} before proceeding!
-    sorry
+    have : a.primeFactorsList.length + b.primeFactorsList.length = 2 := by
+      calc _
+      _ = (a * b).primeFactorsList.length := by simpa using hab.length_eq.symm
+      _ = _ := by simpa [h] using hpq.length_eq
 
-  use 2 ^ (2 * n + 1) + 2 ^ (n + 1) + 1, 2 ^ (2 * n + 1) - 2 ^ (n + 1) + 1
-  refine ⟨?_, ?_⟩
-  · symm  -- TODO: eliminate?
+    have ha_len_pos : 0 < a.primeFactorsList.length := by
+      refine List.length_pos.mpr ?_
+      suffices a ≠ 0 ∧ a ≠ 1 by simpa using this
+      exact (Nat.two_le_iff a).mp ha
+    have hb_len_pos : 0 < b.primeFactorsList.length := by
+      refine List.length_pos.mpr ?_
+      suffices b ≠ 0 ∧ b ≠ 1 by simpa using this
+      exact (Nat.two_le_iff b).mp hb
+    -- have ha_len_lt : a.primeFactorsList.length < 2 := by linarith
+    have ha_len : a.primeFactorsList.length = 1 := by linarith
+    have hb_len : b.primeFactorsList.length = 1 := by linarith
+
+    have h_prime_of_length_eq_one : ∀ x : ℕ, x.primeFactorsList.length = 1 → x.Prime := by
+      intro n
+      rw [List.length_eq_one, forall_exists_index]
+      intro p hnp
+      have hn : n ≠ 0 := by
+        rintro rfl
+        simp at hnp
+      have hp : p.Prime := by
+        suffices p ∈ n.primeFactorsList from Nat.prime_of_mem_primeFactorsList this
+        simp [hnp]
+      convert hp
+      calc _
+      _ = n.primeFactorsList.prod := (Nat.prod_primeFactorsList hn).symm
+      _ = _ := by simp [hnp]
+
+    have ha_prime : a.Prime := h_prime_of_length_eq_one a ha_len
+    have hb_prime : b.Prime := h_prime_of_length_eq_one b hb_len
+
+    have := Nat.primeFactorsList_unique (l := [a, b]) (n := p * q) (by simpa using h)
+      (by simpa using ⟨ha_prime, hb_prime⟩)
+
+    exact this.trans hpq
+
+  let a : ℕ := 2 ^ (2 * n + 1) + 2 ^ (n + 1) + 1
+  let b : ℕ := 2 ^ (2 * n + 1) - 2 ^ (n + 1) + 1
+  have hab : a * b = 2 ^ (4 * n + 2) + 1 := by
+    unfold a b
     -- Switch to `ℤ` to use `ring` without worrying about negatives.
     refine (Nat.cast_inj (R := ℤ)).mp ?_
     simp only [Nat.cast_mul, Nat.cast_add]
@@ -43,11 +85,21 @@ theorem number_theory_223945 (n : ℕ) (hn : 2 ≤ n) :
     simp only [Nat.cast_pow]
     ring
 
+  use a, b
+  refine ⟨?_, ?_, hab.trans hpq, ?_⟩
+  · unfold a
+    simp
+  · unfold b
+    suffices 2 ^ (n + 1) < 2 ^ (2 * n + 1) by simpa [Nat.sub_eq_zero_iff_le] using this
+    refine Nat.pow_lt_pow_of_lt one_lt_two ?_
+    linarith
+
   -- Use the series `2^(4 n) - 2^(4 n - 2) + 2^(4 n - 4) - ... + 2^4 - 2^2 + 1`.
   -- Split the sum into positive and negative sums while working in `ℕ`.
-  use 2 ^ 2 + 1, ∑ i in Finset.range (n + 1), 2 ^ (4 * i) - ∑ i in Finset.range n, 2 ^ (4 * i + 2)
-  refine ⟨?_, ?_⟩
-  · symm  -- TODO: eliminate?
+  let c := 2 ^ 2 + 1
+  let d := ∑ i in Finset.range (n + 1), 2 ^ (4 * i) - ∑ i in Finset.range n, 2 ^ (4 * i + 2)
+  have hcd : c * d = 2 ^ (4 * n + 2) + 1 := by
+    unfold c d
     calc _
     _ = 2 ^ 2 * ∑ i ∈ Finset.range (n + 1), 2 ^ (4 * i)
         + ∑ i ∈ Finset.range (n + 1), 2 ^ (4 * i)
@@ -89,15 +141,27 @@ theorem number_theory_223945 (n : ℕ) (hn : 2 ≤ n) :
       simp only [Nat.add_sub_cancel_right]
       ring
 
-  simp only [Nat.reducePow, Nat.reduceAdd]
-  suffices 5 ∉
-      ({2 ^ (2 * n + 1) + 2 ^ (n + 1) + 1, 2 ^ (2 * n + 1) - 2 ^ (n + 1) + 1} : Multiset ℕ) by
-    refine mt (fun h ↦ ?_) this
-    simp [h]
+  use c, d
+  refine ⟨?_, ?_, hcd.trans hpq, ?_⟩
+  · norm_num
+  · unfold d
+    refine ne_of_gt ?_
+    refine Nat.lt_sub_iff_add_lt'.mpr ?_
+    rw [Finset.sum_range_succ']
+    simp only [mul_zero, pow_zero, add_lt_add_iff_right]
+    refine Finset.sum_lt_sum_of_nonempty ?_ ?_
+    · suffices n ≠ 0 by simpa using this
+      exact Nat.not_eq_zero_of_lt hn
+    · intro i _
+      refine Nat.pow_lt_pow_of_lt one_lt_two ?_
+      simp [mul_add]
 
-  suffices 5 ≠ 2 ^ (2 * n + 1) + 2 ^ (n + 1) + 1 ∧ 5 ≠ 2 ^ (2 * n + 1) - 2 ^ (n + 1) + 1 by
-    simpa using this
+  suffices c ∉ [a, b] by
+    refine mt (fun h_perm ↦ ?_) this
+    refine h_perm.mem_iff.mpr ?_
+    simp
 
+  suffices c ≠ a ∧ c ≠ b by simpa using this
   refine ⟨?_, ?_⟩
   · refine ne_of_lt ?_
     calc _
