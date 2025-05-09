@@ -10,8 +10,8 @@ then the range of the real number $a$ is? -/
 
 theorem algebra_145653 (f g : ℝ → ℝ) (hf : f.Odd) (hg : g.Even)
     (hfg : ∀ x, f x + g x = 2 ^ x) (a : ℝ) :
-    (∀ x ∈ Set.Icc 1 2, 0 ≤ a * f x + g (2 * x)) ↔ -17 / 6 ≤ a := by
-
+    (∀ x ∈ Set.Icc 1 2, 0 ≤ a * f x + g (2 * x)) ↔ -17/6 ≤ a := by
+  -- Use `f + g`, `f - g` to obtain definitions for each.
   have hfg' (x) : -f x + g x = 2 ^ (-x) := by simpa [hf x, hg x] using hfg (-x)
   have hg (x) : 2 * g x = 2 ^ x + 2 ^ (-x) := by
     convert congrArg₂ (· + ·) (hfg x) (hfg' x) using 1
@@ -21,8 +21,9 @@ theorem algebra_145653 (f g : ℝ → ℝ) (hf : f.Odd) (hg : g.Even)
     ring
 
   calc _
-  _ ↔ ∀ x : ℝ, x ∈ Set.Icc 1 2 → 0 ≤ 2 * (a * f x + g (2 * x)) := by simp
-
+  -- Multiply inequality by 2 to make substitution easier.
+  _ ↔ ∀ x ∈ Set.Icc 1 2, 0 ≤ 2 * (a * f x + g (2 * x)) := by simp
+  -- Substitute and gather terms such that only dependence on `x` is through `2^x - 2^(-x)`.
   _ ↔ ∀ x : ℝ, x ∈ Set.Icc 1 2 → 0 ≤ a * (2 ^ x - 2 ^ (-x)) + ((2 ^ x - 2 ^ (-x)) ^ 2 + 2) := by
     suffices ∀ x, 2 * (a * f x + g (2 * x)) =
         a * (2 ^ x - 2 ^ (-x)) + ((2 ^ x - 2 ^ (-x)) ^ 2 + 2) by
@@ -34,6 +35,7 @@ theorem algebra_145653 (f g : ℝ → ℝ) (hf : f.Odd) (hg : g.Even)
       rw [hf, hg]
       congr 3 <;> ring
     _ = a * (2 ^ x - 2 ^ (-x)) + ((2 ^ x) ^ 2 + (2 ^ (-x)) ^ 2) := by simp [rpow_mul, -neg_mul]
+    -- Show that the cross-term from the square `-2 * 2^x * 2^(-x) = -2` is cancelled by adding 2.
     _ = a * (2 ^ x - 2 ^ (-x)) + ((2 ^ x - 2 ^ (-x)) ^ 2 + 2) := by
       congr 1
       rw [sub_sq', ← sub_add_comm]
@@ -41,6 +43,7 @@ theorem algebra_145653 (f g : ℝ → ℝ) (hf : f.Odd) (hg : g.Even)
       rw [mul_assoc, ← rpow_add two_pos]
       simp
 
+  -- Isolate the `a` term; move constant to other side and divide by `2^x - 2^(-x)` (positive).
   _ ↔ ∀ x : ℝ, x ∈ Set.Icc 1 2 → -(2 ^ x - 2 ^ (-x) + 2 / (2 ^ x - 2 ^ (-x))) ≤ a := by
     refine forall₂_congr fun x hx ↦ ?_
     rw [Set.mem_Icc] at hx
@@ -52,13 +55,13 @@ theorem algebra_145653 (f g : ℝ → ℝ) (hf : f.Odd) (hg : g.Even)
       linarith
     _ ↔ _ := by rw [neg_div, add_div, sq, mul_self_div_self]
 
+  -- Replace `x ∈ [1, 2]` with `t = 2^x - 2^(-x) ∈ [3/2, 15/4]`.
   _ ↔ ∀ t ∈ (fun x : ℝ ↦ 2 ^ x - 2 ^ (-x)) '' Set.Icc 1 2, -(t + 2 / t) ≤ a := by
-    simp only [Set.forall_mem_image]
-
-  _ ↔ ∀ t ∈ Set.Icc (3 / 2 : ℝ) (15 / 4), -(t + 2 / t) ≤ a := by
-    suffices (fun x : ℝ ↦ 2 ^ x - 2 ^ (-x)) '' Set.Icc 1 2 = Set.Icc (3 / 2 : ℝ) (15 / 4) by
-      rw [this]
-
+    rw [Set.forall_mem_image]
+  -- Show that the image of `Icc 1 2` is obtained by mapping the endpoints,
+  -- since the function is continuous and (strictly) monotonic.
+  _ ↔ ∀ t ∈ Set.Icc (3/2 : ℝ) (15/4), -(t + 2 / t) ≤ a := by
+    suffices (fun x : ℝ ↦ 2 ^ x - 2 ^ (-x)) '' Set.Icc 1 2 = Set.Icc (3/2 : ℝ) (15/4) by rw [this]
     have h_cont : ContinuousOn (fun x ↦ 2 ^ x - 2 ^ (-x) : ℝ → ℝ) (Set.Icc 1 2) := by
       refine ContinuousOn.sub ?_ ?_
       · exact .rpow continuousOn_const (continuousOn_id' _) (by simp)
@@ -78,13 +81,12 @@ theorem algebra_145653 (f g : ℝ → ℝ) (hf : f.Odd) (hg : g.Even)
       rw [csSup_Icc one_le_two]
       norm_num
 
-  _ ↔ -17 / 6 ≤ a := by
-
+  -- Finally, use the fact that `-(t + 2 / t)` is continuous and (strictly) antitone on
+  -- `[3/2, 15/4]` to show that the minimum can be obtained by evaluating at `t = 3/2`.
+  _ ↔ -17/6 ≤ a := by
     have h_cont : ContinuousOn (fun t : ℝ ↦ t + 2 / t) (Set.Ioi 0) := by
       refine .add (continuousOn_id' _) ?_
-      -- refine .mono ?_ (Set.Ioi_subset_Ioi (sqrt_nonneg 2))
       exact .div₀ continuousOn_const (continuousOn_id' _) fun x hx ↦ ne_of_gt hx
-
     -- The derivative of `-(t + 2 / t)` is `-1 + 2 / t ^ 2`; negative for `2 < t ^ 2`.
     have h_anti : StrictAntiOn (fun t : ℝ ↦ -(t + 2 / t)) (Set.Ioi √2) := by
       refine StrictMonoOn.neg ?_
@@ -102,32 +104,40 @@ theorem algebra_145653 (f g : ℝ → ℝ) (hf : f.Odd) (hg : g.Even)
         replace hx := lt_sq_of_sqrt_lt hx
         exact (div_lt_one (two_pos.trans hx)).mpr hx
 
+    -- Confine results to `[3/2, 15/4]`.
+    have h_cont' : ContinuousOn (fun t : ℝ ↦ -(t + 2 / t)) (Set.Icc (3/2) (15/4)) := by
+      refine h_cont.neg.mono fun x hx ↦ ?_
+      rw [Set.mem_Icc] at hx
+      suffices 0 < (3/2 : ℝ) by simpa using this.trans_le hx.1
+      norm_num
+    have h_anti' : StrictAntiOn (fun t : ℝ ↦ -(t + 2 / t)) (Set.Icc (3/2) (15/4)) := by
+      refine h_anti.mono fun x hx ↦ ?_
+      rw [Set.mem_Icc] at hx
+      suffices √2 < 3/2 by simpa using this.trans_le hx.1
+      refine (sqrt_lt' ?_).mpr ?_ <;> norm_num
+
     calc _
-    _ ↔ sSup ((fun t ↦ -(t + 2 / t)) '' Set.Icc (3 / 2) (15 / 4)) ≤ a := by
-      have := csSup_le_iff (α := ℝ) (s := (fun t : ℝ ↦ -(t + 2 / t)) '' Set.Icc (3 / 2) (15 / 4))
-        (isCompact_Icc.bddAbove_image sorry) (by simp; norm_num) (a := a)
-
-      rw [this]
-      rw [Set.forall_mem_image]
-
+    -- The upper bound is satisfied for all elements of [3/2, 15/4] iff
+    -- it is satisfied for the maximum element.
+    _ ↔ ∀ y ∈ (fun t ↦ -(t + 2 / t)) '' Set.Icc (3/2) (15/4), y ≤ a := Set.forall_mem_image.symm
+    _ ↔ sSup ((fun t ↦ -(t + 2 / t)) '' Set.Icc (3/2) (15/4)) ≤ a := by
+      symm
+      refine csSup_le_iff ?_ ?_
+      · exact isCompact_Icc.bddAbove_image h_cont'
+      · suffices (3/2 : ℝ) ≤ 15/4 by simpa using this
+        norm_num
     _ ↔ _ := by
-      suffices sSup ((fun t : ℝ ↦ -(t + 2 / t)) '' Set.Icc (3 / 2) (15 / 4)) = -17 / 6 by
-        rw [this]
+      suffices sSup ((fun t : ℝ ↦ -(t + 2 / t)) '' Set.Icc (3/2) (15/4)) = -17/6 by rw [this]
       calc _
-      _ = (fun t : ℝ ↦ -(t + 2 / t)) (sInf (Set.Icc (3 / 2) (15 / 4))) := by
+      _ = (fun t : ℝ ↦ -(t + 2 / t)) (sInf (Set.Icc (3/2) (15/4))) := by
         symm
-        refine AntitoneOn.map_csInf_of_continuousWithinAt (f := fun t ↦ -(t + 2 / t))
-          ?_ ?_ ?_ bddBelow_Icc
-        · refine ContinuousOn.continuousWithinAt ?_ ?_
-          · refine h_cont.neg.mono fun x hx ↦ ?_
-            suffices 0 < (3 / 2 : ℝ) by simpa using this.trans_le hx.1
-            norm_num
-          · suffices (3 / 2 : ℝ) ≤ 15 / 4 by simp [this]
-            norm_num
-        · refine h_anti.antitoneOn.mono fun x ↦ ?_
-          simp
-          sorry  -- easy
-        · suffices (3 / 2 : ℝ) ≤ 15 / 4 by simpa using this
+        refine AntitoneOn.map_csInf_of_continuousWithinAt (h_cont'.continuousWithinAt ?_)
+          h_anti'.antitoneOn ?_ bddBelow_Icc
+        · suffices (3/2 : ℝ) ≤ 15/4 by simp [this]
           norm_num
-      _ = (fun t : ℝ ↦ -(t + 2 / t)) (3 / 2) := by rw [csInf_Icc (by norm_num)]
+        · suffices (3/2 : ℝ) ≤ 15/4 by simpa using this
+          norm_num
+      _ = (fun t : ℝ ↦ -(t + 2 / t)) (3/2) := by
+        suffices (3/2 : ℝ) ≤ 15/4 by simp [this]
+        norm_num
       _ = _ := by norm_num
