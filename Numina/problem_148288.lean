@@ -12,27 +12,23 @@ then the range of real number $m$ is? -/
 
 theorem inequalities_148288 (m : ℝ) :
     (∀ x : ℝ, x < -1 → 0 < (m - m^2) * 4^x + 2^x + 1) ↔ m ∈ Set.Icc (-2) 3 := by
-
-  -- Let `a = m - m^2`.
+  -- Let `a = m - m^2` for ease of notation.
   generalize ha : m - m^2 = a
 
-  -- TODO: move into `calc`
-  suffices (∀ x : ℝ, x < -1 → 0 < a * (2 ^ x) ^ 2 + 2 ^ x + 1) ↔ m ∈ Set.Icc (-2) 3 by
-    convert this with x hx
+  calc _
+  -- Rewrite such that only dependence on `x` is through `2 ^ x`.
+  _ ↔ ∀ x : ℝ, x < -1 → 0 < a * (2 ^ x) ^ 2 + 2 ^ x + 1 := by
+    refine forall₂_congr fun x hx ↦ ?_
+    suffices (4 : ℝ) ^ x = (2 ^ x) ^ 2 by rw [this]
     calc _
-    _ = (2 ^ 2 : ℝ) ^ x := by
-      congr
-      norm_num
+    _ = (2 ^ 2 : ℝ) ^ x := by norm_num
     _ = _ := by
       simp only [← rpow_two, ← rpow_mul two_pos.le]
       rw [mul_comm x 2]
-
-  calc _
-  _ ↔ ∀ x : ℝ, x ∈ Set.Iio (-1) → 0 < a * (2 ^ x) ^ 2 + 2 ^ x + 1 := by simp
+  -- Replace `x ∈ (-∞, -1)` with `t = 2^x ∈ (0, 1/2)`.
   _ ↔ ∀ t : ℝ, t ∈ (2 ^ · : ℝ → ℝ) '' Set.Iio (-1) → 0 < a * t ^ 2 + t + 1 :=
-    .symm Set.forall_mem_image
-
-  _ ↔ ∀ t ∈ Set.Ioo 0 (2⁻¹ : ℝ), 0 < a * t ^ 2 + t + 1 := by
+    Iff.symm Set.forall_mem_image
+  _ ↔ ∀ t ∈ Set.Ioo 0 2⁻¹, 0 < a * t ^ 2 + t + 1 := by
     suffices (2 ^ · : ℝ → ℝ) '' Set.Iio (-1) = Set.Ioo 0 (2⁻¹ : ℝ) by rw [this]
     refine Set.BijOn.image_eq ?_
     refine Set.InvOn.bijOn (f' := logb 2) ?_ ?_ ?_
@@ -57,29 +53,25 @@ theorem inequalities_148288 (m : ℝ) :
       · simpa using ht
       · norm_num
 
-  -- TODO: Use `wlog` instead?
-  _ ↔ a < 0 → ∀ t ∈ Set.Ioo 0 (2⁻¹ : ℝ), 0 < a * t ^ 2 + t + 1 := by
-    cases le_or_lt 0 a with
-    | inr ha => simp [ha]
-    | inl ha =>
-      suffices ∀ t ∈ Set.Ioo 0 2⁻¹, 0 < a * t ^ 2 + t + 1 by simpa [ha.not_lt] using this
-      intro t ht
-      replace ht : 0 < t := ht.1
-      refine add_pos_of_nonneg_of_pos ?_ one_pos
-      exact add_nonneg (mul_nonneg ha (sq_nonneg t)) ht.le
-
-  _ ↔ a < 0 → -6 ≤ a := by
-    -- Take `a < 0` out as an assumption.
-    refine imp_congr_right fun ha_neg ↦ ?_
+  _ ↔ -6 ≤ a := by
+    -- We can assume `a < 0` since the inequality is trivially satisfied for `0 ≤ a`.
+    wlog ha_neg : a < 0
+    · rw [not_lt] at ha_neg
+      refine iff_of_true ?_ ?_
+      · simp only [Set.mem_Ioo, and_imp]
+        intro t ht _
+        refine add_pos_of_nonneg_of_pos ?_ one_pos
+        exact add_nonneg (mul_nonneg ha_neg (sq_nonneg t)) ht.le
+      · exact le_trans (by norm_num) ha_neg
+    -- Due to (strong) concavity of the quadratic, it suffices to ensure condition at boundaries.
     -- When `t = 0`, we have `0 < 1`.
     -- When `t = 1/2`, we have `0 < a/4 + 1/2 + 1 = a/4 + 3/2`.
-    -- Due to (strong) concavity of the quadratic, it suffices to ensure condition at boundaries.
-    -- Since it is trivially satisfied at `t = 0`, it suffices to consider `t = 1/2`.
+    -- As the condition is trivially satisfied at `t = 0`, it suffices to consider `t = 1/2`.
     calc _
     _ ↔ 0 ≤ a * 2⁻¹ ^ 2 + 2⁻¹ + 1 := by
+      constructor
       -- The reverse direction is easily proved using convexity.
       -- However, we don't have an iff theorem for the infimum of the image.
-      constructor
       · intro h
         -- Given that `a * t^2 + t + 1` is greater than zero on `(0, 1/2)`,
         -- we need to show that it is also greater than or equal to zero at `t = 1/2`.
@@ -117,7 +109,7 @@ theorem inequalities_148288 (m : ℝ) :
 
     -- Left inequality is always satisfied, hence only interested in the right.
     _ ↔ 0 ≤ a * 2⁻¹ ^ 2 + 2⁻¹ + 1 := by simp
-
+    -- Now simple manipulation provides `-6 ≤ a`.
     _ ↔ 0 ≤ a / 4 + 3 / 2 := by
       refine propext_iff.mp ?_
       congr 1
@@ -126,20 +118,17 @@ theorem inequalities_148288 (m : ℝ) :
     _ ↔ -(3 / 2) * 4 ≤ a := le_div_iff₀ (by norm_num)
     _ ↔ _ := by norm_num
 
-  _ ↔ -6 ≤ a := by
-    cases le_or_lt 0 a with
-    | inr ha => simp [ha]
-    | inl ha =>
-      suffices -6 ≤ a by simpa [ha.not_lt] using this
-      exact le_trans (by norm_num) ha
+  -- Finally, obtain the condition in terms of `m` rather than `a`.
   _ ↔ -6 ≤ m - m ^ 2 := by rw [ha]
   _ ↔ -6 ≤ -(m ^ 2 - m) := by simp
   _ ↔ m ^ 2 - m - 6 ≤ 0 := by simp [add_comm]
+  -- Factor the nonpositive quadratic.
   _ ↔ (m + 2) * (m - 3) ≤ 0 := by
     suffices m ^ 2 - m - 6 = (m + 2) * (m - 3) by rw [this]
     ring
   _ ↔ _ := by
     rw [mul_nonpos_iff, Set.mem_Icc]
+    -- Eliminate the empty case.
     convert or_iff_left ?_ using 1
     · exact and_congr neg_le_iff_add_nonneg sub_nonpos.symm
     · intro h
