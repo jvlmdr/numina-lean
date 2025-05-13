@@ -46,44 +46,34 @@ theorem algebra_128360 {n : ℕ} (p : Polynomial ℝ) (hn : p.natDegree = n)
       _ = _ := by simp [Finset.sum_range_succ']
 
     -- TODO: This ends up being two names for the same thing.
-    have hp_natDegree : 0 < p.natDegree := by simpa [hn] using hn_pos
+    have hp_natDegree : 0 < p.natDegree := hn ▸ hn_pos
     have hp_degree : 0 < p.degree := natDegree_pos_iff_degree_pos.mp hp_natDegree
 
+    -- The degree of all terms in `q` after the first is less than that of `p`.
+    have hq_degree_rest_lt : (∑ i ∈ Finset.range n, derivative^[i + 1] p).degree < p.degree := by
+      refine lt_of_le_of_lt (degree_sum_le _ _) ?_
+      refine (Finset.sup_lt_iff (bot_lt_of_lt hp_degree)).mpr ?_
+      intro i hi
+      refine degree_lt_degree ?_
+      calc _
+      _ ≤ (derivative p).natDegree - i := by
+        simpa using natDegree_iterate_derivative (derivative p) i
+      _ ≤ (derivative p).natDegree := Nat.sub_le _ i
+      _ < p.natDegree := natDegree_derivative_lt hp_natDegree.ne'
+    -- Therefore, the degree and leading coefficient of `q` are equal to those of `p`.
     have hq_degree : q.degree = p.degree := by
       unfold q
       rw [Finset.sum_range_succ']
-      simp only [Function.iterate_zero_apply]
-      refine degree_add_eq_right_of_degree_lt ?_
-      refine lt_of_le_of_lt (degree_sum_le _ _) ?_
-      refine (Finset.sup_lt_iff (bot_lt_of_lt hp_degree)).mpr ?_
-      intro i hi
-      refine degree_lt_degree ?_
-      calc _
-      _ ≤ (derivative p).natDegree - i := by
-        simpa using natDegree_iterate_derivative (derivative p) i
-      _ ≤ (derivative p).natDegree := Nat.sub_le _ i
-      _ < p.natDegree := natDegree_derivative_lt hp_natDegree.ne'
-
+      simpa using degree_add_eq_right_of_degree_lt hq_degree_rest_lt
     have hq_lead : q.leadingCoeff = p.leadingCoeff := by
       unfold q
       rw [Finset.sum_range_succ']
-      simp only [Function.iterate_zero_apply]
-      refine leadingCoeff_add_of_degree_lt ?_
-      -- TODO: This is copied from above.
-      refine lt_of_le_of_lt (degree_sum_le _ _) ?_
-      refine (Finset.sup_lt_iff (bot_lt_of_lt hp_degree)).mpr ?_
-      intro i hi
-      refine degree_lt_degree ?_
-      calc _
-      _ ≤ (derivative p).natDegree - i := by
-        simpa using natDegree_iterate_derivative (derivative p) i
-      _ ≤ (derivative p).natDegree := Nat.sub_le _ i
-      _ < p.natDegree := natDegree_derivative_lt hp_natDegree.ne'
+      simpa using leadingCoeff_add_of_degree_lt hq_degree_rest_lt
 
     -- Get rid of `n` to reduce rewrites and substitutions.
     rcases hn with rfl
-    have hq_degree' : q.natDegree = p.natDegree := natDegree_eq_of_degree_eq hq_degree
-    have hp_degree : 0 < p.degree := natDegree_pos_iff_degree_pos.mp hn_pos
+    clear hn_pos  -- TODO
+    have hq_natDegree : q.natDegree = p.natDegree := natDegree_eq_of_degree_eq hq_degree
 
     -- Mathlib contains results for a polynomial as x tends to +∞.
     -- To obtain results for x tending to -∞, use `p.comp (-X)`.
@@ -120,7 +110,7 @@ theorem algebra_128360 {n : ℕ} (p : Polynomial ℝ) (hn : p.natDegree = n)
       simp only [cocompact_eq_atBot_atTop, tendsto_sup] at this ⊢
       convert this using 1
       · simp only [h_tendsto_atBot, tendsto_atTop_iff_leadingCoeff_nonneg]
-        simp [← natDegree_pos_iff_degree_pos, natDegree_comp, hq_degree', hq_lead]
+        simp [← natDegree_pos_iff_degree_pos, natDegree_comp, hq_natDegree, hq_lead]
       · simp [tendsto_atTop_iff_leadingCoeff_nonneg, hq_degree, hq_lead]
 
     simp only [cocompact_eq_atBot_atTop, tendsto_sup]
