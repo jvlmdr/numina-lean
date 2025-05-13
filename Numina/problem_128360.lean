@@ -17,36 +17,41 @@ theorem algebra_128360 {n : ℕ} (p : Polynomial ℝ) (hn : p.natDegree = n)
     simpa [hn] using hp_nonneg
   | inr hn_pos =>
     let q := ∑ i ∈ Finset.range (n + 1), derivative^[i] p
+    -- Rerwrite the sum of polynomial evaluations as the evaluation of a sum of polynomials.
+    -- Use the linear map `leval` to map through the sum.
     suffices ∀ x, 0 ≤ q.leval x by simpa [q] using this
     change ∀ x, 0 ≤ q.eval x
 
+    -- The leading term of `q` will match that of `p`, hence `q` goes to infinity away from zero.
+    -- Therefore, it will suffice to show that `q` is non-negative at all stationary points.
     suffices Tendsto q.eval (cocompact ℝ) atTop by
-      suffices h_deriv : q.derivative = q - p by
-        obtain ⟨u, hu_min⟩ : ∃ x, IsMinOn q.eval Set.univ x := by
-          suffices ∃ x ∈ Set.univ, IsMinOn q.eval Set.univ x by simpa using this
-          refine ContinuousOn.exists_isMinOn' q.continuousOn_aeval isClosed_univ (Set.mem_univ 0) ?_
-          simpa using this.eventually_ge_atTop (eval 0 q)
+      -- The derivative of `q` is `q - p`. When this is zero, `q x = p x ≥ 0`.
+      have h_deriv : q.derivative = q - p := by
+        unfold q
+        calc _
+        _ = ∑ i ∈ Finset.range (n + 1), derivative^[i + 1] p := by
+          simp_rw [Function.iterate_succ']
+          simp
+        _ = ∑ i ∈ Finset.range n, derivative^[i + 1] p := by
+          rw [Finset.sum_range_succ, add_right_eq_self]
+          refine iterate_derivative_eq_zero ?_
+          simp [hn]
+        _ = _ := by simp [Finset.sum_range_succ']
 
-        suffices 0 ≤ q.eval u from fun x ↦ le_trans this (isMinOn_iff.mp hu_min x (Set.mem_univ x))
-        suffices q.eval u = p.eval u by simpa [this] using hp_nonneg u
-        refine sub_eq_zero.mp ?_
-        suffices eval u (q - p) = 0 by simpa using this
-        rw [← h_deriv]
-        simpa using (hu_min.isLocalMin univ_mem).deriv_eq_zero
-
-      unfold q
-      calc _
-      _ = ∑ i ∈ Finset.range (n + 1), derivative^[i + 1] p := by
-        simp_rw [Function.iterate_succ']
-        simp
-      _ = ∑ i ∈ Finset.range n, derivative^[i + 1] p := by
-        rw [Finset.sum_range_succ, add_right_eq_self]
-        refine iterate_derivative_eq_zero ?_
-        simp [hn]
-      _ = _ := by simp [Finset.sum_range_succ']
+      -- Obtain the global minimum since `q` is continuous and goes to infinity.
+      obtain ⟨u, hu_min⟩ : ∃ x, IsMinOn q.eval Set.univ x := by
+        suffices ∃ x ∈ Set.univ, IsMinOn q.eval Set.univ x by simpa using this
+        refine ContinuousOn.exists_isMinOn' q.continuousOn_aeval isClosed_univ (Set.mem_univ 0) ?_
+        simpa using this.eventually_ge_atTop (eval 0 q)
+      -- We only need to prove that the minimum is non-negative.
+      suffices 0 ≤ q.eval u from fun x ↦ this.trans (isMinOn_iff.mp hu_min x (Set.mem_univ x))
+      -- Obtain this from the derivative being zero at any local minimum.
+      convert hp_nonneg u using 1
+      simpa [h_deriv, sub_eq_zero] using (hu_min.isLocalMin univ_mem).deriv_eq_zero
 
     -- TODO: This ends up being two names for the same thing.
     have hp_natDegree : 0 < p.natDegree := hn ▸ hn_pos
+    clear hn_pos  -- TODO
     have hp_degree : 0 < p.degree := natDegree_pos_iff_degree_pos.mp hp_natDegree
 
     -- The degree of all terms in `q` after the first is less than that of `p`.
@@ -72,7 +77,6 @@ theorem algebra_128360 {n : ℕ} (p : Polynomial ℝ) (hn : p.natDegree = n)
 
     -- Get rid of `n` to reduce rewrites and substitutions.
     rcases hn with rfl
-    clear hn_pos  -- TODO
     have hq_natDegree : q.natDegree = p.natDegree := natDegree_eq_of_degree_eq hq_degree
 
     -- Mathlib contains results for a polynomial as x tends to +∞.
@@ -113,5 +117,4 @@ theorem algebra_128360 {n : ℕ} (p : Polynomial ℝ) (hn : p.natDegree = n)
         simp [← natDegree_pos_iff_degree_pos, natDegree_comp, hq_natDegree, hq_lead]
       · simp [tendsto_atTop_iff_leadingCoeff_nonneg, hq_degree, hq_lead]
 
-    simp only [cocompact_eq_atBot_atTop, tendsto_sup]
-    exact ⟨hp_tendsto_atBot, hp_tendsto_atTop⟩
+    simpa using ⟨hp_tendsto_atBot, hp_tendsto_atTop⟩
