@@ -7,7 +7,7 @@ open Polynomial Filter
 /- p(x) is a polynomial of degree n with real coefficients and is non-negative for all x.
 Show that p(x) + p'(x) + p''(x) + ... (n+1 terms) ≥ 0 for all x. -/
 
-theorem algebra_128360 {n : ℕ} (p : Polynomial ℝ) (hp_degree : p.natDegree = n)
+theorem algebra_128360 {n : ℕ} (p : Polynomial ℝ) (hn : p.natDegree = n)
     (hp_nonneg : ∀ x, 0 ≤ p.eval x) :
     ∀ x, 0 ≤ ∑ i ∈ Finset.range (n + 1), (derivative^[i] p).eval x := by
   -- If `n = 0`, then `q(x) = p(x) = c ≥ 0` and the inequality holds trivially.
@@ -42,28 +42,46 @@ theorem algebra_128360 {n : ℕ} (p : Polynomial ℝ) (hp_degree : p.natDegree =
       _ = ∑ i ∈ Finset.range n, derivative^[i + 1] p := by
         rw [Finset.sum_range_succ, add_right_eq_self]
         refine iterate_derivative_eq_zero ?_
-        simp [hp_degree]
+        simp [hn]
       _ = _ := by simp [Finset.sum_range_succ']
 
-    -- Get rid of `n` to reduce rewrites and substitutions.
-    rcases hp_degree with rfl
+    -- TODO: This ends up being two names for the same thing.
+    have hp_natDegree : 0 < p.natDegree := by simpa [hn] using hn_pos
+    have hp_degree : 0 < p.degree := natDegree_pos_iff_degree_pos.mp hp_natDegree
 
     have hq_degree : q.degree = p.degree := by
       unfold q
       rw [Finset.sum_range_succ']
       simp only [Function.iterate_zero_apply]
       refine degree_add_eq_right_of_degree_lt ?_
-      -- Which way best to proceed here? Need induction?
-      sorry
+      refine lt_of_le_of_lt (degree_sum_le _ _) ?_
+      refine (Finset.sup_lt_iff (bot_lt_of_lt hp_degree)).mpr ?_
+      intro i hi
+      refine degree_lt_degree ?_
+      calc _
+      _ ≤ (derivative p).natDegree - i := by
+        simpa using natDegree_iterate_derivative (derivative p) i
+      _ ≤ (derivative p).natDegree := Nat.sub_le _ i
+      _ < p.natDegree := natDegree_derivative_lt hp_natDegree.ne'
 
     have hq_lead : q.leadingCoeff = p.leadingCoeff := by
       unfold q
       rw [Finset.sum_range_succ']
       simp only [Function.iterate_zero_apply]
       refine leadingCoeff_add_of_degree_lt ?_
-      -- Overlaps with result above?
-      sorry
+      -- TODO: This is copied from above.
+      refine lt_of_le_of_lt (degree_sum_le _ _) ?_
+      refine (Finset.sup_lt_iff (bot_lt_of_lt hp_degree)).mpr ?_
+      intro i hi
+      refine degree_lt_degree ?_
+      calc _
+      _ ≤ (derivative p).natDegree - i := by
+        simpa using natDegree_iterate_derivative (derivative p) i
+      _ ≤ (derivative p).natDegree := Nat.sub_le _ i
+      _ < p.natDegree := natDegree_derivative_lt hp_natDegree.ne'
 
+    -- Get rid of `n` to reduce rewrites and substitutions.
+    rcases hn with rfl
     have hq_degree' : q.natDegree = p.natDegree := natDegree_eq_of_degree_eq hq_degree
     have hp_degree : 0 < p.degree := natDegree_pos_iff_degree_pos.mp hn_pos
 
