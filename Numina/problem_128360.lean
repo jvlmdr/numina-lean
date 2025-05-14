@@ -7,23 +7,25 @@ open Polynomial Filter
 /- p(x) is a polynomial of degree n with real coefficients and is non-negative for all x.
 Show that p(x) + p'(x) + p''(x) + ... (n+1 terms) ≥ 0 for all x. -/
 
-theorem algebra_128360 {n : ℕ} (p : Polynomial ℝ) (hn : p.natDegree = n)
+theorem algebra_128360 (p : Polynomial ℝ)
     (hp_nonneg : ∀ x, 0 ≤ p.eval x) :
-    ∀ x, 0 ≤ ∑ i ∈ Finset.range (n + 1), (derivative^[i] p).eval x := by
+    ∀ x, 0 ≤ ∑ i ∈ Finset.range (p.natDegree + 1), (derivative^[i] p).eval x := by
   -- If `n = 0`, then `q(x) = p(x) = c ≥ 0` and the inequality holds trivially.
   -- This allows us to focus on the case where `p` is non-trivial with `0 < p.degree`.
-  cases Nat.eq_zero_or_pos n with
-  | inl hn =>
-    simpa [hn] using hp_nonneg
-  | inr hn_pos =>
+  cases Nat.eq_zero_or_pos p.natDegree with
+  | inl hp_natDegree =>
+    simpa [hp_natDegree] using hp_nonneg
+  | inr hp_natDegree =>
+    generalize hn : p.natDegree = n
     let q := ∑ i ∈ Finset.range (n + 1), derivative^[i] p
-    -- Rerwrite the sum of polynomial evaluations as the evaluation of a sum of polynomials.
-    -- Use the linear map `leval` to map through the sum.
+    -- Rewrite sum of polynomial evaluations as evaluation of sum of polynomials.
+    -- Use the linear version `leval` to map through the sum.
     suffices ∀ x, 0 ≤ q.leval x by simpa [q] using this
-    change ∀ x, 0 ≤ q.eval x
+    simp only [leval_apply]
 
-    -- The leading term of `q` will match that of `p`, hence `q` goes to infinity away from zero.
-    -- Therefore, it will suffice to show that `q` is non-negative at all stationary points.
+    -- The leading term of `q` matches that of `p`.
+    -- Therefore `q`, like `p`, will go to +∞ as `x` becomes large in either direction.
+    -- It will therefore suffice to show that `q` is non-negative at all stationary points.
     suffices Tendsto q.eval (cocompact ℝ) atTop by
       -- The derivative of `q` is `q - p`. When this is zero, `q x = p x ≥ 0`.
       have h_deriv : q.derivative = q - p := by
@@ -49,11 +51,7 @@ theorem algebra_128360 {n : ℕ} (p : Polynomial ℝ) (hn : p.natDegree = n)
       convert hp_nonneg u using 1
       simpa [h_deriv, sub_eq_zero] using (hu_min.isLocalMin univ_mem).deriv_eq_zero
 
-    -- TODO: This ends up being two names for the same thing.
-    have hp_natDegree : 0 < p.natDegree := hn ▸ hn_pos
-    clear hn_pos  -- TODO
     have hp_degree : 0 < p.degree := natDegree_pos_iff_degree_pos.mp hp_natDegree
-
     -- The degree of all terms in `q` after the first is less than that of `p`.
     have hq_degree_rest_lt : (∑ i ∈ Finset.range n, derivative^[i + 1] p).degree < p.degree := by
       refine lt_of_le_of_lt (degree_sum_le _ _) ?_
@@ -75,46 +73,49 @@ theorem algebra_128360 {n : ℕ} (p : Polynomial ℝ) (hn : p.natDegree = n)
       rw [Finset.sum_range_succ']
       simpa using leadingCoeff_add_of_degree_lt hq_degree_rest_lt
 
+    -- It will often be useful to have `natDegree` (e.g. `natDegree_comp`).
+    have hq_natDegree : q.natDegree = p.natDegree := natDegree_eq_of_degree_eq hq_degree
     -- Get rid of `n` to reduce rewrites and substitutions.
     rcases hn with rfl
-    have hq_natDegree : q.natDegree = p.natDegree := natDegree_eq_of_degree_eq hq_degree
 
-    -- Mathlib contains results for a polynomial as x tends to +∞.
-    -- To obtain results for x tending to -∞, use `p.comp (-X)`.
-    have h_tendsto_atBot {p : ℝ[X]} :
-        Tendsto p.eval atBot atTop ↔ Tendsto (p.comp (-X)).eval atTop atTop := by
+    -- Split into two `Tendsto` statements, `atBot` and `atTop`.
+    simp only [cocompact_eq_atBot_atTop, tendsto_sup]
+
+    -- Mathlib contains results for a polynomial `p` as `x` tends to +∞.
+    -- To handle `x` going to -∞, instead consider `p.comp (-X)` as `x` tends to +∞.
+    suffices Tendsto (q.comp (-X)).eval atTop atTop ∧ Tendsto q.eval atTop atTop by
+      convert this using 1
       constructor
+      -- The forward direction is a straightforward application of `Tendsto.comp`.
       · intro h
         simpa using h.comp tendsto_neg_atTop_atBot
+      -- To prove the reverse direction, compose again with negation.
       · intro h
         simpa [Function.comp_def] using h.comp tendsto_neg_atBot_atTop
 
-    have h_degree_comp_neg_X {p : ℝ[X]} (hp : 0 < p.degree) : 0 < (p.comp (-X)).degree := by
-      simpa [← natDegree_pos_iff_degree_pos, natDegree_comp] using hp
-
-    have hp_tendsto_atTop : Tendsto p.eval atTop atTop := by
-      refine tendsto_atTop_of_leadingCoeff_nonneg p hp_degree ?_
-      refine le_of_not_lt ?_
-      intro hp_lead
-      have := tendsto_atBot_of_leadingCoeff_nonpos p hp_degree hp_lead.le
-      suffices ¬∀ᶠ x in atTop, 0 ≤ p.eval x from this (.of_forall hp_nonneg)
-      simpa using fun x ↦ exists_lt_of_tendsto_atBot this x 0
-
-    have hp_tendsto_atBot : Tendsto p.eval atBot atTop := by
-      rw [h_tendsto_atBot]
-      refine tendsto_atTop_of_leadingCoeff_nonneg _ (h_degree_comp_neg_X hp_degree) ?_
-      refine le_of_not_lt ?_
-      intro hp_lead
-      have := tendsto_atBot_of_leadingCoeff_nonpos _ (h_degree_comp_neg_X hp_degree) hp_lead.le
-      suffices ¬∀ᶠ x in atTop, 0 ≤ p.eval (-x) from this (.of_forall fun x ↦ hp_nonneg (-x))
-      simpa using fun x ↦ exists_lt_of_tendsto_atBot this x 0
-
-    -- TODO: Avoid multiple uses of `tendsto_atTop_iff_leadingCoeff_nonneg`?
-    suffices Tendsto p.eval (cocompact ℝ) atTop by
-      simp only [cocompact_eq_atBot_atTop, tendsto_sup] at this ⊢
+    -- Suffices to prove this behavior for `p` rather than `q` as they share a leading term.
+    suffices Tendsto (p.comp (-X)).eval atTop atTop ∧ Tendsto p.eval atTop atTop by
       convert this using 1
-      · simp only [h_tendsto_atBot, tendsto_atTop_iff_leadingCoeff_nonneg]
-        simp [← natDegree_pos_iff_degree_pos, natDegree_comp, hq_natDegree, hq_lead]
-      · simp [tendsto_atTop_iff_leadingCoeff_nonneg, hq_degree, hq_lead]
+      · simp only [tendsto_atTop_iff_leadingCoeff_nonneg, ← natDegree_pos_iff_degree_pos]
+        simp [natDegree_comp, hq_natDegree, hq_lead]
+      · simp only [tendsto_atTop_iff_leadingCoeff_nonneg]
+        rw [hq_degree, hq_lead]
 
-    simpa using ⟨hp_tendsto_atBot, hp_tendsto_atTop⟩
+    -- Given that the degree is non-zero, a non-negative polynomial must tend to +∞.
+    suffices ∀ p : ℝ[X], 0 < p.degree → (∀ x, 0 ≤ p.eval x) → Tendsto p.eval atTop atTop by
+      refine ⟨?_, this p hp_degree hp_nonneg⟩
+      refine this ?_ ?_ ?_
+      · simpa [← natDegree_pos_iff_degree_pos, natDegree_comp] using hp_natDegree
+      · simpa using fun x ↦ hp_nonneg (-x)
+
+    intro p hp_degree hp_nonneg
+    refine tendsto_atTop_of_leadingCoeff_nonneg p hp_degree ?_
+    -- Need to show that the leading coefficient is non-negative; prove by contradiction.
+    -- If the leading coefficient were negative, `p` would tend to -∞ (i.e. < 0) for large `x`.
+    suffices ¬∃ x ≥ 0, p.eval x < 0 by
+      refine le_of_not_lt ?_
+      refine mt (fun hp_lead ↦ ?_) this
+      -- We can use `Tendsto p.eval atTop atBot` to obtain some `x` such that `p.eval x < 0`.
+      refine exists_lt_of_tendsto_atBot ?_ 0 0
+      exact tendsto_atBot_of_leadingCoeff_nonpos p hp_degree hp_lead.le
+    simpa using fun x _ ↦ hp_nonneg x
