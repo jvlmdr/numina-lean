@@ -27,29 +27,6 @@ lemma three_dvd_two_pow_sub_one (j : ℕ) : 3 ∣ 2 ^ j - 1 ↔ Even j := by
     suffices 4 ≡ 1 [MOD 3] by simpa using (this.pow m).mul_right 2
     rfl
 
--- When `j` is even, we can find `i` such that `4 + 3 i = 2 ^ (j + 2)`.
-lemma exists_arith_eq_geom (j : ℕ) (h_even : Even j) :
-    ∃ i, 3 * i = 4 * (2 ^ j - 1) := by
-  -- Eliminate the tsub before performing induction to simplify manipulation.
-  suffices ∃ i, 4 + 3 * i = 4 * 2 ^ j by
-    refine this.imp fun i hi ↦ ?_
-    convert congrArg (· - 4) hi using 1
-    · simp
-    · simp [mul_tsub]
-  -- Holds trivially for `j = 0`. No need to prove for `j = 1`.
-  -- Then use induction to prove for `j = 2 + k` given hy[opothesis for `j = k`.
-  induction j using Nat.twoStepInduction with
-  | zero => simp
-  | one => contradiction
-  | more j IH _ =>
-    obtain ⟨i', hi'⟩ := IH (by simpa using h_even.tsub even_two)
-    -- Left side: `4 + 3 * i`
-    -- Right side: `4 (2 ^ (j + 2)) = 4 (4 * 2 ^ j) = 4 (4 + 3 i) = 4 + 3 (4 + 4 i)`
-    use 4 + 4 * i'
-    calc _
-    _ = 4 * (4 + 3 * i') := by ring
-    _ = _ := by rw [hi', pow_add]; ring
-
 theorem algebra_205122 {a b : ℕ → ℝ}
     (ha : ∃ d, ∀ n, a n = a 0 + d * n) (hb : ∃ q, ∀ n, b n = b 0 * q ^ n)
     (hs : ∀ n, ∑ i in Finset.range n, a i = (3 * n ^ 2 + 5 * n : ℝ) / 2)
@@ -98,12 +75,9 @@ theorem algebra_205122 {a b : ℕ → ℝ}
   -- Note that since `c` is a geometric sequence and a subsequence of `b` (also geometric),
   -- we expect `c` to sample `b` at regular intervals.
   -- We can see that `3 i + 4 = 2 ^ j` is not satisfied for `j = 0, 1` and
-  -- is equivalent to `3 i = 4 (2 ^ (j - 2) - 1)` for `2 ≤ j`.
-  -- Or equivalently, introduce `j = v + 2` and the condition is `3 i = 4 (2 ^ v - 1)`.
-  -- This implies that `3 ∣ 2 ^ v - 1`, which is true iff `Even v`. However, it remains
-  -- to show that `Even v` implies the existence of `i` such that `3 i = 4 (2 ^ v - 1)`.
-  -- This can be proved by induction using
-  -- `4 (2^(v + 2) - 1) = 16 (2 ^ v) - 4 = 4 (4 (2 ^ v - 1) + 3) = 4 (3 i) + 4 * 3`
+  -- is equivalent to `3 i = 4 (2 ^ v - 1)` where we introduce `2 + v = j`.
+  -- The existence of some `i` for each `v` is equivalent to `3 ∣ 4 (2 ^ v - 1)`.
+  -- Since 3 and 4 are coprime, this is equivalent to `3 ∣ 2 ^ v - 1`, which is true iff `Even v`.
 
   -- First switch from `ℝ` to `ℕ`.
   suffices (Set.range fun n ↦ 4 ^ (n + 1)) = Set.range (4 + 3 * ·) ∩ Set.range (2 ^ ·) by
@@ -143,22 +117,13 @@ theorem algebra_205122 {a b : ℕ → ℝ}
     refine exists_congr fun v ↦ and_congr_left fun hv ↦ ?_
     rcases hv with rfl
     calc _
-    _ ↔ (∃ i, 3 * i = 4 * (2 ^ v - 1)) := by
+    _ ↔ ∃ i, 3 * i = 4 * (2 ^ v - 1) := by
       refine exists_congr fun i ↦ ?_
       rw [mul_tsub, eq_tsub_iff_add_eq_of_le (by simpa using Nat.one_le_two_pow)]
       simp [add_comm]
-    _ ↔ Even v := by
-      -- Apply the two results from above.
-      constructor
-      -- Divisibility of `4 * (2 ^ v - 1)` by `3` implies `Even v`.
-      · intro ⟨i, hi⟩
-        refine (three_dvd_two_pow_sub_one v).mp ?_
-        -- Since 3 and 4 are coprime, 3 must divide the other factor.
-        suffices 3 ∣ 4 * (2 ^ v - 1) from (Nat.Coprime.dvd_mul_left (by norm_num)).mp this
-        exact Dvd.intro i hi
-      -- `Even v` implies the existence of `i` such that `3 * i = 4 * (2 ^ v - 1)`.
-      · intro hv
-        exact exists_arith_eq_geom v hv
+    _ ↔ 3 ∣ 4 * (2 ^ v - 1) := by simp [dvd_iff_exists_eq_mul_right, eq_comm]
+    _ ↔ 3 ∣ 2 ^ v - 1 := Nat.Coprime.dvd_mul_left (by norm_num)
+    _ ↔ Even v := three_dvd_two_pow_sub_one v
 
   -- Finally, show that `4 ^ (k + 1)` corresponds to `2 ^ (v + 2)` iff `Even v`.
   _ ↔ (∃ v k, v = 2 * k ∧ 2 ^ (2 + v) = x) := by
