@@ -96,21 +96,34 @@ theorem algebra_118182 (a b : ℕ) :
     refine mt (fun h ↦ ?_) (Int.not_irrational c)
     rw [← hc, irrational_mul_int_iff]
     refine ⟨?_, h⟩
-    suffices (↑(2 * b) - a : ℤ) ≠ 0 by simpa using this
+    suffices ((2 * b) - a : ℤ) ≠ 0 by simpa using this
     refine sub_ne_zero_of_ne ?_
     exact mt Int.ofNat_inj.mp ha
 
-  have : 2 * b = a := by
+  have hab : 2 * b = a := by
     refine this.resolve_right ?_
     intro ha_rat
-    have hb_rat : ¬Irrational √b := by sorry
-
-    have ha_nat : ∃ u : ℕ, √a = u := by sorry
-    have hb_nat : ∃ v : ℕ, √b = v := by sorry
+    have ha_nat : ∃ u : ℕ, √a = u := by
+      refine exists_nat_of_sqrt_eq_rat a ?_
+      simpa [Irrational, eq_comm] using ha_rat  -- TODO: eq_comm
     rcases ha_nat with ⟨u, ha_nat⟩
+    --
+    have h : ↑(u * (u + 1)) = √b * ↑(u + 2) := by simpa [ha_nat] using h
+    have hb_rat : ¬Irrational √b := by
+      suffices ¬Irrational (√b * ↑(u + 2)) by
+        rw [irrational_mul_nat_iff] at this
+        simpa using this
+      rw [← h]
+      exact Nat.not_irrational (u * (u + 1))
+    --
+    have hb_nat : ∃ v : ℕ, √b = v := by
+      refine exists_nat_of_sqrt_eq_rat b ?_
+      simpa [Irrational, eq_comm] using hb_rat  -- TODO: eq_comm
     rcases hb_nat with ⟨v, hb_nat⟩
-    rw [ha_nat, hb_nat] at h
-    have h : u * (u + 1) = v * (u + 2) := (Nat.cast_inj (R := ℝ)).mp (by simpa)
+    --
+    have h : u * (u + 1) = v * (u + 2) := by
+      refine (Nat.cast_inj (R := ℝ)).mp ?_
+      simpa [hb_nat] using h
 
     -- TODO: Might be easier not to assume `0 < a` and keep as `∨` in goal?
     have hu : 0 < u := by
@@ -127,6 +140,25 @@ theorem algebra_118182 (a b : ℕ) :
     -- This provides a contradiction: `u + 2 ≤ u`
     simpa using Nat.le_of_dvd hu h_dvd
 
-  simp [← this] at h
-  simp [← this] at h_sq
-  sorry
+  suffices b = 1 by
+    refine ⟨?_, this⟩
+    simpa [this] using hab.symm
+
+  have h : √2 * √b * (√2 * √b + 1) = √b * (√2 * √b + 2) := by simpa [← hab] using h
+
+  have h : √2 * √b + 1 = √b + √2 := by
+    suffices √2 * (√2 * √b + 1) = √2 * (√b + √2) from (mul_right_inj' (by simp)).mp this
+    suffices √2 * (√2 * √b + 1) = (√2 * √b + 2) by simpa [mul_add]
+    suffices √b * (√2 * (√2 * √b + 1)) = √b * (√2 * √b + 2) by
+      refine (mul_right_inj' ?_).mp this
+      suffices 2 * b ≠ 0 by simpa
+      exact hab ▸ ha.ne'
+    convert h using 1
+    ring
+
+  have h : (√2 - 1) * √b = √2 - 1 := by
+    rw [sub_one_mul, sub_eq_sub_iff_add_eq_add]
+    convert h using 1
+    ring
+
+  simpa [mul_right_eq_self₀, sub_eq_zero] using h
