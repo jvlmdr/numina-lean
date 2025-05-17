@@ -88,15 +88,12 @@ theorem algebra_118182 (a b : ℕ) :
     cases a.eq_zero_or_pos with
     | inl ha => exact .inl ha
     | inr ha =>
-      -- Substitute `2 * b` for `a` in the original equation.
-      have h : √2 * √b * (√2 * √b + 1) = √b * (√2 * √b + 2) := by simpa [hab] using h
+      -- Substitute `2 * b` for `a` in the original equation; expand 2 into `√2^2` for `ring`.
+      have h : √2 * √b * (√2 * √b + 1) = √b * (√2 * √b + √2^2) := by simpa [hab] using h
       -- Eliminate the common factor of `√2 √b`.
       have h : √2 * √b + 1 = √b + √2 := by
-        -- Multiply by `√2`.
-        suffices √2 * (√2 * √b + 1) = √2 * (√b + √2) from (mul_right_inj' (by simp)).mp this
-        suffices √2 * (√2 * √b + 1) = √2 * √b + 2 by simpa [mul_add]
-        -- Multiply by `√b`.
-        suffices √b * (√2 * (√2 * √b + 1)) = √b * (√2 * √b + 2) by
+        -- Multiply by `√b * √2`.
+        suffices √2 * √b * (√2 * √b + 1) = √2 * √b * (√b + √2) by
           refine (mul_right_inj' ?_).mp this
           suffices 2 * b ≠ 0 by simpa
           exact hab ▸ ha.ne'
