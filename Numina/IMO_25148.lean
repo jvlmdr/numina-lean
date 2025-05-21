@@ -14,7 +14,8 @@ For example, for $a=2003$, we have $b=3200, c=10240000$, and $d = 02400001 = 240
 Find all numbers $a$ for which $d(a) = a^{2}$. -/
 
 def d (a : ℕ) : ℕ :=
-  ofDigits 10 <| rotateRight <| digits 10 <| (· ^ 2) <| ofDigits 10 <| rotateLeft <| digits 10 a
+  ofDigits 10 <| rotateRight <| digits 10 <| (· ^ 2) <|
+  ofDigits 10 <| rotate (n := 1) <| digits 10 a
 
 -- When we square a number with $n$ digits, we get a number with either $2 n$ or $2 n + 1$ digits.
 -- Using the existing lemmas in Mathlib, this is most easily expressed using Nat.log.
@@ -256,9 +257,107 @@ def f : ℕ → ℕ → Finset ℕ :=
 -- `f = (digits 10 c).getLast _ = (digits 10 d)[0] = s ^ 2 % 10`
 -- `f ∈ ?`
 
-theorem number_theory_25148 {a : ℕ} (ha : 0 < a) :
+lemma rotateRight_append_singleton (l : List ℕ) (x : ℕ) :
+    rotateRight (l ++ [x]) = x :: l := by
+  unfold rotateRight
+  cases l <;> simp
+
+lemma rotateLeft_cons (l : List ℕ) (x : ℕ) :
+    rotateLeft (x :: l) = l ++ [x] := by
+  unfold rotateLeft
+  cases l <;> simp
+
+lemma rotate_cons (l : List ℕ) (x : ℕ) :
+    (x :: l).rotate 1 = l ++ [x] := by
+  unfold rotate
+  cases l <;> simp
+
+
+theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
     d a = a ^ 2 ↔ a ∈ Set.range (fun n ↦ ofDigits 10 ([1] ++ List.replicate n 2)) ∪ {2, 3} := by
   unfold d
   simp only
 
-  sorry
+  calc _
+  -- a = ...s
+  -- b = s...
+  -- c = f...
+  -- d = ...f = a ^ 2
+  _ ↔ ∃ (b c : ℕ) (la lc : List ℕ),
+      digits 10 a = la ∧ ofDigits 10 (la.rotate 1) = b ∧ b ^ 2 = c ∧
+      digits 10 c = lc ∧ ofDigits 10 lc.rotateRight = a ^ 2 := by simp
+
+  _ ↔ ∃ (b c : ℕ) (s f : ℕ) (ra rc : List ℕ) (la lc : List ℕ),
+      digits 10 a = la ∧ ofDigits 10 (la.rotate 1) = b ∧ b ^ 2 = c ∧
+      digits 10 c = lc ∧ ofDigits 10 lc.rotateRight = a ^ 2 ∧
+      la = s :: ra ∧ lc = rc ++ [f] := by
+    simp only [exists_and_left, exists_eq_left', exists_and_right, iff_self_and]
+    intro _
+    refine ⟨?_, ?_⟩
+    · rw [← length_pos_iff_exists_cons]
+      refine length_pos.mpr ?_
+      exact digits_ne_nil_iff_ne_zero.mpr ha
+    · suffices digits 10 (ofDigits 10 ((digits 10 a).rotate 1) ^ 2) ≠ [] by
+        -- Is this not available as a lemma?
+        generalize digits 10 (ofDigits 10 ((digits 10 a).rotate 1) ^ 2) = l at this ⊢
+        use l.getLast this, l.take (l.length - 1)
+        simp
+      suffices ofDigits 10 ((digits 10 a).rotate 1) ^ 2 ≠ 0 from digits_ne_nil_iff_ne_zero.mpr this
+      refine pow_ne_zero 2 ?_
+      -- The number composed of rotated digits of `a` cannot be zero since `a` is not zero.
+      -- Show this using the largest digit of `a`, which must be non-zero.
+      refine mt (fun h ↦ ?_) (getLast_digit_ne_zero 10 ha)
+      exact digits_zero_of_eq_zero (by norm_num) h _ (by simp)
+
+  -- -- Re-order and eliminate `la, lc`.
+  -- _ ↔ ∃ (b c : ℕ) (s f : ℕ) (ra rc : List ℕ) (la lc : List ℕ),
+  --     la = s :: ra ∧ lc = rc ++ [f] ∧
+  --     digits 10 a = la ∧ ofDigits 10 (la.rotate 1) = b ∧ b ^ 2 = c ∧
+  --     digits 10 c = lc ∧ ofDigits 10 lc.rotateRight = a ^ 2 := by
+  --   refine exists₂_congr fun b c ↦ ?_
+  --   refine exists₄_congr fun s f ra rc ↦ ?_
+  --   refine exists₂_congr fun la lc ↦ ?_
+  --   sorry
+  -- _ ↔ ∃ (b c : ℕ) (s f : ℕ) (ra rc : List ℕ),
+  --     digits 10 a = s :: ra ∧ ofDigits 10 ((s :: ra).rotate 1) = b ∧ b ^ 2 = c ∧
+  --     digits 10 c = rc ++ [f] ∧ ofDigits 10 (rc ++ [f]).rotateRight = a ^ 2 := by
+  --   simp
+
+  -- Eliminate `la, lc`.
+  _ ↔ ∃ (b c : ℕ) (s f : ℕ) (ra rc : List ℕ),
+      digits 10 a = s :: ra ∧ ofDigits 10 ((s :: ra).rotate 1) = b ∧ b ^ 2 = c ∧
+      digits 10 c = rc ++ [f] ∧ ofDigits 10 (rc ++ [f]).rotateRight = a ^ 2 := by
+    refine exists₂_congr fun b c ↦ exists₄_congr fun s f ra rc ↦ ?_
+    simp only [exists_and_left, exists_eq_left']
+    -- TODO: More elegant way?
+    constructor
+    · intro ⟨hb, hc, hd, hla, hlc⟩
+      exact ⟨hla, hla ▸ hb, hc, hlc, hlc ▸ hd⟩
+    · intro ⟨hla, hb, hc, hlc, hd⟩
+      exact ⟨hla ▸ hb, hc, hlc ▸ hd, hla, hlc⟩
+
+  -- Introduce additional conditions that must hold.
+  _ ↔ ∃ (b c : ℕ) (s f : ℕ) (ra rc : List ℕ),
+      digits 10 a = s :: ra ∧ ofDigits 10 ((s :: ra).rotate 1) = b ∧ b ^ 2 = c ∧
+      digits 10 c = rc ++ [f] ∧ ofDigits 10 (rc ++ [f]).rotateRight = a ^ 2 ∧
+      s ^ 2 % 10 = f ∧
+      f ∈ Finset.Ico (1 ⊔ s ^ 2) (10 ⊓ (s + 1) ^ 2) ∪
+        Finset.Ico (1 ⊔ s ^ 2 / 10) (10 ⊓ (s + 1) ^ 2 ⌈/⌉ 10) := by
+    refine exists₂_congr fun b c ↦ exists₄_congr fun s f ra rc ↦ ?_
+    simp only [and_congr_right_iff, iff_self_and]
+    intro hla hb hc hlc hd
+    refine ⟨?_, ?_⟩
+    ·
+      sorry
+    · refine last_digit 10 (by norm_num) b s f ?_ ?_
+      · rw [← hb]
+        -- Need to remove trailing zeros from `ra`.
+        -- Or re-formulate the max digit condition.
+        use ra
+        rw [rotate_cons]
+        -- rw [digits_ofDigits]
+        sorry
+      · rw [hc]
+        use rc, hlc
+
+  _ ↔ _ := by sorry
