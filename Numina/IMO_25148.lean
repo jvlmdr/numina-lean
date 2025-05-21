@@ -14,8 +14,8 @@ For example, for $a=2003$, we have $b=3200, c=10240000$, and $d = 02400001 = 240
 Find all numbers $a$ for which $d(a) = a^{2}$. -/
 
 def d (a : ℕ) : ℕ :=
-  ofDigits 10 <| rotateRight <| digits 10 <| (· ^ 2) <|
-  ofDigits 10 <| rotate (n := 1) <| digits 10 a
+  ofDigits 10 <| rotateRight <| digits 10 <|
+  (ofDigits 10 <| rotate (n := 1) <| digits 10 a) ^ 2
 
 -- When we square a number with $n$ digits, we get a number with either $2 n$ or $2 n + 1$ digits.
 -- Using the existing lemmas in Mathlib, this is most easily expressed using Nat.log.
@@ -272,11 +272,39 @@ lemma rotate_cons (l : List ℕ) (x : ℕ) :
   unfold rotate
   cases l <;> simp
 
+-- TODO: Comment
+-- Note: It is not necessary to exclude the zero case.
+lemma first_and_last (s : ℕ) (hs : s < 10) :
+    (s ^ 2 % 10 ∈ Finset.Ico (1 ⊔ s ^ 2) (10 ⊓ (s + 1) ^ 2) ∪
+      Finset.Ico (1 ⊔ s ^ 2 / 10) (10 ⊓ (s + 1) ^ 2 ⌈/⌉ 10)) ↔
+    s ∈ ({1, 2, 3} : Finset ℕ) := by
+  interval_cases s <;> simp
+
+lemma ten_pow_eq_nine_mul_replicate_add_one (n : ℕ) :
+    10 ^ n = 9 * ofDigits 10 (replicate n 1) + 1 := by
+  induction n with
+  | zero => simp
+  | succ n IH =>
+    rw [Nat.pow_succ, IH, replicate_succ, ofDigits_cons]
+    ring
+
+lemma ten_pow_sub_one_div_nine (n : ℕ) :
+    (10 ^ n - 1) / 9 = ofDigits 10 (replicate n 1) := by
+  refine Nat.div_eq_of_eq_mul_right (by norm_num) ?_
+  refine Nat.sub_eq_of_eq_add ?_
+  exact ten_pow_eq_nine_mul_replicate_add_one n
+
+
+-- lemma exists_one (p : ℕ → Prop) (n : ℕ) : (∃ x, p x) ∧ (∀ x ≠ n → ¬p x) ↔ p n := by
+--   sorry
+
+-- lemma mul_ofDigits_replicate_of_mul_lt (b n k x : ℕ) :
+--     k * ofDigits b (replicate n x) = ofDigits b (replicate n (k * x)) := by
+--   simp [mul_ofDigits]
 
 theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
-    d a = a ^ 2 ↔ a ∈ Set.range (fun n ↦ ofDigits 10 ([1] ++ List.replicate n 2)) ∪ {2, 3} := by
+    d a = a ^ 2 ↔ a ∈ Set.range (fun n ↦ ofDigits 10 (1 :: replicate n 2)) ∪ {2, 3} := by
   unfold d
-  simp only
 
   calc _
   -- a = ...s
@@ -347,8 +375,18 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
     simp only [and_congr_right_iff, iff_self_and]
     intro hla hb hc hlc hd
     refine ⟨?_, ?_⟩
-    ·
-      sorry
+    · calc _
+      _ = a ^ 2 % 10 := by
+        convert congrArg (fun l ↦ ofDigits 10 l ^ 2 % 10) hla.symm using 1
+        · simp [ofDigits_cons, pow_mod]
+        · simp [ofDigits_digits]
+      _ = _ := by
+        rw [rotateRight_append_singleton, ofDigits_cons] at hd
+        convert congrArg (· % 10) hd.symm using 1
+        suffices f < 10 by simpa using (mod_eq_of_lt this).symm
+        suffices f ∈ digits 10 c from digits_lt_base' this
+        simp [hlc]
+
     · refine last_digit 10 (by norm_num) b s f ?_ ?_
       · rw [← hb]
         -- Need to remove trailing zeros from `ra`.
@@ -360,4 +398,200 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
       · rw [hc]
         use rc, hlc
 
-  _ ↔ _ := by sorry
+  --
+  _ ↔ ∃ (b c : ℕ) (s f : ℕ) (ra rc : List ℕ),
+      digits 10 a = s :: ra ∧ ofDigits 10 ((s :: ra).rotate 1) = b ∧ b ^ 2 = c ∧
+      digits 10 c = rc ++ [f] ∧ ofDigits 10 (rc ++ [f]).rotateRight = a ^ 2 ∧
+      s ^ 2 % 10 = f ∧
+      s ∈ ({1, 2, 3} : Finset ℕ) := by
+    refine exists₂_congr fun b c ↦ exists₄_congr fun s f ra rc ↦ ?_
+    simp only [and_congr_right_iff, iff_self_and]
+    intro hla hb hc hlc hd hf
+    rw [← hf]
+    refine first_and_last s ?_
+    suffices s ∈ digits 10 a from digits_lt_base' this
+    simp [hla]
+
+  -- -- Eliminate some of the variables.
+  -- _ ↔ ∃ (c : ℕ) (s f : ℕ) (ra rc : List ℕ),
+  --     digits 10 a = s :: ra ∧ ofDigits 10 ((s :: ra).rotate 1) ^ 2 = c ∧
+  --     digits 10 c = rc ++ [f] ∧ ofDigits 10 (rc ++ [f]).rotateRight = a ^ 2 ∧
+  --     s ^ 2 % 10 = f ∧
+  --     s ∈ ({1, 2, 3} : Finset ℕ) := by
+  --   sorry
+
+  _ ↔ ∃ (b c s f : ℕ) (ra rc : List ℕ),
+      digits 10 a = s :: ra ∧ ofDigits 10 ((s :: ra).rotate 1) = b ∧ b ^ 2 = c ∧
+      digits 10 c = rc ++ [f] ∧ ofDigits 10 (rc ++ [f]).rotateRight = a ^ 2 ∧
+      s ^ 2 % 10 = f ∧
+      (s = 1 ∨ s = 2 ∨ s = 3) := by simp
+
+  -- Since `s < 3` and hence `f = s ^ 2 < 10`, we know that both `c = b ^ 2` and `d` have
+  -- exactly `2 k` digits, where `a` has `k` digits. TODO: k + 1?
+  -- Let `b = s * 10 ^ k + r` with `r < 10 ^ k`, and therefore `a = 10 * r + s`.
+  -- From `c = b ^ 2`, we obtain
+  -- `c = (s * 10 ^ k + r) ^ 2 = s ^ 2 * 10 ^ (2 k) + 2 s r * 10 ^ k + r ^ 2`
+  -- Shifting the digits gives
+  -- `d = 2 s r * 10 ^ (k + 1) + r ^ 2 * 10 + s ^ 2`
+  -- Compare this to `d = a ^ 2`:
+  -- `d = (10 * r + s) ^ 2 = 10 (r ^ 2 * 10 + 2 r s) + s ^ 2`
+  -- Equating these gives
+  -- `r (2 s * 10 ^ k + r) = r (r * 10 + 2 s)`
+  -- Therefore, either `r = 0`, or `2 s * 10 ^ k + r = r * 10 + 2 s`.
+  -- If `r = 0`, then `a = b = s`, `c = d = s ^ 2`, and `d = a ^ 2` is satisfied by `s = 1`.
+  -- Otherwise, re-arranging gives
+  -- `2 s (10 ^ k - 1) = r (10 - 1)`
+  -- `r = (10 ^ k - 1) / 9 * 2 s`
+  -- `r = 11...1 * 2 s`
+  -- Our three cases are then `a = 22...21`, `a = 44...42`, and `a = 66...63`.
+  -- However, the latter two violate the condition that `a ^ 2` has `2 k` digits. (TODO)
+
+  -- Replace `f` with `s ^ 2`.
+  _ ↔ ∃ (b c s : ℕ) (ra rc : List ℕ),
+      digits 10 a = s :: ra ∧ ofDigits 10 ((s :: ra).rotate 1) = b ∧ b ^ 2 = c ∧
+      digits 10 c = rc ++ [s ^ 2] ∧ ofDigits 10 (rc ++ [s ^ 2]).rotateRight = a ^ 2 ∧
+      (s = 1 ∨ s = 2 ∨ s = 3) := by
+    sorry
+
+  -- -- Remove `c` (do earlier?).
+  -- _ ↔ ∃ (b s : ℕ) (ra rc : List ℕ),
+  --     digits 10 a = s :: ra ∧ ofDigits 10 ((s :: ra).rotate 1) = b ∧
+  --     digits 10 (b ^ 2) = rc ++ [s ^ 2] ∧ ofDigits 10 (rc ++ [s ^ 2]).rotateRight = a ^ 2 ∧
+  --     (s = 1 ∨ s = 2 ∨ s = 3) := by
+  --   sorry
+
+  -- -- Introduce constraint that `b ^ 2` and `a ^ 2` have `2 k + 1` digits.
+  -- _ ↔ ∃ (b s k : ℕ) (ra rc : List ℕ),
+  --     digits 10 a = s :: ra ∧ ofDigits 10 ((s :: ra).rotate 1) = b ∧
+  --     digits 10 (b ^ 2) = rc ++ [s ^ 2] ∧ ofDigits 10 (rc ++ [s ^ 2]).rotateRight = a ^ 2 ∧
+  --     (s = 1 ∨ s = 2 ∨ s = 3) ∧
+  --     log 10 a = k ∧
+  --     log 10 (a ^ 2) = 2 * k ∧
+  --     log 10 (b ^ 2) = 2 * k := by
+  --   sorry
+
+  -- -- Replace `ra` and `rc` with `x` and `y`.
+  -- _ ↔ ∃ (b s k x y : ℕ),
+  --     digits 10 a = s :: digits 10 x ∧ ofDigits 10 ((s :: digits 10 x).rotate 1) = b ∧
+  --     digits 10 (b ^ 2) = digits 10 y ++ [s ^ 2] ∧
+  --     ofDigits 10 (digits 10 y ++ [s ^ 2]).rotateRight = a ^ 2 ∧
+  --     (s = 1 ∨ s = 2 ∨ s = 3) ∧
+  --     log 10 a = k ∧
+  --     log 10 (a ^ 2) = 2 * k ∧
+  --     log 10 (b ^ 2) = 2 * k := by
+  --   sorry
+
+
+
+  -- _ ↔ ∃ (s k x : ℕ),
+  --     s + 10 * x = a ∧
+  --     x * (2 * s * 10 ^ k + x) = x * (x * 10 + 2 * s) ∧
+  --     (s = 1 ∨ s = 2 ∨ s = 3) := by
+  --   sorry
+
+  -- _ ↔ ∃ (s k x : ℕ),
+  --     s + 10 * x = a ∧
+  --     (x = 0 ∨ 2 * s * ((10 ^ k - 1) / 9) = x) ∧
+  --     (s = 1 ∨ s = 2 ∨ s = 3) := by
+  --   sorry
+
+  -- _ ↔ ∃ (s k x : ℕ),
+  --     (s = 1 ∨ s = 2 ∨ s = 3) ∧
+  --     s + 10 * x = a ∧
+  --     (x = 0 ∨ 2 * s * ofDigits 10 (replicate k 1) = x) := by
+  --   sorry
+
+
+
+  _ ↔ ∃ (s k x : ℕ), (s = 1 ∨ s = 2 ∨ s = 3) ∧ log 10 (a ^ 2) = 2 * k ∧
+      x * (2 * s * 10 ^ k + x) = x * (x * 10 + 2 * s) ∧ s + 10 * x = a := by
+    sorry
+
+  -- We do not need to consider the case `x = 0` separately since it is already
+  -- included in the case `k = 0`.
+  _ ↔ ∃ (s k x : ℕ), (s = 1 ∨ s = 2 ∨ s = 3) ∧ log 10 (a ^ 2) = 2 * k ∧
+      x = ofDigits 10 (replicate k (2 * s)) ∧ s + 10 * x = a := by
+    refine exists_congr fun s ↦ ?_
+    simp only [mul_eq_mul_left_iff, exists_and_left, exists_eq_left, and_congr_right_iff]
+    intro hs
+
+    -- intro hs ha_log_sq
+    simp only [or_and_right, exists_or, exists_eq_left, mul_zero, add_zero]
+    sorry
+
+    -- calc _
+    -- _ ↔ ∃ k x, log 10 (a ^ 2) = 2 * k ∧
+    --     (2 * s * 10 ^ k + x = x * 10 + 2 * s ∧ s + 10 * x = a ∨ s = a) := by
+    --   simp [exists_or]
+    -- _ ↔ ∃ x k, log 10 (a ^ 2) = 2 * k ∧
+    --     (2 * s * 10 ^ k + x = x * 10 + 2 * s ∧ s + 10 * x = a ∨ s = a) := exists_comm
+    -- _ ↔ _ := by
+    --   simp [and_or_right, exists_or]
+    --   sorry
+
+  -- Put in a form to match the final result.
+  -- The constraint that `a ^ 2` has `2 k + 1` digits comes from the fact that `c = b ^ 2` has
+  -- `2 k + 1` digits since `b` has `k + 1` digits and its leading digit is `s` with `s ^ 2 < 10`.
+  _ ↔ ∃ (s k x : ℕ), (s = 1 ∨ s = 2 ∨ s = 3) ∧ x = ofDigits 10 (replicate k (2 * s)) ∧
+      s + 10 * x = a ∧ log 10 (a ^ 2) = 2 * k := by
+
+    -- just re-ordering
+
+    -- refine exists₃_congr fun s k x ↦ ?_
+    -- simp
+    -- intro hs ha ha_log_sq
+
+    -- refine exists₂_congr fun s k ↦ ?_
+    -- simp
+    -- simp only [← and_assoc]
+
+    sorry
+
+  _ ↔ _ := by
+    -- TODO: non-terminal simps
+    rw [Set.mem_union]
+    simp [ofDigits_cons]
+    refine or_congr ?_ ?_
+    · refine exists_congr fun k ↦ ?_
+      refine and_iff_left_of_imp fun ha ↦ ?_
+      rw [← ha]
+      cases k with
+      | zero => simp
+      | succ k =>
+        simp [replicate_succ', ofDigits_append]
+        simp [mul_add, ← add_assoc]
+        -- Should be possible.
+        sorry
+
+    · refine or_congr ?_ ?_
+      · -- Exclude all cases except `k = 0`.
+        calc _
+        _ ↔ (∃ k, 2 + 10 * ofDigits 10 (replicate k 4) = a ∧ k = 0) := by
+          refine exists_congr fun k ↦ ?_
+          refine and_congr_right fun ha ↦ ?_
+          rw [← ha]
+          cases k with
+          | zero => simp
+          | succ k =>
+            simp [replicate_succ', ofDigits_append]
+            simp [mul_add, ← add_assoc]
+            -- Should be possible.
+            sorry
+        _ ↔ _ := by
+          simp [eq_comm]
+
+      · -- Exclude all cases except `k = 0`.
+        calc _
+        _ ↔ (∃ k, 3 + 10 * ofDigits 10 (replicate k 6) = a ∧ k = 0) := by
+          refine exists_congr fun k ↦ ?_
+          refine and_congr_right fun ha ↦ ?_
+          rw [← ha]
+          cases k with
+          | zero => simp
+          | succ k =>
+            simp [replicate_succ', ofDigits_append]
+            simp [mul_add, ← add_assoc]
+            -- Should be possible.
+            sorry
+        _ ↔ _ := by
+          simp [eq_comm]
