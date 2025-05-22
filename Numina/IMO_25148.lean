@@ -450,17 +450,10 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
     refine exists₂_congr fun b c ↦ exists₄_congr fun s f lx ly ↦ ?_
     simp only [and_congr_right_iff]
     rintro ha_digits hb_digits hc hc_digits hd rfl
-
-    -- have hb_zero : b ≠ 0 := by sorry
-    -- -- TODO: Add `s ≠ 0` or `b ≠ 0` to hypothesis?
-    -- have hs_pos : 0 < s := by
-    --   refine zero_lt_of_ne_zero ?_
-    --   convert getLast_digit_ne_zero 10 hb_zero
-    --   simp [hb_digits]
+    -- We could also introduce `0 < s` here for `interval_cases`, but it is not necessary.
     have hs_lt : s < 10 := by
       suffices s ∈ digits 10 a from digits_lt_base' this
       simp [ha_digits]
-
     -- The left side of the disjunction holds for `s = 1, 2, 3` (`f = 1, 4, 9`).
     -- s        =   1    2   3   4   5   6   7   8   9
     -- s^2 % 10 =   1    4   9   6   5   6   9   4   1
@@ -499,11 +492,226 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
   -- However, the latter two violate the condition that `a ^ 2` has `2 k` digits. (TODO)
 
   -- Replace `f` with `s ^ 2`.
-  _ ↔ ∃ (b c s : ℕ) (lx ly : List ℕ),
-      digits 10 a = s :: lx ∧ ofDigits 10 (lx ++ [s]) = b ∧ b ^ 2 = c ∧
-      digits 10 c = ly ++ [s ^ 2] ∧ ofDigits 10 (ly ++ [s ^ 2]).rotateRight = a ^ 2 ∧
-      (s = 1 ∨ s = 2 ∨ s = 3) := by
+  -- TODO: Reorder: Make it so that `f` constraint can pop out.
+  _ ↔ ∃ (b c : ℕ) (s f : ℕ) (lx ly : List ℕ),
+      b ^ 2 = c ∧ (s = 1 ∨ s = 2 ∨ s = 3) ∧ s ^ 2 % 10 = f ∧
+      digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s] ∧
+      digits 10 c = ly ++ [f] ∧ ofDigits 10 (f :: ly) = a ^ 2 ∧
+      ly.length = 2 * lx.length := by
+    -- TODO
     sorry
+  _ ↔ ∃ (b c : ℕ) (s : ℕ) (lx ly : List ℕ),
+      b ^ 2 = c ∧ (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s] ∧
+      digits 10 c = ly ++ [s ^ 2] ∧ ofDigits 10 (s ^ 2 :: ly) = a ^ 2 ∧
+      ly.length = 2 * lx.length := by simp
+
+  -- Goal: Introduce constraint `x * (2 * s * 10 ^ k + x) = x * (x * 10 + 2 * s)`
+  -- where `x = ofDigits 10 lx`, with `x < 10 ^ k`.
+  -- First step: Introduce `k` and `x`.
+
+  _ ↔ ∃ (b c : ℕ) (s : ℕ) (lx ly : List ℕ) (k : ℕ),
+      b ^ 2 = c ∧
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      lx.length = k ∧
+      digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s] ∧
+      digits 10 c = ly ++ [s ^ 2] ∧ ofDigits 10 (s ^ 2 :: ly) = a ^ 2 ∧
+      ly.length = 2 * k := by
+    -- simp? [-exists_eq_or_imp]
+    refine exists₂_congr fun b c ↦ ?_
+    simp
+    -- simp only [exists_and_left, exists_eq_left', exists_eq_left]
+
+  -- Introduce `x` without eliminating `lx`.
+  -- This is because it's easier to require e.g. `digits 10 a = s :: lx` than
+  -- require that `lx` is a valid digit list.
+
+
+  _ ↔ ∃ (lx ly : List ℕ) (s : ℕ) (c b k : ℕ),
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      lx.length = k ∧
+      b ^ 2 = c ∧
+      digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s] ∧
+      digits 10 c = ly ++ [s ^ 2] ∧ ofDigits 10 (s ^ 2 :: ly) = a ^ 2 ∧
+      ly.length = 2 * k := by
+    sorry
+  -- Re-order such that `b` is substituted with `x + 10 ^ k * s`.
+  -- TODO: Might not be needed since we use `exists_congr` anyway?
+  _ ↔ ∃ (lx ly : List ℕ) (s : ℕ) (c b k x : ℕ),
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      lx.length = k ∧
+      ofDigits 10 lx = x ∧
+      x + 10 ^ k * s = b ∧
+      b ^ 2 = c ∧
+      digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s] ∧
+      digits 10 c = ly ++ [s ^ 2] ∧ ofDigits 10 (s ^ 2 :: ly) = a ^ 2 ∧
+      ly.length = 2 * k := by
+    refine exists₃_congr fun lx ly s ↦ ?_
+    refine exists₃_congr fun c b k ↦ ?_
+    simp only [exists_and_left, exists_eq_left', and_congr_right_iff, iff_and_self, and_imp]
+    intro hs hx_len hc ha_digits hb_digits hc_digits hd hy_len
+    convert congrArg (ofDigits 10) hb_digits.symm using 1
+    · simp [ofDigits_append, hx_len]
+    · simp [ofDigits_digits]
+
+  -- From here, we can eliminate `lx` and `ly`.
+
+  _ ↔ ∃ (s : ℕ) (b k x : ℕ),
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      (digits 10 x).length = k ∧
+      -- x < 10 ^ k ∧
+      (digits 10 a).length = k + 1 ∧
+      x + 10 ^ k * s = b ∧
+      -- b ^ 2 = c ∧
+      s + 10 * x = a ∧
+      (digits 10 (b ^ 2)).length = 2 * k + 1 ∧
+      -- s ^ 2 + 10 * y = a ^ 2 ∧
+      (digits 10 (a ^ 2)).length = 2 * k + 1 := by
+    sorry
+
+  -- See whether this is enough to obtain the condition.
+  _ ↔ ∃ (s k x b : ℕ),
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      x + 10 ^ k * s = b ∧
+      s + 10 * x = a ∧
+      (digits 10 x).length = k ∧
+      (digits 10 a).length = k + 1 ∧  -- for convenience
+      (digits 10 (b ^ 2)).length = 2 * k + 1 ∧
+      (digits 10 (a ^ 2)).length = 2 * k + 1 := by
+    -- simp [-exists_eq_or_imp]
+    sorry
+
+  _ ↔ ∃ (s k x b : ℕ),
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      x + 10 ^ k * s = b ∧
+      s + 10 * x = a ∧
+      (digits 10 x).length = k ∧
+      (digits 10 a).length = k + 1 ∧  -- for convenience
+      (digits 10 (b ^ 2)).length = 2 * k + 1 ∧
+      (digits 10 (a ^ 2)).length = 2 * k + 1 ∧
+      x * (2 * s * 10 ^ k + x) = x * (x * 10 + 2 * s) := by
+    refine exists₄_congr fun s k x b ↦ ?_
+    simp only [and_congr_right_iff, iff_self_and]
+    intro hs hb ha hx_len ha_len hc_len hd_len
+    -- `c = b ^ 2 = 10 ^ (2 * k) * s ^ 2 + 10 ^ k * 2 * s * x + x ^ 2`
+    -- `d = a ^ 2 = 100 * x ^ 2 + 10 * 2 * s * x + s ^ 2`
+    -- Now we need the fact that `d` is obtained by rotating `c` to the right.
+    -- `c = s ^ 2 * 10 ^ (2 * k) + y`
+    -- `c = s ^ 2 * 10 ^ (2 * k) + 10 ^ k * 2 * s * x + x ^ 2`
+    --  Therefore `y = 2 * s * x * 10 ^ k + x ^ 2 = x (2 s 10^k + x)`
+    -- `d = y * 10 + s ^ 2`
+    -- `d = 10 * (x ^ 2 * 10 + 2 * s * x) + s ^ 2`
+    -- Therefore `y = x ^ 2 * 10 + 2 * s * x = x (10 x + 2 s)`
+    -- Combining these gives
+    -- `2 * s * x * 10 ^ k + x ^ 2 = x ^ 2 * 10 + 2 * s * x`
+    -- `x * (2 * s * (10 ^ k - 1)) = x * (x * (10 - 1))`
+    -- `x = 0` or `2 * s * (10 ^ k - 1) = x * (10 - 1)`
+    sorry
+
+
+  -- How to most easily check that the numbers starting with 4 and 6 violate the length?
+  -- Any number greater than 33..3?
+  -- Can we use our existing condition for the digits of the square?
+
+  -- That is, for `k = m + 1`, we have
+  -- `digits 10 a = s :: lx = (s :: replicate m (2 * s)) ++ [2 * s]`. Perfect.
+  -- When `k = 0`, we have `digits 10 a = [] ++ [s]`.
+  -- Therefore, the only condition we need is the number of digits of `a ^ 2`.
+  _ ↔ ∃ (k s : ℕ),
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      digits 10 a = s :: replicate k (2 * s) ∧
+      (digits 10 (a ^ 2)).length = 2 * k + 1 := by
+    sorry
+
+  -- _ ↔ ∃ (k s x : ℕ),
+  --     (k = 0 ∨ k > 0) ∧
+  --     (s = 1 ∨ s = 2 ∨ s = 3) ∧
+  --     digits 10 a = s :: replicate k (2 * s) ∧
+  --     (digits 10 (a ^ 2)).length = 2 * k + 1 := by
+  --   simp only [Nat.eq_zero_or_pos, true_and]
+
+  _ ↔ (a = 1 ∨ a = 2 ∨ a = 3) ∨ (∃ k, digits 10 a = 1 :: replicate (k + 1) 2) := by
+    rw [← or_exists_add_one]
+    refine or_congr ?_ ?_
+    · simp
+      -- Need to rewrite `digits 10 a = [s]` as `a = s`?
+      sorry
+    · refine exists_congr fun k ↦ ?_
+      simp [replicate_succ']
+      simp only [← cons_append]
+      -- Hmm... Need to have `v` and `lv` to use our definition...
+      -- Just use `getLast` and `take`?
+      have h (s v lv) := digits_square_append_singleton 10 (by norm_num) a (2 * s) v
+        (s :: replicate k (2 * s)) lv
+      -- A number starting with 2 has square starting with 4-9.
+      have h₁ := h 1
+      simp [ceilDiv_eq_add_pred_div] at h₁
+      -- A number starting with 4 has square starting with 1-2 and an extra digit.
+      have h₂ := h 2
+      simp [ceilDiv_eq_add_pred_div] at h₂
+      -- A number starting with 6 has square starting with 3-4 and an extra digit.
+      have h₃ := h 3
+      simp [ceilDiv_eq_add_pred_div] at h₃
+      sorry
+
+    -- simp only [exists_and_left]
+    -- simp only [exists_const]  -- TODO: move condition?
+    -- rw [exists_eq_or_imp]
+    -- refine or_congr ?_ ?_
+    -- · sorry
+    -- · refine exists_congr fun k ↦ ?_
+    --   simp only [and_congr_right_iff]
+    --   intro hk
+    --   simp
+    --   -- Prefer to take `cases k` to have `k + 1`.
+    --   have (s m : ℕ) : s :: replicate (m + 1) (2 * s) = (s :: replicate m (2 * s)) ++ [2 * s] := by
+    --     simp [replicate_succ']
+
+    --   sorry
+
+
+  -- -- Re-order.
+  -- _ ↔ ∃ (s : ℕ) (k : ℕ) (lx ly : List ℕ) (b c : ℕ),
+  --     (s = 1 ∨ s = 2 ∨ s = 3) ∧
+  --     b ^ 2 = c ∧
+  --     lx.length = k ∧
+  --     digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s] ∧
+  --     digits 10 c = ly ++ [s ^ 2] ∧ ofDigits 10 (s ^ 2 :: ly) = a ^ 2 ∧
+  --     ly.length = 2 * k := by
+  --   sorry
+
+  -- _ ↔ ∃ (s : ℕ) (x k : ℕ) (lx ly : List ℕ) (b c : ℕ),
+  --     (s = 1 ∨ s = 2 ∨ s = 3) ∧
+  --     b ^ 2 = c ∧
+  --     b = x + s * 10 ^ k ∧
+  --     x = ofDigits 10 lx ∧
+  --     lx.length = k ∧
+  --     digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s] ∧
+  --     digits 10 c = ly ++ [s ^ 2] ∧ ofDigits 10 (s ^ 2 :: ly) = a ^ 2 ∧
+  --     ly.length = 2 * k := by
+  --   -- refine exists₃_congr fun b c s ↦ ?_
+  --   -- simp only [exists_and_left, exists_eq_left', exists_eq_left]
+  --   refine exists_congr fun s ↦ ?_
+  --   simp only [exists_and_left, exists_eq_left', exists_eq_left, and_congr_right_iff]
+
+
+  --   sorry
+
+
+  -- _ ↔ ∃ (s : ℕ) (x k : ℕ) (lx ly : List ℕ) (b c : ℕ),
+  --     (s = 1 ∨ s = 2 ∨ s = 3) ∧
+  --     b ^ 2 = c ∧
+  --     b = x + s * 10 ^ k ∧
+  --     x = ofDigits 10 lx ∧
+  --     lx.length = k ∧
+  --     digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s] ∧
+  --     digits 10 c = ly ++ [s ^ 2] ∧ ofDigits 10 (s ^ 2 :: ly) = a ^ 2 ∧
+  --     ly.length = 2 * k := by
+  --   sorry
+
+
+
+
 
   -- -- Remove `c` (do earlier?).
   -- _ ↔ ∃ (b s : ℕ) (lx ly : List ℕ),
