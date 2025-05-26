@@ -433,7 +433,8 @@ lemma ten_pow_sub_one_div_nine (n : ℕ) :
   refine Nat.sub_eq_of_eq_add ?_
   exact ten_pow_eq_nine_mul_replicate_add_one n
 
-lemma combined_result (s k x : ℕ) (hs_ne : s ≠ 0) (hs_lt : 2 * s < 10) :
+-- TODO: rename
+lemma combined_result {s k : ℕ} (hs_ne : s ≠ 0) (hs_lt : 2 * s < 10) (x : ℕ) :
     x + 2 * s * 10 ^ k = 2 * s + 10 * x ↔ digits 10 x = replicate k (2 * s) := by
   calc x + 2 * s * 10 ^ k = 2 * s + 10 * x
   _ ↔ 2 * s * 10 ^ k + x = 10 * x + 2 * s := by simp [add_comm]
@@ -1045,44 +1046,14 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
       rw [or_and_right]
       refine or_congr_right ?_
       refine and_congr_right fun hk ↦ ?_
-      -- Seek contradiction in the number of digits of `a ^ 2`.
-      -- We know that `a ^ 2` ends with `2 * s` (TODO).
-      -- Since `10 ≤ (2 * s) ^ 2`, `a ^ 2` will have the maximum number of digits possible,
-      -- that is, `(digits 10 (a ^ 2)).length = 2 * (digits 10 a).length`.
-
-      -- On the other hand, we know that `a ^ 2` has at most the same number of digits as `b ^ 2`.
-      -- That is, we know that `a ^ 2` has one more digit than `y`, and `y` has at most `2 k` digits.
-
-      -- On the other hand, `a` has one more digit than `x`, and `x` has exactly `k` digits.
-
-      -- If `a` has `k + 1` digits, then `a ^ 2` has `2 (k + 1) + {-1, 0} = 2 k + {1, 2}` digits.
-
-      -- Where is the contradiction?!
-
-      -- How many digits does `b ^ 2` have?
-      -- We know that `b` has largest digit `s`.
-      -- However, this alone doesn't tell us that `b ^ 2` has the minimum number of digits,
-      -- since `s` could be 3, and (3 + 1) ^ 2 is not less than 10.
-
-      -- We do know that `b ^ 2` has exactly `2 k + 1` digits, and
-      -- `a ^ 2` has at most as many digits as `b ^ 2`.
-      -- Therefore, it will suffice to show that `a ^ 2` has `2 k + 2` digits.
-      -- To show this, we observe that the leading digit of `a` is `2 * s`, with `10 ≤ (2 * s) ^ 2`.
-
       refine or_iff_left_of_imp fun hs ↦ ?_
+      -- Seek contradiction in the number of digits of `a ^ 2`.
       exfalso
-
-      -- have hb2_len : (digits 10 (b ^ 2)).length = 2 * k + 1 :=
-      --   calc _
-      --   _ = (digits 10 y).length + (2 * k - (digits 10 y).length) + 1 := by
-      --     simp [add_assoc, hb2_dig]
-      --   _ = _ := by simp [hy_len]
-
-      -- Since `a ^ 2` is obtained by rotating the digits of `b ^ 2`, it has at most the same
-      -- number of digits, which is `2 k + 1`.
+      -- First use the fact that `a ^ 2` is a digit rotation of `b ^ 2`.
+      -- Due to this fact, `a ^ 2` has at most the same number of digits, which is `2 k + 1`.
       have ha2_len : (digits 10 (a ^ 2)).length ≤ 2 * k + 1 := by simp [ha2_dig, hy_len]
       refine ha2_len.not_lt ?_
-
+      -- Now consider the number of digits obtained by squaring `a`.
       -- Since `a` has `k + 1` digits, `a ^ 2` may have either `2 k + 1` or `2 k + 2` digits.
       -- However, the leading digit of `a` is `2 * s` with `s` being 2 or 3.
       -- Since `10 ≤ (2 * s) ^ 2`, `a ^ 2` has `2 k + 2` digits, providing the contradiction.
@@ -1098,8 +1069,12 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
       -- Need to know that `x = replicate k (2 * s)`!
 
       have hx_dig : digits 10 x = replicate k (2 * s) := by
-        -- TODO
-        sorry
+        refine (combined_result ?_ ?_ x).mp hx
+        -- TODO: These conditions also hold for `s = 1`; could obtain earlier.
+        · suffices ∀ s, s = 2 ∨ s = 3 → s ≠ 0 from this s hs
+          simp
+        · suffices ∀ s, s = 2 ∨ s = 3 → 2 * s < 10 from this s hs
+          simp
 
       -- Replace `k` with `m + 1` for easier simplification.
       obtain ⟨m, rfl⟩ : ∃ m, m + 1 = k := exists_add_one_eq.mpr (zero_lt_of_ne_zero hk)
