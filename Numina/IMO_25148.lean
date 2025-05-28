@@ -967,9 +967,9 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
   -- Re-order.
   _ ↔ ∃ (s k b x y : ℕ),
       (s = 1 ∨ s = 2 ∨ s = 3) ∧
-      (digits 10 x).length = k ∧
       digits 10 a = s :: digits 10 x ∧
       digits 10 b = digits 10 x ++ [s] ∧
+      (digits 10 x).length = k ∧
       (digits 10 y).length ≤ 2 * k ∧
       digits 10 (b ^ 2) = digits 10 y ++ replicate (2 * k - (digits 10 y).length) 0 ++ [s ^ 2] ∧
       digits 10 (a ^ 2) = s ^ 2 :: digits 10 y := by
@@ -979,13 +979,12 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
   -- Since this is used to eliminate `s = 2, 3` when `k ≠ 0`, must split cases here.
   _ ↔ ∃ (s k b x : ℕ),
       (s = 1 ∨ s = 2 ∨ s = 3) ∧
-      (digits 10 x).length = k ∧
       digits 10 a = s :: digits 10 x ∧
       digits 10 b = digits 10 x ++ [s] ∧
       (k = 0 ∧ x = 0 ∨ k ≠ 0 ∧ s = 1 ∧ digits 10 x = replicate k (2 * s)) := by
     refine exists₄_congr fun s k b x ↦ ?_
     simp only [exists_and_left, and_congr_right_iff]
-    intro hs hx_len ha_dig hb_dig
+    intro hs ha_dig hb_dig
 
     have hs_zero : s ≠ 0 := by
       suffices ∀ s, s = 1 ∨ s = 2 ∨ s = 3 → s ≠ 0 from this s hs
@@ -1003,12 +1002,9 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
     cases eq_or_ne k 0 with
     | inl hk =>
       rcases hk with rfl
-      have hx : x = 0 := by
-        suffices digits 10 x = [] from digits_eq_nil_iff_eq_zero.mp this
-        simpa using hx_len
-      rcases hx with rfl
-      suffices digits 10 (b ^ 2) = [s ^ 2] ∧ digits 10 (a ^ 2) = [s ^ 2] by
-        simpa [digits_eq_nil_iff_eq_zero] using this
+      suffices x = 0 → digits 10 (b ^ 2) = [s ^ 2] ∧ digits 10 (a ^ 2) = [s ^ 2] by
+        simpa [digits_eq_nil_iff_eq_zero]
+      rintro rfl
       convert And.intro hs2_dig hs2_dig
       · have := congrArg (ofDigits 10) hb_dig
         simpa [ofDigits_digits] using this  -- TODO: why??
@@ -1021,14 +1017,16 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
       have ha : a = s + 10 * x := by
         have := congrArg (ofDigits 10) ha_dig
         simpa [ofDigits_digits, ofDigits_cons] using this  -- TODO: why??
-      have hb : b = x + 10 ^ k * s := by
-        have := congrArg (ofDigits 10) hb_dig
-        simpa [ofDigits_digits, ofDigits_append, hx_len] using this
 
       -- Not sure how to get nice condition from here.
       constructor
-      · intro ⟨y, hy_len, hb2_dig, ha2_dig⟩
+      · intro ⟨hx_len, y, hy_len, hb2_dig, ha2_dig⟩
 
+        have hb : b = x + 10 ^ k * s := by
+          have := congrArg (ofDigits 10) hb_dig
+          simpa [ofDigits_digits, ofDigits_append, hx_len] using this
+
+        -- TODO: long?
         have hx : x + 2 * s * 10 ^ k = 2 * s + 10 * x := by
           have ha2 : a ^ 2 = s ^ 2 + 10 * y := by
             have := congrArg (ofDigits 10) ha2_dig
@@ -1093,6 +1091,16 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
         have hx : x + 2 * s * 10 ^ k = 2 * s + 10 * x :=
           (combined_result hs_zero hs_two_mul_lt x).mpr hx_dig
 
+        have hx_len : (digits 10 x).length = k := by
+          have := congrArg length hx_dig
+          simpa using this
+        refine ⟨hx_len, ?_⟩
+
+        -- TODO: avoid doing this twice?
+        have hb : b = x + 10 ^ k * s := by
+          have := congrArg (ofDigits 10) hb_dig
+          simpa [ofDigits_digits, ofDigits_append, hx_len] using this
+
         have ha2 : a ^ 2 = s ^ 2 + y * 10 := by
           unfold y
           rw [ha]
@@ -1142,15 +1150,6 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
           rw [hy_len]
           ring
         · exact ha2_dig
-
-  -- TEMPORARY
-  _ ↔ ∃ (s k b x : ℕ),
-      (s = 1 ∨ s = 2 ∨ s = 3) ∧
-      digits 10 a = s :: digits 10 x ∧
-      digits 10 b = digits 10 x ++ [s] ∧
-      (k = 0 ∧ x = 0 ∨ k ≠ 0 ∧ s = 1 ∧ digits 10 x = replicate k (2 * s)) := by sorry
-
-  -- TODO: Could remove `(digits 10 x).length = k` earlier, above?
 
   -- Eliminate `b` and `x`.
   _ ↔ ∃ (s k : ℕ),
