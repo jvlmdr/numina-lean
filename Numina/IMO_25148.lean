@@ -47,6 +47,13 @@ lemma len_digits_sq_le (b : ℕ) (hb : 1 < b) (n : ℕ) :
   | zero => simp
   | succ n => simpa [digits_len, hb, mul_add] using log_sq_le hb n.add_one_ne_zero
 
+lemma len_digits_sq_add_one_eq_or (b : ℕ) (hb : 1 < b) (n : ℕ) :
+    (digits b (n ^ 2)).length + 1 = 2 * (digits b n).length ∨
+    (digits b (n ^ 2)).length + 1 = 2 * (digits b n).length + 1 := by
+  refine le_and_le_add_one_iff.mp ⟨?_, ?_⟩
+  · exact le_len_digits_sq b hb n
+  · simpa using len_digits_sq_le b hb n
+
 -- lemma log_sq_mem_Icc {b n : ℕ} (hb : 1 < b) (hn : n ≠ 0) :
 --     log b (n ^ 2) ∈ Finset.Icc (2 * log b n) (2 * log b n + 1) :=
 --   Finset.mem_Icc.mpr ⟨le_log_sq hb hn, log_sq_le hb hn⟩
@@ -164,157 +171,248 @@ lemma mem_Ico_of_digits_eq_concat {b : ℕ} (hb : 1 < b) (n x : ℕ) (l : List �
     suffices d ∈ digits b n from digits_lt_base hb this
     simpa [hn_digits] using mem_append_left [x] hd
 
+lemma mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul {b : ℕ} (hb : 1 < b) {n : ℕ}
+    {lx : List ℕ} {x : ℕ} (hx : digits b n = lx ++ [x])
+    {ly : List ℕ} {y : ℕ} (hy : digits b (n ^ 2) = ly ++ [y])
+    (h_len : ly.length = 2 * lx.length) :
+    y ∈ Finset.Ico (x ^ 2) ((x + 1) ^ 2) := by
+
+  have hx_mem := mem_Ico_of_digits_eq_concat hb n x lx hx
+  have hy_mem := mem_Ico_of_digits_eq_concat hb (n ^ 2) y ly hy
+  rw [h_len] at hy_mem
+  simp only [Finset.mem_inter, Finset.mem_Ico]
+  -- We want to show `x ^ 2 ≤ y < (x + 1) ^ 2` when `n` has `k` digits and
+  -- `n ^ 2` has `2 * k` digits, with `k = log b n + 1`.
+
+  -- We have `x * b ^ k ≤ n < (x + 1) * b ^ k`
+  -- and `y * b ^ (2 * k) ≤ n ^ 2 < (y + 1) * b ^ (2 * k)`.
+
+  -- Does this help us?
+  -- What is the principle that we need to apply?
+
+  -- `n = x * b ^ k + r`
+  -- Therefore `n ^ 2` is at least `x ^ 2 * b ^ (2 * k)`
+  -- But does this help us to bound `y`?
+  -- From above, we do have `n ^ 2 < (y + 1) * b ^ (2 * k)`.
+  -- Putting these together,
+  -- `x ^ 2 * b ^ (2 * k) < (y + 1) * b ^ (2 * k)`
+  -- `x ^ 2 < y + 1`
+  -- `x ^ 2 ≤ y`
+  -- Not sure if this will always work though?
+
+  -- Consider the other side of the bound:
+  -- `n = x * b ^ k + r`, and `n < (x + 1) * b ^ k`
+  -- `n ^ 2 < (x + 1) ^ 2 * b ^ (2 * k)`
+  -- From above, we have `y * b ^ (2 * k) ≤ n ^ 2`
+  -- Putting these together,
+  -- `y * b ^ (2 * k) < (x + 1) ^ 2 * b ^ (2 * k)`
+  -- `y < (x + 1) ^ 2`
+
+  -- Looks good!
+  refine ⟨?_, ?_⟩
+
+  · suffices x ^ 2 < y + 1 from le_of_lt_succ this
+    suffices x ^ 2 * b ^ (2 * lx.length) < (y + 1) * b ^ (2 * lx.length) from
+      Nat.lt_of_mul_lt_mul_right this
+    convert lt_of_le_of_lt (Nat.pow_le_pow_left hx_mem.1 2) hy_mem.2 using 1
+    ring
+  · suffices y * b ^ (2 * lx.length) < (x + 1) ^ 2 * b ^ (2 * lx.length) from
+      Nat.lt_of_mul_lt_mul_right this
+    convert lt_of_le_of_lt hy_mem.1 (Nat.pow_lt_pow_left hx_mem.2 two_ne_zero) using 1
+    ring
+
+lemma mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul_add_one {b : ℕ} (hb : 1 < b) {n : ℕ}
+    {lx : List ℕ} {x : ℕ} (hx : digits b n = lx ++ [x])
+    {ly : List ℕ} {y : ℕ} (hy : digits b (n ^ 2) = ly ++ [y])
+    (h_len : ly.length = 2 * lx.length + 1) :
+    y ∈ Finset.Ico (x ^ 2 / b) ((x + 1) ^ 2 ⌈/⌉ b) := by
+  have hx_mem := mem_Ico_of_digits_eq_concat hb n x lx hx
+  have hy_mem := mem_Ico_of_digits_eq_concat hb (n ^ 2) y ly hy
+
+  rw [h_len] at hy_mem
+  simp only [← Finset.Ico_inter_Ico, Finset.mem_inter, Finset.mem_Ico]
+  refine ⟨?_, ?_⟩
+  · suffices x ^ 2 / b < y + 1 from le_of_lt_succ this
+    rw [div_lt_iff_lt_mul (zero_lt_of_lt hb)]
+    -- suffices x ^ 2 < (y + 1) * b from (div_lt_iff_lt_mul (zero_lt_of_lt hb)).mpr this
+    suffices x ^ 2 * b ^ (2 * lx.length) < (y + 1) * b * b ^ (2 * lx.length) from
+      Nat.lt_of_mul_lt_mul_right this
+    convert lt_of_le_of_lt (Nat.pow_le_pow_left hx_mem.1 2) hy_mem.2 using 1 <;> ring
+
+    -- Where is the bound coming from.
+    -- n ^ 2 = y * 10 ^ (2 k + 1) + c = (x * 10 ^ k + r) ^ 2
+    -- (x * 10 ^ k) ^ 2 = x ^ 2 * 10 ^ (2 k) ≤ n ^ 2
+    -- n ^ 2 < (y + 1) * 10 ^ (2 k + 1) = 10 (y + 1) * 10 ^ (2 k)
+
+    -- Together:
+    -- x ^ 2 * 10 ^ (2 k) < 10 (y + 1) 10 ^ (2 k)
+    -- x ^ 2 < 10 (y + 1)
+    -- x ^ 2 / 10 < y + 1  `Nat.div_lt_iff_lt_mul`
+    -- x ^ 2 / 10 ≤ y
+
+  · -- n ^ 2 = y * 10 ^ (2 k + 1) + c = (x * 10 ^ k + r) ^ 2
+    -- y * 10 ^ (2 k + 1) ≤ y * 10 ^ (2 k + 1) + c = n ^ 2
+    -- n ^ 2 = (x * 10 ^ k + r) ^ 2 < (x + 1) ^ 2 * 10 ^ (2 k)
+    -- Together:
+    -- 10 y * 10 ^ (2 k) < (x + 1) ^ 2 * 10 ^ (2 k)
+    -- 10 y < (x + 1) ^ 2
+    -- 10 y < x ^ 2 + 2 x + 1
+    -- 10 y ≤ x ^ 2 + 2 x = x (x + 2)
+    -- y ≤ x (x + 2) / 10 = (x ^ 2 + 2 * x) / 10
+
+    -- What is the condition on `y` given `10 y < (x + 1) ^ 2`?
+    -- y * 10 < ((x + 1) ^ 2 + 10 - 1) - (10 - 1)
+    -- y < ((x + 1) ^ 2 + 10 - 1) / 10
+    -- y < (x + 1) ^ 2 ⌈/⌉ 10
+
+    rw [ceilDiv_eq_add_pred_div]
+    -- TODO: Avoid `tsub` if possible?
+    change y + 1 ≤ ((x + 1) ^ 2 + b - 1) / b
+    rw [Nat.le_div_iff_mul_le (zero_lt_of_lt hb)]
+    suffices y * b + 1 ≤ (x + 1) ^ 2 by
+      convert add_le_add_right this (b - 1) using 1
+      · rw [← add_tsub_assoc_of_le hb.le]
+        simp [add_mul]
+      · rw [add_tsub_assoc_of_le hb.le]
+    change y * b < (x + 1) ^ 2
+
+    suffices y * b * b ^ (2 * lx.length) < (x + 1) ^ 2 * b ^ (2 * lx.length) from
+      Nat.lt_of_mul_lt_mul_right this
+    convert lt_of_le_of_lt hy_mem.1 (Nat.pow_lt_pow_left hx_mem.2 two_ne_zero) using 1 <;> ring
+
+
+lemma len_eq_or_of_digits_eq_concat {b : ℕ} (hb : 1 < b) {n : ℕ}
+    {lx : List ℕ} {x : ℕ} (hx : digits b n = lx ++ [x])
+    {ly : List ℕ} {y : ℕ} (hy : digits b (n ^ 2) = ly ++ [y]) :
+    ly.length = 2 * lx.length ∨ ly.length = 2 * lx.length + 1 := by
+  have hn_zero : n ≠ 0 := by
+    suffices digits b n ≠ [] from digits_ne_nil_iff_ne_zero.mp this
+    simp [hx]
+  suffices log b (n ^ 2) = ly.length ∧ log b n = lx.length by
+    rw [← this.1, ← this.2]
+    exact log_sq_eq hb hn_zero
+  constructor
+  · suffices log b (n ^ 2) + 1 = ly.length + 1 by simpa using this
+    convert congrArg length hy using 1
+    · simp [digits_len, hb, hn_zero]
+    · simp
+  · suffices log b n + 1 = lx.length + 1 by simpa using this
+    convert congrArg length hx using 1
+    · simp [digits_len, hb, hn_zero]
+    · simp
+
+lemma len_eq_two_mul_of_digits_sq_eq_concat_of_not_mem_Ico {b : ℕ} (hb : 1 < b) {n : ℕ}
+    {lx : List ℕ} {x : ℕ} (hn_dig : digits b n = lx ++ [x])
+    {ly : List ℕ} {y : ℕ} (hn2_dig : digits b (n ^ 2) = ly ++ [y])
+    (hy : y ∉ Finset.Ico (x ^ 2 / b) ((x + 1) ^ 2 ⌈/⌉ b)) :
+    ly.length = 2 * lx.length := by
+  contrapose! hy with hy_len
+  refine mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul_add_one hb hn_dig hn2_dig ?_
+  exact (len_eq_or_of_digits_eq_concat hb hn_dig hn2_dig).resolve_left hy_len
+
+lemma len_eq_two_mul_add_one_of_digits_sq_eq_concat_of_not_mem_Ico {b : ℕ} (hb : 1 < b) {n : ℕ}
+    {lx : List ℕ} {x : ℕ} (hn_dig : digits b n = lx ++ [x])
+    {ly : List ℕ} {y : ℕ} (hn2_dig : digits b (n ^ 2) = ly ++ [y])
+    (hy : y ∉ Finset.Ico (x ^ 2) ((x + 1) ^ 2)) :
+    ly.length = 2 * lx.length + 1 := by
+  contrapose! hy with hy_len
+  refine mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul hb hn_dig hn2_dig ?_
+  exact (len_eq_or_of_digits_eq_concat hb hn_dig hn2_dig).resolve_right hy_len
+
+lemma digits_square_concat' {b : ℕ} (hb : 1 < b) {n : ℕ}
+    {lx : List ℕ} {x : ℕ} (hn_dig : digits b n = lx ++ [x])
+    {ly : List ℕ} {y : ℕ} (hn2_dig : digits b (n ^ 2) = ly ++ [y]) :
+    ly.length = 2 * lx.length ∧ y ∈ Finset.Ico (x ^ 2) ((x + 1) ^ 2) ∨
+    ly.length = 2 * lx.length + 1 ∧ y ∈ Finset.Ico (x ^ 2 / b) ((x + 1) ^ 2 ⌈/⌉ b) := by
+  -- TODO: Revise comment.
+  -- Split into two cases.
+  -- If `n` has `k + 1` digits, then `n ^ 2` has either `2 k + 1` or `2 k + 2` digits.
+  -- When it has `2 k + 1`, we know that `x ^ 2 < b` and there was no carry to change this.
+  refine (len_eq_or_of_digits_eq_concat hb hn_dig hn2_dig).imp ?_ ?_
+  · refine fun hy_len ↦ ⟨hy_len, ?_⟩
+    exact mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul hb hn_dig hn2_dig hy_len
+  · refine fun hy_len ↦ ⟨hy_len, ?_⟩
+    exact mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul_add_one hb hn_dig hn2_dig hy_len
+
+-- Build in the digit constraint for easier simplification.
+-- TODO: Eliminate?
 lemma digits_square_concat (b : ℕ) (hb : 1 < b) (n : ℕ)
     (lx : List ℕ) (x : ℕ) (ly : List ℕ) (y : ℕ)
     (hx : digits b n = lx ++ [x]) (hy : digits b (n ^ 2) = ly ++ [y]) :
     ly.length = 2 * lx.length ∧ y ∈ Finset.Ico (1 ⊔ x ^ 2) (b ⊓ (x + 1) ^ 2) ∨
     ly.length = 2 * lx.length + 1 ∧ y ∈ Finset.Ico (1 ⊔ x ^ 2 / b) (b ⊓ (x + 1) ^ 2 ⌈/⌉ b) := by
-  have hn_zero : n ≠ 0 := by
-    suffices digits b n ≠ [] from digits_ne_nil_iff_ne_zero.mp this
-    simp [hx]
-
-  have hx_mem := mem_Ico_of_digits_eq_concat hb n x lx hx
-  have hy_mem := mem_Ico_of_digits_eq_concat hb (n ^ 2) y ly hy
-
-  -- Split into two cases.
-  -- If `n` has `k + 1` digits, then `n ^ 2` has either `2 k + 1` or `2 k + 2` digits.
-  -- When it has `2 k + 1`, we know that `x ^ 2 < b` and there was no carry to change this.
-  -- TODO: Replace `log` lemma with `length ∘ digits` lemma?
-  refine Or.imp (fun h_len ↦ ?_) (fun h_len ↦ ?_) (log_sq_eq hb hn_zero)
-  · have h_len : ly.length = 2 * lx.length := by
-      suffices (digits b (n ^ 2)).length + 1 = 2 * (digits b n).length by
-        simpa [hx, hy, mul_add] using this
-      simpa [digits_len b _ hb, hn_zero, mul_add] using h_len
-
-    rw [h_len] at hy_mem
-    simp only [← Finset.Ico_inter_Ico, Finset.mem_inter, Finset.mem_Ico]
-    refine ⟨h_len, ⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
-    · rw [one_le_iff_ne_zero]
-      convert getLast_digit_ne_zero b (m := n ^ 2) (by simpa using hn_zero)
+  simp only [← Finset.Ico_inter_Ico]
+  suffices y ∈ Finset.Ico 1 b by simpa [this] using digits_square_concat' hb hx hy
+  rw [Finset.mem_Ico]
+  constructor
+  · rw [one_le_iff_ne_zero]
+    convert getLast_digit_ne_zero b (m := n ^ 2) ?_
+    · simp [hy]
+    · suffices digits b (n ^ 2) ≠ [] from digits_ne_nil_iff_ne_zero.mp this
       simp [hy]
-    · suffices y ∈ digits b (n ^ 2) from digits_lt_base hb this
-      simp [hy]
+  · suffices y ∈ digits b (n ^ 2) from digits_lt_base hb this
+    simp [hy]
 
-    -- We want to show `x ^ 2 ≤ y < (x + 1) ^ 2` when `n` has `k` digits and
-    -- `n ^ 2` has `2 * k` digits, with `k = log b n + 1`.
 
-    -- We have `x * b ^ k ≤ n < (x + 1) * b ^ k`
-    -- and `y * b ^ (2 * k) ≤ n ^ 2 < (y + 1) * b ^ (2 * k)`.
-
-    -- Does this help us?
-    -- What is the principle that we need to apply?
-
-    -- `n = x * b ^ k + r`
-    -- Therefore `n ^ 2` is at least `x ^ 2 * b ^ (2 * k)`
-    -- But does this help us to bound `y`?
-    -- From above, we do have `n ^ 2 < (y + 1) * b ^ (2 * k)`.
-    -- Putting these together,
-    -- `x ^ 2 * b ^ (2 * k) < (y + 1) * b ^ (2 * k)`
-    -- `x ^ 2 < y + 1`
-    -- `x ^ 2 ≤ y`
-    -- Not sure if this will always work though?
-
-    -- Consider the other side of the bound:
-    -- `n = x * b ^ k + r`, and `n < (x + 1) * b ^ k`
-    -- `n ^ 2 < (x + 1) ^ 2 * b ^ (2 * k)`
-    -- From above, we have `y * b ^ (2 * k) ≤ n ^ 2`
-    -- Putting these together,
-    -- `y * b ^ (2 * k) < (x + 1) ^ 2 * b ^ (2 * k)`
-    -- `y < (x + 1) ^ 2`
-
-    -- Looks good!
-
-    · suffices x ^ 2 < y + 1 from le_of_lt_succ this
-      suffices x ^ 2 * b ^ (2 * lx.length) < (y + 1) * b ^ (2 * lx.length) from
-        Nat.lt_of_mul_lt_mul_right this
-      convert lt_of_le_of_lt (Nat.pow_le_pow_left hx_mem.1 2) hy_mem.2 using 1
-      ring
-    · suffices y * b ^ (2 * lx.length) < (x + 1) ^ 2 * b ^ (2 * lx.length) from
-        Nat.lt_of_mul_lt_mul_right this
-      convert lt_of_le_of_lt hy_mem.1 (Nat.pow_lt_pow_left hx_mem.2 two_ne_zero) using 1
-      ring
-
-  · have h_len : ly.length = 2 * lx.length + 1 := by
-      suffices (digits b (n ^ 2)).length = 2 * (digits b n).length by
-        simpa [hx, hy, mul_add] using this
-      simpa [digits_len b _ hb, hn_zero, mul_add] using h_len
-
-    rw [h_len] at hy_mem
-    simp only [← Finset.Ico_inter_Ico, Finset.mem_inter, Finset.mem_Ico]
-    refine ⟨h_len, ⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
-    · rw [one_le_iff_ne_zero]
-      convert getLast_digit_ne_zero b (m := n ^ 2) (by simpa using hn_zero)
-      simp [hy]
-    · suffices y ∈ digits b (n ^ 2) from digits_lt_base hb this
-      simp [hy]
-
-    · suffices x ^ 2 / b < y + 1 from le_of_lt_succ this
-      rw [div_lt_iff_lt_mul (zero_lt_of_lt hb)]
-      -- suffices x ^ 2 < (y + 1) * b from (div_lt_iff_lt_mul (zero_lt_of_lt hb)).mpr this
-      suffices x ^ 2 * b ^ (2 * lx.length) < (y + 1) * b * b ^ (2 * lx.length) from
-        Nat.lt_of_mul_lt_mul_right this
-      convert lt_of_le_of_lt (Nat.pow_le_pow_left hx_mem.1 2) hy_mem.2 using 1 <;> ring
-
-      -- Where is the bound coming from.
-      -- n ^ 2 = y * 10 ^ (2 k + 1) + c = (x * 10 ^ k + r) ^ 2
-      -- (x * 10 ^ k) ^ 2 = x ^ 2 * 10 ^ (2 k) ≤ n ^ 2
-      -- n ^ 2 < (y + 1) * 10 ^ (2 k + 1) = 10 (y + 1) * 10 ^ (2 k)
-
-      -- Together:
-      -- x ^ 2 * 10 ^ (2 k) < 10 (y + 1) 10 ^ (2 k)
-      -- x ^ 2 < 10 (y + 1)
-      -- x ^ 2 / 10 < y + 1  `Nat.div_lt_iff_lt_mul`
-      -- x ^ 2 / 10 ≤ y
-
-    · -- n ^ 2 = y * 10 ^ (2 k + 1) + c = (x * 10 ^ k + r) ^ 2
-      -- y * 10 ^ (2 k + 1) ≤ y * 10 ^ (2 k + 1) + c = n ^ 2
-      -- n ^ 2 = (x * 10 ^ k + r) ^ 2 < (x + 1) ^ 2 * 10 ^ (2 k)
-      -- Together:
-      -- 10 y * 10 ^ (2 k) < (x + 1) ^ 2 * 10 ^ (2 k)
-      -- 10 y < (x + 1) ^ 2
-      -- 10 y < x ^ 2 + 2 x + 1
-      -- 10 y ≤ x ^ 2 + 2 x = x (x + 2)
-      -- y ≤ x (x + 2) / 10 = (x ^ 2 + 2 * x) / 10
-
-      -- What is the condition on `y` given `10 y < (x + 1) ^ 2`?
-      -- y * 10 < ((x + 1) ^ 2 + 10 - 1) - (10 - 1)
-      -- y < ((x + 1) ^ 2 + 10 - 1) / 10
-      -- y < (x + 1) ^ 2 ⌈/⌉ 10
-
-      rw [ceilDiv_eq_add_pred_div]
-      -- TODO: Avoid `tsub` if possible?
-      change y + 1 ≤ ((x + 1) ^ 2 + b - 1) / b
-      rw [Nat.le_div_iff_mul_le (zero_lt_of_lt hb)]
-      suffices y * b + 1 ≤ (x + 1) ^ 2 by
-        convert add_le_add_right this (b - 1) using 1
-        · rw [← add_tsub_assoc_of_le hb.le]
-          simp [add_mul]
-        · rw [add_tsub_assoc_of_le hb.le]
-      change y * b < (x + 1) ^ 2
-
-      suffices y * b * b ^ (2 * lx.length) < (x + 1) ^ 2 * b ^ (2 * lx.length) from
-        Nat.lt_of_mul_lt_mul_right this
-      convert lt_of_le_of_lt hy_mem.1 (Nat.pow_lt_pow_left hx_mem.2 two_ne_zero) using 1 <;> ring
-
--- TODO: Extract as lemma. Use log or length digits?
--- TODO: Holds even when `n = 0`?
-lemma len_digits_eq_of_le_getLast_sq (b : ℕ) (hb : 1 < b) (n : ℕ)
-    (hn : digits b n ≠ []) (hx : b ≤ (digits b n).getLast hn ^ 2) :
+lemma len_digits_eq_of_le_getLast_sq {b : ℕ} (hb : 1 < b) (n : ℕ)
+    (hx : ∀ h, b ≤ (digits b n).getLast h ^ 2) :
     (digits b (n ^ 2)).length = 2 * (digits b n).length := by
-  sorry
+  cases eq_or_ne n 0 with
+  | inl hn => simp [hn]
+  | inr hn =>
+    have hn_nil : digits b n ≠ [] := digits_ne_nil_iff_ne_zero.mpr hn
+    have hn2_nil : digits b (n ^ 2) ≠ [] := digits_ne_nil_iff_ne_zero.mpr (pow_ne_zero 2 hn)
+    specialize hx hn_nil
+    obtain ⟨lx, x, hn_dig⟩ : ∃ (l : List ℕ) (x : ℕ), digits b n = l ++ [x] :=
+      ⟨_, _, .symm <| dropLast_concat_getLast <| hn_nil⟩
+    obtain ⟨ly, y, hn2_dig⟩ : ∃ (l : List ℕ) (x : ℕ), digits b (n ^ 2) = l ++ [x] :=
+      ⟨_, _, .symm <| dropLast_concat_getLast <| hn2_nil⟩
+    suffices ly.length = 2 * lx.length + 1 by simpa [hn2_dig, hn_dig, mul_add]
+    refine len_eq_two_mul_add_one_of_digits_sq_eq_concat_of_not_mem_Ico hb hn_dig hn2_dig ?_
+    rw [Finset.mem_Ico]
+    refine not_and_of_not_left _ ?_
+    rw [not_le]
+    calc _
+    _ < b := by
+      suffices y ∈ digits b (n ^ 2) from digits_lt_base hb this
+      simp [hn2_dig]
+    _ ≤ x ^ 2 := by simpa [hn_dig] using hx
 
--- TODO: Extract as lemma. Use log (to avoid - 1) or length of digits?
-lemma len_digits_eq_of_getLast_add_one_sq_lt (b : ℕ) (hb : 1 < b) (n : ℕ)
-    (hn : digits b n ≠ []) (hx : ((digits b n).getLast hn + 1) ^ 2 < b) :
+lemma len_digits_eq_of_getLast_add_one_sq_lt {b : ℕ} (hb : 1 < b) (n : ℕ)
+    (hx : ∀ h, ((digits b n).getLast h + 1) ^ 2 < b) :
     (digits b (n ^ 2)).length = 2 * (digits b n).length - 1 := by
-  sorry
+  cases eq_or_ne n 0 with
+  | inl hn => simp [hn]
+  | inr hn =>
+    have hn_nil : digits b n ≠ [] := digits_ne_nil_iff_ne_zero.mpr hn
+    have hn2_nil : digits b (n ^ 2) ≠ [] := digits_ne_nil_iff_ne_zero.mpr (pow_ne_zero 2 hn)
+    specialize hx hn_nil
+    obtain ⟨lx, x, hn_dig⟩ : ∃ (l : List ℕ) (x : ℕ), digits b n = l ++ [x] :=
+      ⟨_, _, .symm <| dropLast_concat_getLast <| hn_nil⟩
+    obtain ⟨ly, y, hn2_dig⟩ : ∃ (l : List ℕ) (x : ℕ), digits b (n ^ 2) = l ++ [x] :=
+      ⟨_, _, .symm <| dropLast_concat_getLast <| hn2_nil⟩
+    suffices ly.length = 2 * lx.length by simpa [hn2_dig, hn_dig, mul_add]
+    refine len_eq_two_mul_of_digits_sq_eq_concat_of_not_mem_Ico hb hn_dig hn2_dig ?_
+    rw [Finset.mem_Ico]
+    refine not_and_of_not_right _ ?_
+    rw [not_lt, ceilDiv_le_iff_le_mul (zero_lt_of_lt hb)]
+    have hx : (x + 1) ^ 2 < b := by simpa [hn_dig] using hx
+    have hy : y = (digits b (n ^ 2)).getLast hn2_nil := by simp [hn2_dig]
+    calc _
+    _ ≤ b := hx.le
+    _ ≤ _ := by
+      refine Nat.le_mul_of_pos_right b ?_
+      refine zero_lt_of_ne_zero ?_
+      simpa [hy] using getLast_digit_ne_zero b (pow_ne_zero 2 hn)
 
--- TODO: Extract as lemma. Use log (to avoid - 1) or length of digits?
-lemma len_digits_add_one_eq_of_getLast_add_one_sq_lt (b : ℕ) (hb : 1 < b) (n : ℕ)
-    (hn : digits b n ≠ []) (hx : ((digits b n).getLast hn + 1) ^ 2 < b) :
+lemma len_digits_add_one_eq_of_getLast_add_one_sq_lt {b : ℕ} (hb : 1 < b) (n : ℕ)
+    (hx : ∃ h, ((digits b n).getLast h + 1) ^ 2 < b) :
     (digits b (n ^ 2)).length + 1 = 2 * (digits b n).length := by
-  sorry
-
+  rcases hx with ⟨hn_nil, hx⟩
+  suffices (b.digits (n ^ 2)).length = 2 * (b.digits n).length - 1 by
+    refine (eq_tsub_iff_add_eq_of_le ?_).mp this
+    simpa [one_le_iff_ne_zero] using hn_nil
+  exact len_digits_eq_of_getLast_add_one_sq_lt hb n (fun _ ↦ hx)
 
 -- TODO: There might be an easier way to prove this using injectivity of addition?
 -- Uniqueness of `div_add_mod`? `List.take_append_drop`?
@@ -983,7 +1081,7 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
 
         suffices (digits 10 (a ^ 2)).length = 2 * (digits 10 a).length by
           simp [this, ha_dig, hx_dig, mul_add]
-        refine len_digits_eq_of_le_getLast_sq 10 (by norm_num) a (by simp [ha_dig]) ?_
+        refine len_digits_eq_of_le_getLast_sq (b := 10) (by norm_num) a ?_
         suffices 10 ≤ (2 * s) ^ 2 by simpa [ha_dig, hx_dig] using this
         suffices ∀ s, s = 2 ∨ s = 3 → 10 ≤ (2 * s) ^ 2 from this s hs
         simp
@@ -1007,9 +1105,11 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
         -- Rewrite `k` as `m + 1` for simplification.
         obtain ⟨m, hm⟩ : ∃ m, m + 1 = k := exists_add_one_eq.mpr (zero_lt_of_ne_zero hk)
 
+        have ha_nil : digits 10 a ≠ [] := by simp [ha_dig]
+        -- TOD: Might be nicer to use `_.length = _ - 1` here?
         have ha2_len : (digits 10 (a ^ 2)).length + 1 = 2 * (digits 10 a).length :=
-          len_digits_add_one_eq_of_getLast_add_one_sq_lt 10 (by norm_num) a
-            (by simp [ha_dig]) (by simp [ha_dig, hx_dig, hs, ← hm])
+          len_digits_add_one_eq_of_getLast_add_one_sq_lt (b := 10) (by norm_num) a
+            ⟨ha_nil, by simp [ha_dig, hx_dig, hs, ← hm]⟩
 
         have ha2_dig : digits 10 (a ^ 2) = s ^ 2 :: digits 10 y := by
           calc _
