@@ -973,7 +973,15 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
       (digits 10 y).length ≤ 2 * k ∧
       digits 10 (b ^ 2) = digits 10 y ++ replicate (2 * k - (digits 10 y).length) 0 ++ [s ^ 2] ∧
       digits 10 (a ^ 2) = s ^ 2 :: digits 10 y := by
-    sorry
+    refine exists₅_congr fun s k b x y ↦ ?_
+    simp only [and_congr_right_iff]
+    intro hs
+    simp only [← and_assoc, and_congr_left_iff]
+    intro ha2_dig hb2_dig hy_len
+    simp only [and_assoc]
+    constructor
+    · exact fun ⟨hx_len, ha_dig, hb_dig⟩ ↦ ⟨ha_dig, hb_dig, hx_len⟩
+    · exact fun ⟨ha_dig, hb_dig, hx_len⟩ ↦ ⟨hx_len, ha_dig, hb_dig⟩
 
   -- Eliminate constraint on length of `a ^ 2, b ^ 2`.
   -- Since this is used to eliminate `s = 2, 3` when `k ≠ 0`, must split cases here.
