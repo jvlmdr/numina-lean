@@ -1143,80 +1143,74 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
           ring
         · exact ha2_dig
 
+  -- TEMPORARY
+  _ ↔ ∃ (s k b x : ℕ),
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      digits 10 a = s :: digits 10 x ∧
+      digits 10 b = digits 10 x ++ [s] ∧
+      (k = 0 ∧ x = 0 ∨ k ≠ 0 ∧ s = 1 ∧ digits 10 x = replicate k (2 * s)) := by sorry
+
+  -- TODO: Could remove `(digits 10 x).length = k` earlier, above?
+
   -- Eliminate `b` and `x`.
-
-  -- _ ↔ ∃ (s k : ℕ),
-  --     (s = 1 ∨ s = 2 ∨ s = 3) ∧
-  --     (k = 0 ∧ digits 10 a = [s] ∨
-  --       k ≠ 0 ∧ s = 1 ∧ digits 10 a = s :: replicate k (2 * s)) := by
-  --   refine exists₂_congr fun s k ↦ ?_
-  --   sorry
-
-  _ ↔ ∃ s k,
-      (k = 0 ∧ (s = 1 ∨ s = 2 ∨ s = 3) ∨ k ≠ 0 ∧ s = 1) ∧
-      digits 10 a = s :: replicate k (2 * s) := by
-    sorry
-    -- refine exists₂_congr fun s k ↦ ?_
-    -- constructor
-    -- · intro ⟨b, x, hx_len, ha_dig, hb_dig, h⟩
-    --   cases h with
-    --   | inl h =>
-    --     sorry
-    --   | inr h =>
-    --     sorry
-    -- · intro ⟨hks, ha_dig⟩
-    --   use ofDigits 10 (replicate k (2 * s) ++ [s]), ofDigits 10 (replicate k (2 * s))
-    --   have : digits 10 (ofDigits 10 (replicate k (2 * s))) = replicate k (2 * s) := by
-    --     rw [digits_ofDigits]
-    --     · sorry
-    --     · sorry
-    --     · sorry
-    --   simp [this]
-    --   sorry
-
-  -- Re-order to extract the length constraint, such that the subsitution
-  -- `a = 1 ∨ a = 2 ∨ a = 3` can be obtained via `simp`.
-  _ ↔ ∃ k s, (digits 10 (a ^ 2)).length = 2 * k + 1 ∧
-      (s = 1 ∨ s = 2 ∨ s = 3) ∧ digits 10 a = s :: replicate k (2 * s) := by
-
-    sorry
-
+  _ ↔ ∃ (s k : ℕ),
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      (k = 0 ∧ a = s ∨ k ≠ 0 ∧ s = 1 ∧ digits 10 a = s :: replicate k (2 * s)) := by
+    refine exists₂_congr fun s k ↦ ?_
+    simp only [exists_and_left, and_congr_right_iff]
+    intro hs
+    constructor
+    · intro ⟨b, x, ha_dig, hb_dig, h⟩
+      refine h.imp ?_ ?_
+      · intro ⟨hk, hx⟩
+        refine ⟨hk, ?_⟩
+        have := congrArg (ofDigits 10) ha_dig
+        simpa [ofDigits_digits, hx] using this
+      · intro ⟨hk, hs, hx_dig⟩
+        exact ⟨hk, hs, hx_dig ▸ ha_dig⟩
+    · intro h
+      cases h with
+      | inl h =>
+        rcases h with ⟨hk, rfl⟩
+        suffices digits 10 a = [a] from ⟨a, 0, by simpa [hk] using this⟩
+        refine digits_of_lt 10 a ha ?_
+        suffices ∀ s, s = 1 ∨ s = 2 ∨ s = 3 → s < 10 from this a hs
+        simp
+      | inr h =>
+        rcases h with ⟨hk, hs, ha_dig⟩
+        have hx_dig : digits 10 (ofDigits 10 (replicate k (2 * s))) = replicate k (2 * s) := by
+          refine digits_ofDigits 10 (by norm_num) _ ?_ ?_
+          · simp [hs]
+          · simp [hs]
+        have hb_dig :
+            digits 10 (ofDigits 10 (replicate k (2 * s) ++ [s])) = replicate k (2 * s) ++ [s] := by
+          refine digits_ofDigits 10 (by norm_num) _ ?_ ?_
+          · simp [hk, hs]
+          · simp [hs]
+        use (ofDigits 10 (replicate k (2 * s) ++ [s]))
+        use (ofDigits 10 (replicate k (2 * s)))
+        rw [hx_dig, hb_dig]
+        exact ⟨ha_dig, rfl, .inr ⟨hk, hs, rfl⟩⟩
 
   _ ↔ (a = 1 ∨ a = 2 ∨ a = 3) ∨ (∃ k, digits 10 a = 1 :: replicate (k + 1) 2) := by
-    -- Split `k` into `0` and `k + 1`.
-    rw [← or_exists_add_one]
-    refine or_congr ?_ ?_
-    · suffices a = 1 ∨ a = 2 ∨ a = 3 → (digits 10 (a ^ 2)).length = 1 by
-        simpa [digits_eq_iff] using this
-      -- Verify that `a ^ 2` has one digit in all three cases by substitution.
-      clear ha
-      revert a
-      simp
-    · refine exists_congr fun m ↦ ?_
-      calc _
-      -- TODO: Maybe not necessary?
-      _ ↔ (digits 10 (a ^ 2)).length = 2 * (m + 1) + 1 ∧
-          (digits 10 a = 1 :: replicate (m + 1) 2 ∨
-            digits 10 a = 2 :: replicate (m + 1) 4 ∨
-            digits 10 a = 3 :: replicate (m + 1) 6) := by simp
-      -- Eliminate the cases `s = 2` and `s = 3`.
-      _ ↔ (digits 10 (a ^ 2)).length = 2 * (m + 1) + 1 ∧
-          digits 10 a = 1 :: replicate (m + 1) 2 := by
-        rw [and_congr_right_iff]
-        intro h_len
-        refine or_iff_left ?_
-        refine not_or_intro ?_ ?_
-        · contrapose! h_len with ha_digits
-          -- Show that the length property is violated.
-          -- Obtain from the fact that the last digit of `a` squared is at least 10.
-          rw [len_digits_eq_of_le_getLast_sq] <;> simp [ha_digits, mul_add]
-        · contrapose! h_len with ha_digits
-          rw [len_digits_eq_of_le_getLast_sq] <;> simp [ha_digits, mul_add]
-      -- Drop the constraint on the length since it is satisfied for `s = 1`.
-      _ ↔ _ := by
-        rw [and_iff_right_iff_imp]
-        intro ha_digits
-        -- Confirm that the length property holds for `s = 1`.
-        rw [len_digits_eq_of_getLast_add_one_sq_lt] <;> simp [ha_digits, mul_add]
+    constructor
+    · intro ⟨s, k, hs, h⟩
+      refine h.imp ?_ ?_
+      · rintro ⟨hk, rfl⟩
+        exact hs
+      · rintro ⟨hk, rfl, ha_dig⟩
+        use k - 1  -- TODO
+        convert ha_dig
+        exact succ_pred_eq_of_ne_zero hk
+
+    · intro h
+      cases h with
+      | inl ha =>
+        use a, 0
+        simpa using ha
+      | inr h =>
+        rcases h with ⟨k, ha_dig⟩
+        use 1, k + 1
+        simpa using ha_dig
 
   _ ↔ _ := by simp [digits_eq_iff, eq_comm (b := ofDigits _ _)]
