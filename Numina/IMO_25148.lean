@@ -319,7 +319,8 @@ lemma len_eq_two_mul_add_one_of_digits_sq_eq_concat_of_not_mem_Ico {b : ℕ} (hb
   refine mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul hb hn_dig hn2_dig ?_
   exact (len_eq_or_of_digits_eq_concat hb hn_dig hn2_dig).resolve_right hy_len
 
-lemma digits_square_concat' {b : ℕ} (hb : 1 < b) {n : ℕ}
+-- TODO: rename?
+lemma digits_square_concat {b : ℕ} (hb : 1 < b) (n : ℕ)
     {lx : List ℕ} {x : ℕ} (hn_dig : digits b n = lx ++ [x])
     {ly : List ℕ} {y : ℕ} (hn2_dig : digits b (n ^ 2) = ly ++ [y]) :
     ly.length = 2 * lx.length ∧ y ∈ Finset.Ico (x ^ 2) ((x + 1) ^ 2) ∨
@@ -333,26 +334,6 @@ lemma digits_square_concat' {b : ℕ} (hb : 1 < b) {n : ℕ}
     exact mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul hb hn_dig hn2_dig hy_len
   · refine fun hy_len ↦ ⟨hy_len, ?_⟩
     exact mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul_add_one hb hn_dig hn2_dig hy_len
-
--- Build in the digit constraint for easier simplification.
--- TODO: Eliminate?
-lemma digits_square_concat (b : ℕ) (hb : 1 < b) (n : ℕ)
-    (lx : List ℕ) (x : ℕ) (ly : List ℕ) (y : ℕ)
-    (hx : digits b n = lx ++ [x]) (hy : digits b (n ^ 2) = ly ++ [y]) :
-    ly.length = 2 * lx.length ∧ y ∈ Finset.Ico (1 ⊔ x ^ 2) (b ⊓ (x + 1) ^ 2) ∨
-    ly.length = 2 * lx.length + 1 ∧ y ∈ Finset.Ico (1 ⊔ x ^ 2 / b) (b ⊓ (x + 1) ^ 2 ⌈/⌉ b) := by
-  simp only [← Finset.Ico_inter_Ico]
-  suffices y ∈ Finset.Ico 1 b by simpa [this] using digits_square_concat' hb hx hy
-  rw [Finset.mem_Ico]
-  constructor
-  · rw [one_le_iff_ne_zero]
-    convert getLast_digit_ne_zero b (m := n ^ 2) ?_
-    · simp [hy]
-    · suffices digits b (n ^ 2) ≠ [] from digits_ne_nil_iff_ne_zero.mp this
-      simp [hy]
-  · suffices y ∈ digits b (n ^ 2) from digits_lt_base hb this
-    simp [hy]
-
 
 lemma len_digits_eq_of_le_getLast_sq {b : ℕ} (hb : 1 < b) (n : ℕ)
     (hx : ∀ h, b ≤ (digits b n).getLast h ^ 2) :
@@ -472,30 +453,6 @@ lemma exists_digits_eq_concat_iff_exists_getLast_eq_of_ne_nil (b : ℕ) (hb : 1 
     (n d : ℕ) (hl : digits b n ≠ []) :
     (∃ l, digits b n = l ++ [d]) ↔ (digits b n).getLast hl = d := by
   simpa [hl] using exists_digits_eq_concat_iff_exists_getLast_eq b hb n d
-
--- Let `digits b n = s ++ [x]` and `digits b (n ^ 2) = t ++ [y]`.
-
--- Hard to use since need to specify `ly`.
--- lemma digits_square_concat_of_asdf (b : ℕ) (hb : 1 < b) (n : ℕ)
---     (lx : List ℕ) (x : ℕ) (hx : digits b n = lx ++ [x])
---     (ly : List ℕ) (y : ℕ) (hy : digits b (n ^ 2) = lx ++ [x])
---     (hy_len : ly.length = 2 * lx.length) :
---     y ∈ Finset.Ico (1 ⊔ x ^ 2) (b ⊓ (x + 1) ^ 2) := by
---   sorry
-
-
--- The key constraints are:
--- From `d = a ^ 2`:
--- `(digits 10 d)[0] = (digits 10 (a ^ 2))[0] = (digits 10 a)[0] ^ 2 % 10`
--- From `c = b ^ 2`:
--- `(digits 10 c).getLast _ = (digits 10 (b ^ 2)).getLast _ ∈ ?`
--- From the rotations:
--- `(digits 10 b).getLast = (digits 10 a)[0]`
--- `(digits 10 c).getLast = (digits 10 d)[0]`
-
--- Let `a = [s] ++ ta` and `c = hc ++ [f]`, then
--- `f = (digits 10 c).getLast _ = (digits 10 d)[0] = s ^ 2 % 10`
--- `f ∈ ?`
 
 lemma rotateRight_concat (l : List ℕ) (x : ℕ) :
     rotateRight (l ++ [x]) = x :: l := by
@@ -676,68 +633,106 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
         suffices i ∈ digits 10 a from digits_lt_base' this
         simp [ha_dig, hi]
 
-  _ ↔ ∃ (b c : ℕ) (s f : ℕ) (lx ly : List ℕ),
-      digits 10 a = s :: lx ∧
-      digits 10 b = lx ++ [s] ∧
-      b ^ 2 = c ∧
-      digits 10 c = ly ++ [f] ∧
-      ofDigits 10 (f :: ly) = a ^ 2 := by
-    sorry
-
-  -- Identify the `(s, f)` which are feasible.
+  -- Identify the `s, f` pairs which are feasible.
+  -- Introduce conditions on `s, f` which can be shown to hold.
   -- From `d = (...f) = a ^ 2 = (...s) ^ 2` we know that `s ^ 2 % 10 = f`.
-  -- From `c = (f...) = b ^ 2 = (s...) ^ 2` we have constraints outlined above.
-
-  _ ↔ ∃ (b c : ℕ) (s f : ℕ) (lx ly : List ℕ),
-      digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s] ∧ b ^ 2 = c ∧
-      digits 10 c = ly ++ [f] ∧ ofDigits 10 (f :: ly) = a ^ 2 ∧
+  -- From `c = (f...) = b ^ 2 = (s...) ^ 2` we have the constraints outlined above.
+  _ ↔ ∃ (b s f : ℕ) (lx ly : List ℕ),
+      (digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s]) ∧
+      (digits 10 (b ^ 2) = ly ++ [f] ∧ a ^ 2 = ofDigits 10 (f :: ly)) ∧
       s ^ 2 % 10 = f ∧
-      (ly.length = 2 * lx.length ∧ f ∈ Finset.Ico (1 ⊔ s^2) (10 ⊓ (s + 1)^2) ∨
-        ly.length = 2 * lx.length + 1 ∧ f ∈ Finset.Ico (1 ⊔ s^2 / 10) (10 ⊓ (s + 1)^2 ⌈/⌉ 10)) := by
-    refine exists₂_congr fun b c ↦ exists₄_congr fun s f lx ly ↦ ?_
-    simp only [and_congr_right_iff, iff_self_and]
-    intro hla hb hc hlc hd
-    refine ⟨?_, ?_⟩
+      (ly.length = 2 * lx.length ∧ f ∈ Finset.Ico (s^2) ((s + 1)^2) ∨
+        ly.length = 2 * lx.length + 1 ∧ f ∈ Finset.Ico (s^2 / 10) ((s + 1)^2 ⌈/⌉ 10)) ∧
+      f ∈ Finset.Ico 1 10 := by
+    refine exists₅_congr fun b s f lx ly ↦ ?_
+    simp only [and_congr_right_iff, iff_self_and, and_imp]
+    intro ha hb hb2 ha2
+    refine ⟨?_, digits_square_concat (by norm_num) b hb hb2, ?_⟩
     · calc _
       _ = a ^ 2 % 10 := by
-        convert congrArg (fun l ↦ ofDigits 10 l ^ 2 % 10) hla.symm using 1
+        convert congrArg (ofDigits 10 · ^ 2 % 10) ha.symm using 1
         · simp [ofDigits_cons, pow_mod]
         · simp [ofDigits_digits]
       _ = _ := by
-        rw [← hd, ofDigits_cons]
-        suffices f < 10 by simpa using this
-        suffices f ∈ digits 10 c from digits_lt_base' this
-        simp [hlc]
-    · exact digits_square_concat 10 (by norm_num) b lx s ly f hb (hc ▸ hlc)
+        suffices f < 10 by simpa [ha2, ofDigits_cons] using this
+        suffices f ∈ digits 10 (b ^ 2) from digits_lt_base' this
+        simp [hb2]
+    · rw [Finset.mem_Ico]
+      constructor
+      · rw [one_le_iff_ne_zero]
+        convert getLast_digit_ne_zero 10 (m := b ^ 2) ?_
+        · simp [hb2]
+        · suffices digits 10 (b ^ 2) ≠ [] from digits_ne_nil_iff_ne_zero.mp this
+          simp [hb2]
+      · suffices f ∈ digits 10 (b ^ 2) from digits_lt_base' this
+        simp [hb2]
 
-  -- Eliminate the second part of the disjunction.
-  _ ↔ ∃ (b c : ℕ) (s f : ℕ) (lx ly : List ℕ),
-      digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s] ∧ b ^ 2 = c ∧
-      digits 10 c = ly ++ [f] ∧ ofDigits 10 (f :: ly) = a ^ 2 ∧
-      s ^ 2 % 10 = f ∧ ly.length = 2 * lx.length ∧ (s = 1 ∨ s = 2 ∨ s = 3) := by
-    refine exists₂_congr fun b c ↦ exists₄_congr fun s f lx ly ↦ ?_
-    simp only [and_congr_right_iff]
-    rintro ha_digits hb_digits hc hc_digits hd rfl
-    -- We could also introduce `0 < s` here for `interval_cases`, but it is not necessary.
+  -- Eliminate the right side of the disjunction.
+  -- The left side of the disjunction holds for `s = 1, 2, 3` (`f = 1, 4, 9`).
+  -- s        =   1    2   3   4   5   6   7   8   9
+  -- s^2 % 10 =   1    4   9   6   5   6   9   4   1
+  -- f        ∈ 1-3  4-8   9   ∅   ∅   ∅   ∅   ∅   ∅
+  -- The right side of the disjunction does not hold for any `s`.
+  -- s        =  1  2  3    4    5    6    7    8    9
+  -- s^2 % 10 =  1  4  9    6    5    6    9    4    1
+  -- f        ∈  ∅  ∅  1  1-2  2-3  3-4  4-6  6-8  8-9
+  -- We can see that `s^2 % 10` never coincides with feasible values for `f`.
+  _ ↔ ∃ (b s f : ℕ) (lx ly : List ℕ),
+      (digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s]) ∧
+      (digits 10 (b ^ 2) = ly ++ [f] ∧ a ^ 2 = ofDigits 10 (f :: ly)) ∧
+      s ^ 2 % 10 = f ∧
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      ly.length = 2 * lx.length := by
+    refine exists₅_congr fun b s f lx ly ↦ ?_
+    simp only [and_congr_right_iff, and_imp]
+    -- Substitute `f = s ^ 2 % 10`.
+    rintro ha hb hb2 ha2 rfl
+    -- We can use `interval_cases` to check the conditions on `s` using `simp`.
+    -- We could also introduce `0 < s` here, but it is not necessary.
     have hs_lt : s < 10 := by
       suffices s ∈ digits 10 a from digits_lt_base' this
-      simp [ha_digits]
-    -- The left side of the disjunction holds for `s = 1, 2, 3` (`f = 1, 4, 9`).
-    -- s        =   1    2   3   4   5   6   7   8   9
-    -- s^2 % 10 =   1    4   9   6   5   6   9   4   1
-    -- f        ∈ 1-3  4-8   9   ∅   ∅   ∅   ∅   ∅   ∅
-    have h_left : s ^ 2 % 10 ∈ Finset.Ico (1 ⊔ s ^ 2) (10 ⊓ (s + 1) ^ 2) ↔
-        s = 1 ∨ s = 2 ∨ s = 3 := by
-      interval_cases s <;> simp
-    -- The right side of the disjunction does not hold for any `s`.
-    -- s        =  1  2  3    4    5    6    7    8    9
-    -- s^2 % 10 =  1  4  9    6    5    6    9    4    1
-    -- f        ∈  ∅  ∅  1  1-2  2-3  3-4  4-6  6-8  8-9
-    -- We can see that `s^2 % 10` never coincides with feasible values for `f`.
-    have h_right : ¬s ^ 2 % 10 ∈ Finset.Ico (1 ⊔ s ^ 2 / 10) (10 ⊓ (s + 1) ^ 2 ⌈/⌉ 10) := by
-      interval_cases s <;> simp
-    -- Apply these results obtain the required result.
-    simp [h_left, h_right]
+      simp [ha]
+    interval_cases s <;> simp
+
+  -- Since `s ^ 2 < 10`, we can replace `f = s ^ 2 % 10` with `s ^ 2`.
+  -- Re-order and simplify.
+  _ ↔ ∃ (b s f : ℕ) (lx ly : List ℕ),
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧ s ^ 2 % 10 = f ∧
+      (digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s]) ∧
+      (digits 10 (b ^ 2) = ly ++ [f] ∧ a ^ 2 = ofDigits 10 (f :: ly)) ∧
+      ly.length = 2 * lx.length := by
+    refine exists₅_congr fun b s f lx ly ↦ ?_
+    constructor
+    · intro ⟨h_dig, h_sq_dig, hf, hs, h_len⟩
+      exact ⟨hs, hf, h_dig, h_sq_dig, h_len⟩
+    · intro ⟨hs, hf, h_dig, h_sq_dig, h_len⟩
+      exact ⟨h_dig, h_sq_dig, hf, hs, h_len⟩
+  _ ↔ ∃ (b s : ℕ) (lx ly : List ℕ),
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      (digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s]) ∧
+      (digits 10 (b ^ 2) = ly ++ [s ^ 2] ∧ a ^ 2 = ofDigits 10 (s ^ 2 :: ly)) ∧
+      ly.length = 2 * lx.length := by simp
+
+  -- Introduce `k` to denote the number of elements in `lx`.
+  _ ↔ ∃ (b s : ℕ) (lx ly : List ℕ) (k : ℕ),
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      (digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s]) ∧
+      (digits 10 (b ^ 2) = ly ++ [s ^ 2] ∧ a ^ 2 = ofDigits 10 (s ^ 2 :: ly)) ∧
+      lx.length = k ∧ ly.length = 2 * k := by
+    simp
+
+  -- Re-order to separate the length conditions for `lx` and `ly`.
+  -- Move `s, k` to the front as these will parameterize the solutions.
+  _ ↔ ∃ (s k b : ℕ) (lx ly : List ℕ),
+      (s = 1 ∨ s = 2 ∨ s = 3) ∧
+      (lx.length = k ∧ digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s]) ∧
+      ly.length = 2 * k ∧ digits 10 (b ^ 2) = ly ++ [s ^ 2] ∧
+        a ^ 2 = ofDigits 10 (s ^ 2 :: ly) := by
+    constructor
+    · intro ⟨b, s, lx, ly, k, hs, ⟨ha, hb⟩, ⟨hb2, ha2⟩, hx_len, hy_len⟩
+      exact ⟨s, k, b, lx, ly, hs, ⟨hx_len, ha, hb⟩, hy_len, hb2, ha2⟩
+    · intro ⟨s, k, b, lx, ly, hs, ⟨hx_len, ha, hb⟩, hy_len, hb2, ha2⟩
+      exact ⟨b, s, lx, ly, k, hs, ⟨ha, hb⟩, ⟨hb2, ha2⟩, hx_len, hy_len⟩
 
   -- Since `s < 3` and hence `f = s ^ 2 < 10`, we know that both `c = b ^ 2` and `d` have
   -- exactly `2 k` digits, where `a` has `k` digits. TODO: k + 1?
@@ -759,62 +754,7 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
   -- Our three cases are then `a = 22...21`, `a = 44...42`, and `a = 66...63`.
   -- However, the latter two violate the condition that `a ^ 2` has `2 k` digits. (TODO)
 
-  -- Replace `f` with `s ^ 2`.
-  -- TODO: Reorder: Make it so that `f` constraint can pop out.
-  _ ↔ ∃ (b c : ℕ) (s f : ℕ) (lx ly : List ℕ),
-      b ^ 2 = c ∧ (s = 1 ∨ s = 2 ∨ s = 3) ∧ s ^ 2 % 10 = f ∧
-      digits 10 a = s :: lx ∧
-      digits 10 b = lx ++ [s] ∧
-      digits 10 c = ly ++ [f] ∧
-      a ^ 2 = ofDigits 10 (f :: ly) ∧
-      ly.length = 2 * lx.length := by
-    constructor
-    · refine fun ⟨b, c, s, f, lx, ly, ha_dig, hb_dig, hc, hc_dig, hd, hf, h_len, hs⟩ ↦ ?_
-      exact ⟨b, c, s, f, lx, ly, hc, hs, hf, ha_dig, hb_dig, hc_dig, hd.symm, h_len⟩
-    · refine fun ⟨b, c, s, f, lx, ly, hc, hs, hf, ha_dig, hb_dig, hc_dig, hd, h_len⟩ ↦ ?_
-      exact ⟨b, c, s, f, lx, ly, ha_dig, hb_dig, hc, hc_dig, hd.symm, hf, h_len, hs⟩
 
-  _ ↔ ∃ (b c : ℕ) (s : ℕ) (lx ly : List ℕ),
-      b ^ 2 = c ∧ (s = 1 ∨ s = 2 ∨ s = 3) ∧
-      digits 10 a = s :: lx ∧
-      digits 10 b = lx ++ [s] ∧
-      digits 10 c = ly ++ [s ^ 2] ∧
-      a ^ 2 = ofDigits 10 (s ^ 2 :: ly) ∧
-      ly.length = 2 * lx.length := by simp
-
-  -- Introduce `k` to denote the number of elements in `lx`.
-  -- That is, `a` has `k + 1` digits and `b ^ 2` has `2 k + 1` digits.
-  _ ↔ ∃ (b c : ℕ) (s : ℕ) (lx ly : List ℕ) (k : ℕ),
-      b ^ 2 = c ∧
-      (s = 1 ∨ s = 2 ∨ s = 3) ∧
-      lx.length = k ∧
-      digits 10 a = s :: lx ∧
-      digits 10 b = lx ++ [s] ∧
-      digits 10 c = ly ++ [s ^ 2] ∧
-      a ^ 2 = ofDigits 10 (s ^ 2 :: ly) ∧
-      ly.length = 2 * k := by
-    refine exists₂_congr fun b c ↦ ?_
-    simp
-
-  -- Re-order and eliminate `c`.
-  -- TODO: Might not need to re-order here.
-  -- TODO: Could eliminate `c` earlier.
-  _ ↔ ∃ (s k b : ℕ) (lx ly : List ℕ),
-      (s = 1 ∨ s = 2 ∨ s = 3) ∧
-      (lx.length = k ∧
-        digits 10 a = s :: lx ∧
-        digits 10 b = lx ++ [s]) ∧
-      (ly.length = 2 * k ∧
-        digits 10 (b ^ 2) = ly ++ [s ^ 2] ∧
-        -- TODO: Can we have `digits 10 (a ^ 2) = s ^ 2 :: ly` from length of `a ^ 2`?
-        -- Do we need it?
-        a ^ 2 = ofDigits 10 (s ^ 2 :: ly)) := by
-    -- refine exists₃_congr fun s k b ↦ ?_
-    constructor
-    · rintro ⟨b, _, s, lx, ly, k, rfl, hs, hx_len, ha_dig, hb_dig, hc_dig, hd, hy_len⟩
-      exact ⟨s, k, b, lx, ly, hs, ⟨hx_len, ha_dig, hb_dig⟩, hy_len, hc_dig, hd⟩
-    · intro ⟨s, k, b, lx, ly, hs, ⟨hx_len, ha_dig, hb_dig⟩, hy_len, hc_dig, hd⟩
-      exact ⟨b, _, s, lx, ly, k, rfl, hs, hx_len, ha_dig, hb_dig, hc_dig, hd, hy_len⟩
 
 
   -- While we cannot guarantee that `a ^ 2` has `2 k + 1` digits since `ly` could contain
