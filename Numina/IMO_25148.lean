@@ -17,16 +17,26 @@ def d (a : ℕ) : ℕ :=
   ofDigits 10 <| rotateRight <| digits 10 <|
   (ofDigits 10 <| rotate (n := 1) <| digits 10 a) ^ 2
 
--- When we square a number with $n$ digits, we get a number with either $2 n$ or $2 n + 1$ digits.
--- Using the existing lemmas in Mathlib, this is most easily expressed using Nat.log.
+-- Rotate a single element right.
+lemma rotateRight_concat (l : List ℕ) (x : ℕ) :
+    rotateRight (l ++ [x]) = x :: l := by
+  unfold rotateRight
+  cases l <;> simp
 
+-- Rotate a single element left.
+lemma rotate_cons (l : List ℕ) (x : ℕ) :
+    (x :: l).rotate 1 = l ++ [x] := by
+  unfold rotate
+  cases l <;> simp
+
+-- Lower bound on the integer log of a square.
 lemma le_log_sq {b n : ℕ} (hb : 1 < b) (hn : n ≠ 0) : 2 * log b n ≤ log b (n ^ 2) := by
   refine le_log_of_pow_le hb ?_
   rw [mul_comm, pow_mul]
-  refine Nat.pow_le_pow_left ?_ 2
+  gcongr
   exact pow_log_le_self b hn
 
--- TODO: Might be more elegant to generalize power.
+-- Upper bound on the integer log of a square.
 lemma log_sq_le {b n : ℕ} (hb : 1 < b) (hn : n ≠ 0) :
     log b (n ^ 2) ≤ 2 * log b n + 1 := by
   suffices log b (n ^ 2) < 2 * (log b n + 1) from le_of_lt_succ this
@@ -35,138 +45,52 @@ lemma log_sq_le {b n : ℕ} (hb : 1 < b) (hn : n ≠ 0) :
   gcongr
   exact lt_pow_succ_log_self hb n
 
-lemma le_len_digits_sq (b : ℕ) (hb : 1 < b) (n : ℕ) :  -- TODO: Check if `n ≠ 0` required.
+-- The log of a square is either `2 log n` or `2 log n + 1`.
+lemma log_sq_eq_or_eq {b n : ℕ} (hb : 1 < b) (hn : n ≠ 0) :
+    log b (n ^ 2) = 2 * log b n ∨ log b (n ^ 2) = 2 * log b n + 1 :=
+  le_and_le_add_one_iff.mp ⟨le_log_sq hb hn, log_sq_le hb hn⟩
+
+-- Lower bound on the number of digits in a square.
+lemma le_len_digits_sq {b : ℕ} (hb : 1 < b) (n : ℕ) :
     2 * (digits b n).length ≤ (digits b (n ^ 2)).length + 1 := by
   cases n with
   | zero => simp
   | succ n => simpa [digits_len, hb, mul_add] using le_log_sq hb n.add_one_ne_zero
 
-lemma len_digits_sq_le (b : ℕ) (hb : 1 < b) (n : ℕ) :
+-- Upper bound on the number of digits in a square.
+lemma len_digits_sq_le {b : ℕ} (hb : 1 < b) (n : ℕ) :
     (digits b (n ^ 2)).length ≤ 2 * (digits b n).length := by
   cases n with
   | zero => simp
   | succ n => simpa [digits_len, hb, mul_add] using log_sq_le hb n.add_one_ne_zero
 
-lemma len_digits_sq_add_one_eq_or (b : ℕ) (hb : 1 < b) (n : ℕ) :
-    (digits b (n ^ 2)).length + 1 = 2 * (digits b n).length ∨
-    (digits b (n ^ 2)).length + 1 = 2 * (digits b n).length + 1 := by
-  refine le_and_le_add_one_iff.mp ⟨?_, ?_⟩
-  · exact le_len_digits_sq b hb n
-  · simpa using len_digits_sq_le b hb n
-
--- lemma log_sq_mem_Icc {b n : ℕ} (hb : 1 < b) (hn : n ≠ 0) :
---     log b (n ^ 2) ∈ Finset.Icc (2 * log b n) (2 * log b n + 1) :=
---   Finset.mem_Icc.mpr ⟨le_log_sq hb hn, log_sq_le hb hn⟩
-
-lemma log_sq_eq {b n : ℕ} (hb : 1 < b) (hn : n ≠ 0) :
-    log b (n ^ 2) = 2 * log b n ∨ log b (n ^ 2) = 2 * log b n + 1 :=
-  le_and_le_add_one_iff.mp ⟨le_log_sq hb hn, log_sq_le hb hn⟩
-
--- Useful lemma for converting between `digits` and `ofDigits`.
-lemma digits_eq_iff (b : ℕ) (hb : 1 < b) (n : ℕ) (l : List ℕ) : digits b n = l ↔
-    (∀ x ∈ l, x < b) ∧ (∀ h : l ≠ [], l.getLast h ≠ 0) ∧ n = ofDigits b l := by
+-- If `n` has `k + 1` digits and `n ^ 2` has `m + 1` digits, then `m` is either `2 k` or `2 k + 1`.
+lemma len_eq_or_eq_of_digits_eq_concat {b : ℕ} (hb : 1 < b) {n : ℕ}
+    {lx : List ℕ} {x : ℕ} (hx : digits b n = lx ++ [x])
+    {ly : List ℕ} {y : ℕ} (hy : digits b (n ^ 2) = ly ++ [y]) :
+    ly.length = 2 * lx.length ∨ ly.length = 2 * lx.length + 1 := by
+  have hn_zero : n ≠ 0 := by
+    suffices digits b n ≠ [] from digits_ne_nil_iff_ne_zero.mp this
+    simp [hx]
+  suffices log b (n ^ 2) = ly.length ∧ log b n = lx.length by
+    rw [← this.1, ← this.2]
+    exact log_sq_eq_or_eq hb hn_zero
   constructor
-  · rintro rfl
-    refine ⟨?_, ?_, ?_⟩
-    · intro x
-      exact digits_lt_base hb
-    · intro hl
-      refine getLast_digit_ne_zero b ?_
-      exact digits_ne_nil_iff_ne_zero.mp hl
-    · exact (ofDigits_digits b n).symm
-  · rintro ⟨h_lt, h_ne, rfl⟩
-    exact digits_ofDigits b hb l h_lt h_ne
+  · suffices log b (n ^ 2) + 1 = ly.length + 1 by simpa using this
+    convert congrArg length hy using 1
+    · simp [digits_len, hb, hn_zero]
+    · simp
+  · suffices log b n + 1 = lx.length + 1 by simpa using this
+    convert congrArg length hx using 1
+    · simp [digits_len, hb, hn_zero]
+    · simp
 
-
--- lemma digits_add_base_mul (b : ℕ) (hb : 1 < b) (x y : ℕ) (hx : x < b) (hy : y ≠ 0) :
---     digits b (x + b * y) = x :: digits b y := by
---   convert digits_eq_cons_digits_div hb ?_ using 3
---   · simp [mod_eq_of_lt hx]
---   · rw [add_mul_div_left _ _ (zero_lt_of_lt hb)]
---     simp [hx]
---   · simp [add_ne_zero, hy, not_eq_zero_of_lt hb]
-
-lemma digits_add_base_mul (b : ℕ) (hb : 1 < b) (x y : ℕ) (hx : x < b) (hy : y ≠ 0) :
-    digits b (x + b * y) = x :: digits b y := by
-  cases x with
-  | zero => simpa using digits_base_pow_mul hb (k := 1) (zero_lt_of_ne_zero hy)
-  | succ x =>
-    simpa [digits_of_lt b _ x.add_one_ne_zero hx] using
-      (digits_append_digits (zero_lt_of_lt hb) (n := x + 1) (m := y)).symm
-
--- lemma digits_add_base_pow_mul (b : ℕ) (hb : 1 < b) (k x y : ℕ) (hx : x < b ^ k) (hy : y ≠ 0) :
---     digits b (x + b ^ k * y) = x :: digits b y := by
---   cases x with
---   | zero => simpa using digits_base_pow_mul hb (k := 1) (zero_lt_of_ne_zero hy)
---   | succ x =>
---     simpa [digits_of_lt b _ x.add_one_ne_zero hx] using
---       (digits_append_digits (zero_lt_of_lt hb) (n := x + 1) (m := y)).symm
-
--- The number constructed from repeated zero digits is zero, regardless of base or length.
-lemma ofDigits_replicate_zero (b : ℕ) (n : ℕ) : ofDigits b (replicate n 0) = 0 := by
-  induction n with
-  | zero => simp
-  | succ n IH => simp [replicate_succ, ofDigits_cons, IH]
-
-
--- Taking `digits` of `ofDigits` gives the same list without trailing zeros.
-lemma reverse_digits_ofDigits_eq_dropWhile_reverse {b : ℕ} (hb : 1 < b) (l : List ℕ)
-    (hl : ∀ x ∈ l, x < b) :
-    reverse (digits b (ofDigits b l)) = dropWhile (· = 0) l.reverse := by
-  induction l using reverseRecOn with
-  | nil => simp
-  | append_singleton l x IH =>
-    cases x with
-    | zero => simpa [ofDigits_append] using IH fun i hi ↦ hl i (mem_append_left [0] hi)
-    | succ x => simpa using digits_ofDigits b hb (l ++ [x.succ]) hl (by simp)
-
-lemma digits_ofDigits_eq_reverse_dropWhile_reverse {b : ℕ} (hb : 1 < b) (l : List ℕ)
-    (hl : ∀ x ∈ l, x < b) :
-    digits b (ofDigits b l) = reverse (dropWhile (· = 0) l.reverse) :=
-  reverse_eq_iff.mp <| reverse_digits_ofDigits_eq_dropWhile_reverse hb l hl
-
--- Taking `digits` of `ofDigits` gives a list that is no longer than the original list.
-lemma digits_ofDigits_len_le_len (b : ℕ) (hb : 1 < b) (l : List ℕ) (hl : ∀ x ∈ l, x < b) :
-    (digits b (ofDigits b l)).length ≤ l.length := by
-  suffices (digits b (ofDigits b l)).reverse.length ≤ l.reverse.length by simpa
-  rw [reverse_digits_ofDigits_eq_dropWhile_reverse hb l hl]
-  exact (dropWhile_sublist _).length_le
-
-lemma takeWhile_eq_zero_reverse_eq_replicate_sub_length_digits_ofDigits {b : ℕ} (hb : 1 < b)
-    (l : List ℕ) (hl : ∀ x ∈ l, x < b) :
-    takeWhile (· = 0) l.reverse = replicate (l.length - (digits b (ofDigits b l)).length) 0 := by
-  induction l using reverseRecOn with
-  | nil => simp
-  | append_singleton l x IH =>
-    cases x with
-    | zero =>
-      replace hl : ∀ x ∈ l, x < b := fun x hx ↦ hl x (mem_append_left [0] hx)
-      simp [ofDigits_append, IH hl, replicate_succ,
-        Nat.sub_add_comm (digits_ofDigits_len_le_len b hb l hl)]
-    | succ x => simp [digits_ofDigits b hb (l ++ [x.succ]) hl (by simp)]
-
--- The list of digits can be restored by appending zeros.
-lemma digits_ofDigits_append_zeroes_eq_self {b : ℕ} (hb : 1 < b) (l : List ℕ)
-    (hl : ∀ x ∈ l, x < b) :
-    digits b (ofDigits b l) ++ replicate (l.length - (digits b (ofDigits b l)).length) 0 = l := by
-  rw [← reverse_inj]
-  simp only [reverse_append, reverse_replicate]
-  convert takeWhile_append_dropWhile (p := (· = 0)) (l := l.reverse) using 2
-  · rw [takeWhile_eq_zero_reverse_eq_replicate_sub_length_digits_ofDigits hb l hl]
-  · rw [reverse_digits_ofDigits_eq_dropWhile_reverse hb l hl]
-
--- When we square an `n`-digit number with leading digit `x`, the result may have `2 * n` or
--- `2 * n + 1` digits. The map of leading digits is monotonic except for this discontinuity.
--- Therefore, we have to consider whether `x ^ 2 < b ≤ (x + 1) ^ 2`.
-
--- Similar to `Nat.log_eq_iff` except it accounts for the leading digit.
-
+-- Given that `n` has `k + 1` digits and leading digit `x`, it must lie in the range
+-- `x * b ^ k ≤ n < (x + 1) * b ^ k`.
+-- This is similar to `Nat.log_eq_iff` except it accounts for the leading digit.
 lemma mem_Ico_of_digits_eq_concat {b : ℕ} (hb : 1 < b) (n x : ℕ) (l : List ℕ)
     (hn_digits : digits b n = l ++ [x]) :
     n ∈ Set.Ico (x * b ^ l.length) ((x + 1) * b ^ l.length) := by
-  -- have hn_zero : n ≠ 0 := by
-  --   suffices digits b n ≠ [] from digits_ne_nil_iff_ne_zero.mp this
-  --   simp [hn]
   have hn : n = x * b ^ l.length + ofDigits b l := by
     convert congrArg (ofDigits b) hn_digits using 1
     · simp [ofDigits_digits]
@@ -180,46 +104,22 @@ lemma mem_Ico_of_digits_eq_concat {b : ℕ} (hb : 1 < b) (n x : ℕ) (l : List �
     suffices d ∈ digits b n from digits_lt_base hb this
     simpa [hn_digits] using mem_append_left [x] hd
 
-lemma mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul {b : ℕ} (hb : 1 < b) {n : ℕ}
+-- When we square a `(k + 1)`-digit number `n` with leading digit `x`, the result may have either
+-- `2 k` or `2 k + 1` digits. The map from `n` to the leading digit of `n ^ 2` is monotonic except
+-- when the number of digits in `n ^ 2` transitions from `2 k` to `2 k + 1`.
+
+-- If `n ^ 2` has `2 k` digits, then its leading digit `y` must be at least `x ^ 2` and
+-- less than `(x + 1) ^ 2`.
+lemma mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul {b : ℕ} (hb : 1 < b) (n : ℕ)
     {lx : List ℕ} {x : ℕ} (hx : digits b n = lx ++ [x])
     {ly : List ℕ} {y : ℕ} (hy : digits b (n ^ 2) = ly ++ [y])
     (h_len : ly.length = 2 * lx.length) :
     y ∈ Finset.Ico (x ^ 2) ((x + 1) ^ 2) := by
-
   have hx_mem := mem_Ico_of_digits_eq_concat hb n x lx hx
   have hy_mem := mem_Ico_of_digits_eq_concat hb (n ^ 2) y ly hy
   rw [h_len] at hy_mem
   simp only [Finset.mem_inter, Finset.mem_Ico]
-  -- We want to show `x ^ 2 ≤ y < (x + 1) ^ 2` when `n` has `k` digits and
-  -- `n ^ 2` has `2 * k` digits, with `k = log b n + 1`.
-
-  -- We have `x * b ^ k ≤ n < (x + 1) * b ^ k`
-  -- and `y * b ^ (2 * k) ≤ n ^ 2 < (y + 1) * b ^ (2 * k)`.
-
-  -- Does this help us?
-  -- What is the principle that we need to apply?
-
-  -- `n = x * b ^ k + r`
-  -- Therefore `n ^ 2` is at least `x ^ 2 * b ^ (2 * k)`
-  -- But does this help us to bound `y`?
-  -- From above, we do have `n ^ 2 < (y + 1) * b ^ (2 * k)`.
-  -- Putting these together,
-  -- `x ^ 2 * b ^ (2 * k) < (y + 1) * b ^ (2 * k)`
-  -- `x ^ 2 < y + 1`
-  -- `x ^ 2 ≤ y`
-  -- Not sure if this will always work though?
-
-  -- Consider the other side of the bound:
-  -- `n = x * b ^ k + r`, and `n < (x + 1) * b ^ k`
-  -- `n ^ 2 < (x + 1) ^ 2 * b ^ (2 * k)`
-  -- From above, we have `y * b ^ (2 * k) ≤ n ^ 2`
-  -- Putting these together,
-  -- `y * b ^ (2 * k) < (x + 1) ^ 2 * b ^ (2 * k)`
-  -- `y < (x + 1) ^ 2`
-
-  -- Looks good!
   refine ⟨?_, ?_⟩
-
   · suffices x ^ 2 < y + 1 from le_of_lt_succ this
     suffices x ^ 2 * b ^ (2 * lx.length) < (y + 1) * b ^ (2 * lx.length) from
       Nat.lt_of_mul_lt_mul_right this
@@ -230,52 +130,24 @@ lemma mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul {b : ℕ} (hb : 1 < b) {n
     convert lt_of_le_of_lt hy_mem.1 (Nat.pow_lt_pow_left hx_mem.2 two_ne_zero) using 1
     ring
 
-lemma mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul_add_one {b : ℕ} (hb : 1 < b) {n : ℕ}
+-- If `n ^ 2` has `2 k + 1` digits, then its leading digit `y` must be at least `x ^ 2 / b` and
+-- less than `(x + 1) ^ 2 ⌈/⌉ b`, where `⌈/⌉` denotes division with upwards rounding.
+lemma mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul_add_one {b : ℕ} (hb : 1 < b) (n : ℕ)
     {lx : List ℕ} {x : ℕ} (hx : digits b n = lx ++ [x])
     {ly : List ℕ} {y : ℕ} (hy : digits b (n ^ 2) = ly ++ [y])
     (h_len : ly.length = 2 * lx.length + 1) :
     y ∈ Finset.Ico (x ^ 2 / b) ((x + 1) ^ 2 ⌈/⌉ b) := by
   have hx_mem := mem_Ico_of_digits_eq_concat hb n x lx hx
   have hy_mem := mem_Ico_of_digits_eq_concat hb (n ^ 2) y ly hy
-
   rw [h_len] at hy_mem
   simp only [← Finset.Ico_inter_Ico, Finset.mem_inter, Finset.mem_Ico]
   refine ⟨?_, ?_⟩
   · suffices x ^ 2 / b < y + 1 from le_of_lt_succ this
     rw [div_lt_iff_lt_mul (zero_lt_of_lt hb)]
-    -- suffices x ^ 2 < (y + 1) * b from (div_lt_iff_lt_mul (zero_lt_of_lt hb)).mpr this
     suffices x ^ 2 * b ^ (2 * lx.length) < (y + 1) * b * b ^ (2 * lx.length) from
       Nat.lt_of_mul_lt_mul_right this
     convert lt_of_le_of_lt (Nat.pow_le_pow_left hx_mem.1 2) hy_mem.2 using 1 <;> ring
-
-    -- Where is the bound coming from.
-    -- n ^ 2 = y * 10 ^ (2 k + 1) + c = (x * 10 ^ k + r) ^ 2
-    -- (x * 10 ^ k) ^ 2 = x ^ 2 * 10 ^ (2 k) ≤ n ^ 2
-    -- n ^ 2 < (y + 1) * 10 ^ (2 k + 1) = 10 (y + 1) * 10 ^ (2 k)
-
-    -- Together:
-    -- x ^ 2 * 10 ^ (2 k) < 10 (y + 1) 10 ^ (2 k)
-    -- x ^ 2 < 10 (y + 1)
-    -- x ^ 2 / 10 < y + 1  `Nat.div_lt_iff_lt_mul`
-    -- x ^ 2 / 10 ≤ y
-
-  · -- n ^ 2 = y * 10 ^ (2 k + 1) + c = (x * 10 ^ k + r) ^ 2
-    -- y * 10 ^ (2 k + 1) ≤ y * 10 ^ (2 k + 1) + c = n ^ 2
-    -- n ^ 2 = (x * 10 ^ k + r) ^ 2 < (x + 1) ^ 2 * 10 ^ (2 k)
-    -- Together:
-    -- 10 y * 10 ^ (2 k) < (x + 1) ^ 2 * 10 ^ (2 k)
-    -- 10 y < (x + 1) ^ 2
-    -- 10 y < x ^ 2 + 2 x + 1
-    -- 10 y ≤ x ^ 2 + 2 x = x (x + 2)
-    -- y ≤ x (x + 2) / 10 = (x ^ 2 + 2 * x) / 10
-
-    -- What is the condition on `y` given `10 y < (x + 1) ^ 2`?
-    -- y * 10 < ((x + 1) ^ 2 + 10 - 1) - (10 - 1)
-    -- y < ((x + 1) ^ 2 + 10 - 1) / 10
-    -- y < (x + 1) ^ 2 ⌈/⌉ 10
-
-    rw [ceilDiv_eq_add_pred_div]
-    -- TODO: Avoid `tsub` if possible?
+  · rw [ceilDiv_eq_add_pred_div]
     change y + 1 ≤ ((x + 1) ^ 2 + b - 1) / b
     rw [Nat.le_div_iff_mul_le (zero_lt_of_lt hb)]
     suffices y * b + 1 ≤ (x + 1) ^ 2 by
@@ -284,67 +156,44 @@ lemma mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul_add_one {b : ℕ} (hb : 1
         simp [add_mul]
       · rw [add_tsub_assoc_of_le hb.le]
     change y * b < (x + 1) ^ 2
-
     suffices y * b * b ^ (2 * lx.length) < (x + 1) ^ 2 * b ^ (2 * lx.length) from
       Nat.lt_of_mul_lt_mul_right this
     convert lt_of_le_of_lt hy_mem.1 (Nat.pow_lt_pow_left hx_mem.2 two_ne_zero) using 1 <;> ring
 
-
-lemma len_eq_or_of_digits_eq_concat {b : ℕ} (hb : 1 < b) {n : ℕ}
-    {lx : List ℕ} {x : ℕ} (hx : digits b n = lx ++ [x])
-    {ly : List ℕ} {y : ℕ} (hy : digits b (n ^ 2) = ly ++ [y]) :
-    ly.length = 2 * lx.length ∨ ly.length = 2 * lx.length + 1 := by
-  have hn_zero : n ≠ 0 := by
-    suffices digits b n ≠ [] from digits_ne_nil_iff_ne_zero.mp this
-    simp [hx]
-  suffices log b (n ^ 2) = ly.length ∧ log b n = lx.length by
-    rw [← this.1, ← this.2]
-    exact log_sq_eq hb hn_zero
-  constructor
-  · suffices log b (n ^ 2) + 1 = ly.length + 1 by simpa using this
-    convert congrArg length hy using 1
-    · simp [digits_len, hb, hn_zero]
-    · simp
-  · suffices log b n + 1 = lx.length + 1 by simpa using this
-    convert congrArg length hx using 1
-    · simp [digits_len, hb, hn_zero]
-    · simp
-
+-- Determine that `m = 2 k` using the condition on the leading digit.
 lemma len_eq_two_mul_of_digits_sq_eq_concat_of_not_mem_Ico {b : ℕ} (hb : 1 < b) {n : ℕ}
     {lx : List ℕ} {x : ℕ} (hn_dig : digits b n = lx ++ [x])
     {ly : List ℕ} {y : ℕ} (hn2_dig : digits b (n ^ 2) = ly ++ [y])
     (hy : y ∉ Finset.Ico (x ^ 2 / b) ((x + 1) ^ 2 ⌈/⌉ b)) :
     ly.length = 2 * lx.length := by
   contrapose! hy with hy_len
-  refine mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul_add_one hb hn_dig hn2_dig ?_
-  exact (len_eq_or_of_digits_eq_concat hb hn_dig hn2_dig).resolve_left hy_len
+  refine mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul_add_one hb n hn_dig hn2_dig ?_
+  exact (len_eq_or_eq_of_digits_eq_concat hb hn_dig hn2_dig).resolve_left hy_len
 
+-- Determine that `m = 2 k + 1` using the condition on the leading digit.
 lemma len_eq_two_mul_add_one_of_digits_sq_eq_concat_of_not_mem_Ico {b : ℕ} (hb : 1 < b) {n : ℕ}
     {lx : List ℕ} {x : ℕ} (hn_dig : digits b n = lx ++ [x])
     {ly : List ℕ} {y : ℕ} (hn2_dig : digits b (n ^ 2) = ly ++ [y])
     (hy : y ∉ Finset.Ico (x ^ 2) ((x + 1) ^ 2)) :
     ly.length = 2 * lx.length + 1 := by
   contrapose! hy with hy_len
-  refine mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul hb hn_dig hn2_dig ?_
-  exact (len_eq_or_of_digits_eq_concat hb hn_dig hn2_dig).resolve_right hy_len
+  refine mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul hb n hn_dig hn2_dig ?_
+  exact (len_eq_or_eq_of_digits_eq_concat hb hn_dig hn2_dig).resolve_right hy_len
 
--- TODO: rename?
-lemma digits_square_concat {b : ℕ} (hb : 1 < b) (n : ℕ)
+-- There are two (mutually exclusive) cases for the leading digit and length of the square.
+lemma digits_sq_of_eq_concat {b : ℕ} (hb : 1 < b) (n : ℕ)
     {lx : List ℕ} {x : ℕ} (hn_dig : digits b n = lx ++ [x])
     {ly : List ℕ} {y : ℕ} (hn2_dig : digits b (n ^ 2) = ly ++ [y]) :
     ly.length = 2 * lx.length ∧ y ∈ Finset.Ico (x ^ 2) ((x + 1) ^ 2) ∨
     ly.length = 2 * lx.length + 1 ∧ y ∈ Finset.Ico (x ^ 2 / b) ((x + 1) ^ 2 ⌈/⌉ b) := by
-  -- TODO: Revise comment.
-  -- Split into two cases.
-  -- If `n` has `k + 1` digits, then `n ^ 2` has either `2 k + 1` or `2 k + 2` digits.
-  -- When it has `2 k + 1`, we know that `x ^ 2 < b` and there was no carry to change this.
-  refine (len_eq_or_of_digits_eq_concat hb hn_dig hn2_dig).imp ?_ ?_
+  refine (len_eq_or_eq_of_digits_eq_concat hb hn_dig hn2_dig).imp ?_ ?_
   · refine fun hy_len ↦ ⟨hy_len, ?_⟩
-    exact mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul hb hn_dig hn2_dig hy_len
+    exact mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul hb n hn_dig hn2_dig hy_len
   · refine fun hy_len ↦ ⟨hy_len, ?_⟩
-    exact mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul_add_one hb hn_dig hn2_dig hy_len
+    exact mem_Ico_of_digits_sq_eq_concat_of_len_eq_two_mul_add_one hb n hn_dig hn2_dig hy_len
 
-lemma len_digits_eq_of_le_getLast_sq {b : ℕ} (hb : 1 < b) (n : ℕ)
+-- Determine the number of digits in the square from a lower bound on the first digit.
+lemma len_digits_sq_eq_of_le_getLast_sq {b : ℕ} (hb : 1 < b) (n : ℕ)
     (hx : ∀ h, b ≤ (digits b n).getLast h ^ 2) :
     (digits b (n ^ 2)).length = 2 * (digits b n).length := by
   cases eq_or_ne n 0 with
@@ -368,7 +217,8 @@ lemma len_digits_eq_of_le_getLast_sq {b : ℕ} (hb : 1 < b) (n : ℕ)
       simp [hn2_dig]
     _ ≤ x ^ 2 := by simpa [hn_dig] using hx
 
-lemma len_digits_eq_of_getLast_add_one_sq_lt {b : ℕ} (hb : 1 < b) (n : ℕ)
+-- Determine the number of digits in the square from an upper bound on the first digit.
+lemma len_digits_sq_eq_of_getLast_add_one_sq_lt {b : ℕ} (hb : 1 < b) (n : ℕ)
     (hx : ∀ h, ((digits b n).getLast h + 1) ^ 2 < b) :
     (digits b (n ^ 2)).length = 2 * (digits b n).length - 1 := by
   cases eq_or_ne n 0 with
@@ -395,96 +245,55 @@ lemma len_digits_eq_of_getLast_add_one_sq_lt {b : ℕ} (hb : 1 < b) (n : ℕ)
       refine zero_lt_of_ne_zero ?_
       simpa [hy] using getLast_digit_ne_zero b (pow_ne_zero 2 hn)
 
-lemma len_digits_add_one_eq_of_getLast_add_one_sq_lt {b : ℕ} (hb : 1 < b) (n : ℕ)
-    (hx : ∃ h, ((digits b n).getLast h + 1) ^ 2 < b) :
-    (digits b (n ^ 2)).length + 1 = 2 * (digits b n).length := by
-  rcases hx with ⟨hn_nil, hx⟩
-  suffices (b.digits (n ^ 2)).length = 2 * (b.digits n).length - 1 by
-    refine (eq_tsub_iff_add_eq_of_le ?_).mp this
-    simpa [one_le_iff_ne_zero] using hn_nil
-  exact len_digits_eq_of_getLast_add_one_sq_lt hb n (fun _ ↦ hx)
 
--- TODO: There might be an easier way to prove this using injectivity of addition?
--- Uniqueness of `div_add_mod`? `List.take_append_drop`?
-lemma getLast_eq_div_pow (b : ℕ) (hb : 1 < b) (n : ℕ) (hl : digits b n ≠ []) :
-    (digits b n).getLast hl = n / b ^ log b n := by
-  have hn : n ≠ 0 := digits_ne_nil_iff_ne_zero.mp hl
-  calc (digits b n).getLast hl
-  _ = ofDigits b [(digits b n).getLast hl] := by simp
-  _ = ofDigits b (drop ((digits b n).length - 1) (digits b n)) := by rw [drop_length_sub_one hl]
-  _ = ofDigits b (drop (log b n) (digits b n)) := by simp [digits_len b n hb hn]
-  _ = n / b ^ log b n := by rw [self_div_pow_eq_ofDigits_drop (log b n) n hb]
+-- The number constructed from repeated zeros is zero, regardless of base or length.
+lemma ofDigits_replicate_zero (b n : ℕ) : ofDigits b (replicate n 0) = 0 := by
+  induction n with
+  | zero => simp
+  | succ n IH => simp [replicate_succ, ofDigits_cons, IH]
 
-lemma exists_digits_eq_concat_iff_exists_lt_pow_log (b : ℕ) (hb : 1 < b) (n d : ℕ) :
-    (∃ l, digits b n = l ++ [d]) ↔ n ≠ 0 ∧ ∃ x < b ^ log b n, x + b ^ log b n * d = n := by
-  constructor
-  · intro ⟨l, hl⟩
-    have hn : n ≠ 0 := by
-      suffices digits b n ≠ [] from digits_ne_nil_iff_ne_zero.mp this
-      simp [hl]
-    have hl_len : l.length = log b n := by
-      suffices l.length + 1 = log b n + 1 by simpa using this
-      convert congrArg length hl.symm
-      · simp
-      · rw [digits_len b n hb hn]
-    refine ⟨hn, ofDigits b l, ?_, ?_⟩
-    · refine hl_len ▸ ofDigits_lt_base_pow_length hb fun x hx ↦ ?_
-      suffices x ∈ digits b n from digits_lt_base hb this
-      exact hl ▸ mem_append_left [d] hx
-    · convert congrArg (ofDigits b) hl.symm using 1
-      · rw [ofDigits_append, ofDigits_singleton, hl_len]
-      · rw [ofDigits_digits]
-  · intro ⟨hn, x, hx_lt, hx⟩
-    suffices d = (digits b n).getLast (digits_ne_nil_iff_ne_zero.mpr hn) by
-      use (digits b n).dropLast
-      simp [this, dropLast_append_getLast]
-    rw [getLast_eq_div_pow b hb]
-    convert congrArg (· / b ^ log b n) hx
-    rw [add_mul_div_left _ _ (zero_lt_of_lt hx_lt)]
-    simp [hx_lt]
+-- Taking `digits` of `ofDigits` gives the same list without trailing zeros.
+lemma reverse_digits_ofDigits_eq_dropWhile_reverse {b : ℕ} (hb : 1 < b) (l : List ℕ)
+    (hl : ∀ x ∈ l, x < b) :
+    reverse (digits b (ofDigits b l)) = dropWhile (· = 0) l.reverse := by
+  induction l using reverseRecOn with
+  | nil => simp
+  | append_singleton l x IH =>
+    cases x with
+    | zero => simpa [ofDigits_append] using IH fun i hi ↦ hl i (mem_append_left [0] hi)
+    | succ x => simpa using digits_ofDigits b hb (l ++ [x.succ]) hl (by simp)
 
-lemma exists_digits_eq_concat_iff_exists_lt_pow_log_of_ne_zero (b : ℕ) (hb : 1 < b)
-    (n d : ℕ) (hn : n ≠ 0) :
-    (∃ l, digits b n = l ++ [d]) ↔ ∃ x < b ^ log b n, x + b ^ log b n * d = n := by
-  simpa [hn] using exists_digits_eq_concat_iff_exists_lt_pow_log b hb n d
+-- Taking `digits` of `ofDigits` gives a list that is no longer than the original list.
+lemma digits_ofDigits_len_le_len (b : ℕ) (hb : 1 < b) (l : List ℕ) (hl : ∀ x ∈ l, x < b) :
+    (digits b (ofDigits b l)).length ≤ l.length := by
+  suffices (digits b (ofDigits b l)).reverse.length ≤ l.reverse.length by simpa
+  rw [reverse_digits_ofDigits_eq_dropWhile_reverse hb l hl]
+  exact (dropWhile_sublist _).length_le
 
-lemma exists_digits_eq_concat_iff_exists_getLast_eq (b : ℕ) (hb : 1 < b) (n d : ℕ) :
-    (∃ l, digits b n = l ++ [d]) ↔ ∃ h : digits b n ≠ [], (digits b n).getLast h = d := by
-  constructor
-  · intro ⟨l, hl⟩
-    simp [hl]
-  · intro ⟨hl, hd⟩
-    use (digits b n).dropLast
-    rw [← hd]
-    simp [dropLast_append_getLast]
+-- The number of trailing zeros in a list of digits.
+lemma takeWhile_eq_zero_reverse_eq_replicate_sub_length_digits_ofDigits {b : ℕ} (hb : 1 < b)
+    (l : List ℕ) (hl : ∀ x ∈ l, x < b) :
+    takeWhile (· = 0) l.reverse = replicate (l.length - (digits b (ofDigits b l)).length) 0 := by
+  induction l using reverseRecOn with
+  | nil => simp
+  | append_singleton l x IH =>
+    cases x with
+    | zero =>
+      replace hl : ∀ x ∈ l, x < b := fun x hx ↦ hl x (mem_append_left [0] hx)
+      simp [ofDigits_append, IH hl, replicate_succ,
+        Nat.sub_add_comm (digits_ofDigits_len_le_len b hb l hl)]
+    | succ x => simp [digits_ofDigits b hb (l ++ [x.succ]) hl (by simp)]
 
-lemma exists_digits_eq_concat_iff_exists_getLast_eq_of_ne_nil (b : ℕ) (hb : 1 < b)
-    (n d : ℕ) (hl : digits b n ≠ []) :
-    (∃ l, digits b n = l ++ [d]) ↔ (digits b n).getLast hl = d := by
-  simpa [hl] using exists_digits_eq_concat_iff_exists_getLast_eq b hb n d
+-- A list of digits can be restored by appending zeros.
+lemma digits_ofDigits_append_zeroes_eq_self {b : ℕ} (hb : 1 < b) (l : List ℕ)
+    (hl : ∀ x ∈ l, x < b) :
+    digits b (ofDigits b l) ++ replicate (l.length - (digits b (ofDigits b l)).length) 0 = l := by
+  rw [← reverse_inj]
+  simp only [reverse_append, reverse_replicate]
+  convert takeWhile_append_dropWhile (p := (· = 0)) (l := l.reverse) using 2
+  · rw [takeWhile_eq_zero_reverse_eq_replicate_sub_length_digits_ofDigits hb l hl]
+  · rw [reverse_digits_ofDigits_eq_dropWhile_reverse hb l hl]
 
-lemma rotateRight_concat (l : List ℕ) (x : ℕ) :
-    rotateRight (l ++ [x]) = x :: l := by
-  unfold rotateRight
-  cases l <;> simp
-
-lemma rotateLeft_cons (l : List ℕ) (x : ℕ) :
-    rotateLeft (x :: l) = l ++ [x] := by
-  unfold rotateLeft
-  cases l <;> simp
-
-lemma rotate_cons (l : List ℕ) (x : ℕ) :
-    (x :: l).rotate 1 = l ++ [x] := by
-  unfold rotate
-  cases l <;> simp
-
--- TODO: Comment
--- Note: It is not necessary to exclude the zero case.
-lemma first_and_last (s : ℕ) (hs : s < 10) :
-    (s ^ 2 % 10 ∈ Finset.Ico (1 ⊔ s ^ 2) (10 ⊓ (s + 1) ^ 2) ∪
-      Finset.Ico (1 ⊔ s ^ 2 / 10) (10 ⊓ (s + 1) ^ 2 ⌈/⌉ 10)) ↔
-    s ∈ ({1, 2, 3} : Finset ℕ) := by
-  interval_cases s <;> simp
 
 lemma ten_pow_eq_nine_mul_replicate_add_one (n : ℕ) :
     10 ^ n = 9 * ofDigits 10 (replicate n 1) + 1 := by
@@ -498,13 +307,7 @@ lemma ten_pow_sub_one_eq_nine_mul (n : ℕ) :
     10 ^ n - 1 = 9 * ofDigits 10 (replicate n 1) :=
   Nat.sub_eq_of_eq_add (ten_pow_eq_nine_mul_replicate_add_one n)
 
-lemma ten_pow_sub_one_div_nine (n : ℕ) :
-    (10 ^ n - 1) / 9 = ofDigits 10 (replicate n 1) := by
-  refine Nat.div_eq_of_eq_mul_right (by norm_num) ?_
-  refine Nat.sub_eq_of_eq_add ?_
-  exact ten_pow_eq_nine_mul_replicate_add_one n
-
--- The key lemma which lets us obtain an explicit form for `x`.
+-- The key lemma that lets us obtain an explicit form for `x`.
 lemma eq_iff_digits_eq_replicate_two_mul {s k : ℕ} (hs_ne : s ≠ 0) (hs_lt : 2 * s < 10) (x : ℕ) :
     x + 2 * s * 10 ^ k = 2 * s + 10 * x ↔ digits 10 x = replicate k (2 * s) := by
   calc x + 2 * s * 10 ^ k = 2 * s + 10 * x
@@ -538,6 +341,7 @@ lemma eq_iff_digits_eq_replicate_two_mul {s k : ℕ} (hs_ne : s ≠ 0) (hs_lt : 
       simp [ofDigits_digits]
 
 
+-- Defined in analogy to `List.exists_cons_of_ne_nil`.
 lemma exists_concat_of_ne_nil {α : Type*} {l : List α} :
     l ≠ [] → ∃ (x : α) (lx : List α), l = lx ++ [x] := by
   intro hl
@@ -618,7 +422,7 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
     suffices (digits 10 (a ^ 2)).length ≤ 2 * lx.length by
       refine this.not_lt ?_
       rw [lt_iff_add_one_le]
-      simpa [ha_dig, mul_add] using le_len_digits_sq 10 (by norm_num) a
+      simpa [ha_dig, mul_add] using le_len_digits_sq (b := 10) (by norm_num) a
     -- ...with the maximum number of digits obtained by rotating `b ^ 2`.
     calc (digits 10 (a ^ 2)).length
     _ ≤ (f :: ly).length := by
@@ -628,7 +432,7 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
       suffices i ∈ digits 10 (b ^ 2) from digits_lt_base' this
       simpa [hb2, or_comm] using hi
     _ = (digits 10 (b ^ 2)).length := by simp [hb2]
-    _ ≤ 2 * (digits 10 b).length := len_digits_sq_le 10 (by norm_num) b
+    _ ≤ 2 * (digits 10 b).length := len_digits_sq_le (by norm_num) b
     _ ≤ _ := by
       gcongr
       convert digits_ofDigits_len_le_len 10 (by norm_num) lx ?_
@@ -651,7 +455,7 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
     refine exists₅_congr fun b s f lx ly ↦ ?_
     simp only [and_congr_right_iff, iff_self_and, and_imp]
     intro ha hb hb2 ha2
-    refine ⟨?_, digits_square_concat (by norm_num) b hb hb2, ?_⟩
+    refine ⟨?_, digits_sq_of_eq_concat (by norm_num) b hb hb2, ?_⟩
     · calc _
       _ = a ^ 2 % 10 := by
         convert congrArg (ofDigits 10 · ^ 2 % 10) ha.symm using 1
@@ -784,7 +588,7 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
           simp [hb2_dig, hi]
         · rw [ha2, ofDigits_cons]
           have := digits_append_digits (b := 10) (n := s ^ 2) (m := ofDigits 10 l) (by norm_num)
-          simpa [hs2_dig] using this.symm  -- TODO: Need to instantiate first?
+          simpa [hs2_dig] using this.symm
         · refine le_of_le_of_eq ?_ h_len
           refine digits_ofDigits_len_le_len 10 (by norm_num) l fun i hi ↦ ?_
           suffices i ∈ digits 10 (b ^ 2) from digits_lt_base' this
@@ -859,7 +663,7 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
           obtain ⟨m, rfl⟩ : ∃ m, m + 1 = k := exists_add_one_eq.mpr (zero_lt_of_ne_zero hk)
           suffices (digits 10 (a ^ 2)).length = 2 * (digits 10 a).length by
             simp [this, ha_dig, hx_dig, mul_add]
-          refine len_digits_eq_of_le_getLast_sq (b := 10) (by norm_num) a ?_
+          refine len_digits_sq_eq_of_le_getLast_sq (b := 10) (by norm_num) a ?_
           suffices 10 ≤ (2 * s) ^ 2 by simpa [ha_dig, hx_dig] using this
           suffices ∀ s, s = 2 ∨ s = 3 → 10 ≤ (2 * s) ^ 2 from this s hs
           simp
@@ -934,8 +738,9 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
         -- Since `a` has `k + 1` digits with leading digit satisfying `(d + 1) ^ 2 < 10`, we know
         -- that `a ^ 2` will have exactly `2 k + 1` digits, the smaller of the two possible cases.
         have ha2_len : (digits 10 (a ^ 2)).length + 1 = 2 * (digits 10 a).length := by
-          refine len_digits_add_one_eq_of_getLast_add_one_sq_lt (b := 10) (by norm_num) a ?_
-          cases k <;> simp [ha_dig, hx_dig, hs]
+          rw [len_digits_sq_eq_of_getLast_add_one_sq_lt (by norm_num)]
+          · simp [ha_dig, mul_add]
+          · cases k <;> simp [ha_dig, hx_dig, hs]
         -- Connect the digits of `a ^ 2` to those of `y` to subsequently obtain the length of `y`.
         have ha2_dig : digits 10 (a ^ 2) = s ^ 2 :: digits 10 y := by
           suffices digits 10 (a ^ 2) = digits 10 (s ^ 2) ++ digits 10 y by simpa [hs2_dig]
@@ -981,40 +786,37 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
         suffices ∀ s, s = 1 ∨ s = 2 ∨ s = 3 → s < 10 from this a hs
         simp
       | inr h =>
-        rcases h with ⟨hk, hs, ha_dig⟩
-        have hx_dig : digits 10 (ofDigits 10 (replicate k (2 * s))) = replicate k (2 * s) := by
-          refine digits_ofDigits 10 (by norm_num) _ ?_ ?_
-          · simp [hs]
-          · simp [hs]
-        have hb_dig :
-            digits 10 (ofDigits 10 (replicate k (2 * s) ++ [s])) = replicate k (2 * s) ++ [s] := by
-          refine digits_ofDigits 10 (by norm_num) _ ?_ ?_
-          · simp [hk, hs]
-          · simp [hs]
-        use (ofDigits 10 (replicate k (2 * s) ++ [s]))
-        use (ofDigits 10 (replicate k (2 * s)))
+        rcases h with ⟨hk, rfl, ha_dig⟩
+        use (ofDigits 10 (replicate k 2 ++ [1]))
+        use (ofDigits 10 (replicate k 2))
+        have hx_dig : digits 10 (ofDigits 10 (replicate k 2)) = replicate k 2 := by
+          refine digits_ofDigits 10 ?_ _ ?_ ?_ <;> simp
+        have hb_dig : digits 10 (ofDigits 10 (replicate k 2 ++ [1])) = replicate k 2 ++ [1] := by
+          refine digits_ofDigits 10 ?_ _ ?_ ?_ <;> simp [hk]
         rw [hx_dig, hb_dig]
-        exact ⟨ha_dig, rfl, .inr ⟨hk, hs, rfl⟩⟩
+        exact ⟨ha_dig, rfl, .inr ⟨hk, rfl, rfl⟩⟩
 
-  _ ↔ (a = 1 ∨ a = 2 ∨ a = 3) ∨ (∃ k, digits 10 a = 1 :: replicate (k + 1) 2) := by
+  -- Put in the final form.
+  _ ↔ _ := by
+    simp only [Set.mem_union, Set.mem_insert_iff, Set.mem_singleton_iff, Set.mem_range]
     constructor
-    · intro ⟨s, k, hs, h⟩
+    · intro ⟨s, k, ⟨hs, h⟩⟩
       refine h.imp ?_ ?_
-      · rintro ⟨hk, rfl⟩
+      · rintro ⟨rfl, rfl⟩
         exact hs
       · rintro ⟨hk, rfl, ha_dig⟩
-        use k - 1  -- TODO
-        convert ha_dig
-        exact succ_pred_eq_of_ne_zero hk
-
+        use k - 1
+        rw [sub_one_add_one hk]
+        have := congrArg (ofDigits 10) ha_dig
+        simpa [ofDigits_digits] using this.symm
     · intro h
       cases h with
-      | inl ha =>
+      | inl h =>
         use a, 0
-        simpa using ha
+        simpa using h
       | inr h =>
-        rcases h with ⟨k, ha_dig⟩
+        rcases h with ⟨k, ha⟩
         use 1, k + 1
-        simpa using ha_dig
-
-  _ ↔ _ := by simp [digits_eq_iff, eq_comm (b := ofDigits _ _)]
+        suffices digits 10 a = 1 :: replicate (k + 1) 2 by simpa
+        rw [← ha]
+        refine digits_ofDigits 10 ?_ _ ?_ ?_ <;> simp
