@@ -58,7 +58,6 @@ lemma len_digits_sq_add_one_eq_or (b : ℕ) (hb : 1 < b) (n : ℕ) :
 --     log b (n ^ 2) ∈ Finset.Icc (2 * log b n) (2 * log b n + 1) :=
 --   Finset.mem_Icc.mpr ⟨le_log_sq hb hn, log_sq_le hb hn⟩
 
--- TODO: Rename to reflect `log`.
 lemma log_sq_eq {b n : ℕ} (hb : 1 < b) (hn : n ≠ 0) :
     log b (n ^ 2) = 2 * log b n ∨ log b (n ^ 2) = 2 * log b n + 1 :=
   le_and_le_add_one_iff.mp ⟨le_log_sq hb hn, log_sq_le hb hn⟩
@@ -103,48 +102,58 @@ lemma digits_add_base_mul (b : ℕ) (hb : 1 < b) (x y : ℕ) (hx : x < b) (hy : 
 --     simpa [digits_of_lt b _ x.add_one_ne_zero hx] using
 --       (digits_append_digits (zero_lt_of_lt hb) (n := x + 1) (m := y)).symm
 
-lemma digits_ofDigits_len_le_len (b : ℕ) (hb : 1 < b) (l : List ℕ) (hl : ∀ x ∈ l, x < b) :
-    (digits b (ofDigits b l)).length ≤ l.length := by
-  induction l with
-  | nil => simp
-  | cons x l IH =>
-    have ⟨hx, hl⟩ : x < b ∧ ∀ x ∈ l, x < b := by simpa using hl
-    rw [ofDigits_cons, length_cons]
-    cases eq_or_ne (ofDigits b l) 0 with
-    | inl hl_zero =>
-      simp only [hl_zero, mul_zero, add_zero]
-      cases x with
-      | zero => simp
-      | succ x => simp [digits_of_lt b x.succ x.add_one_ne_zero hx]
-    | inr hl_zero =>
-      rw [digits_add_base_mul b hb _ _ hx hl_zero]
-      simpa using IH hl
-
-lemma digits_ofDigits_append_zeroes_eq (b : ℕ) (hb : 1 < b) (l : List ℕ) (hl : ∀ x ∈ l, x < b) :
-    digits b (ofDigits b l) ++ replicate (l.length - (digits b (ofDigits b l)).length) 0 = l := by
-  induction l using reverseRecOn with
-  | nil => simp
-  | append_singleton l x IH =>
-    cases eq_or_ne x 0 with
-    | inl hx =>
-      simp only [length_append, length_singleton]
-      rcases hx with rfl
-      simp only [ofDigits_append, ofDigits_singleton, mul_zero, add_zero]
-      replace hl : ∀ a ∈ l, a < b := fun a ha ↦ hl a (mem_append_left _ ha)
-      convert congrArg (· ++ [0]) (IH hl) using 1
-      rw [Nat.sub_add_comm]
-      · simp [replicate_succ']
-      · exact digits_ofDigits_len_le_len b hb l hl
-
-    | inr hx =>
-      rw [digits_ofDigits _ hb _ hl (by simpa using hx)]
-      simp
-
+-- The number constructed from repeated zero digits is zero, regardless of base or length.
 lemma ofDigits_replicate_zero (b : ℕ) (n : ℕ) : ofDigits b (replicate n 0) = 0 := by
   induction n with
   | zero => simp
   | succ n IH => simp [replicate_succ, ofDigits_cons, IH]
 
+
+-- Taking `digits` of `ofDigits` gives the same list without trailing zeros.
+lemma reverse_digits_ofDigits_eq_dropWhile_reverse {b : ℕ} (hb : 1 < b) (l : List ℕ)
+    (hl : ∀ x ∈ l, x < b) :
+    reverse (digits b (ofDigits b l)) = dropWhile (· = 0) l.reverse := by
+  induction l using reverseRecOn with
+  | nil => simp
+  | append_singleton l x IH =>
+    cases x with
+    | zero => simpa [ofDigits_append] using IH fun i hi ↦ hl i (mem_append_left [0] hi)
+    | succ x => simpa using digits_ofDigits b hb (l ++ [x.succ]) hl (by simp)
+
+lemma digits_ofDigits_eq_reverse_dropWhile_reverse {b : ℕ} (hb : 1 < b) (l : List ℕ)
+    (hl : ∀ x ∈ l, x < b) :
+    digits b (ofDigits b l) = reverse (dropWhile (· = 0) l.reverse) :=
+  reverse_eq_iff.mp <| reverse_digits_ofDigits_eq_dropWhile_reverse hb l hl
+
+-- Taking `digits` of `ofDigits` gives a list that is no longer than the original list.
+lemma digits_ofDigits_len_le_len (b : ℕ) (hb : 1 < b) (l : List ℕ) (hl : ∀ x ∈ l, x < b) :
+    (digits b (ofDigits b l)).length ≤ l.length := by
+  suffices (digits b (ofDigits b l)).reverse.length ≤ l.reverse.length by simpa
+  rw [reverse_digits_ofDigits_eq_dropWhile_reverse hb l hl]
+  exact (dropWhile_sublist _).length_le
+
+lemma takeWhile_eq_zero_reverse_eq_replicate_sub_length_digits_ofDigits {b : ℕ} (hb : 1 < b)
+    (l : List ℕ) (hl : ∀ x ∈ l, x < b) :
+    takeWhile (· = 0) l.reverse = replicate (l.length - (digits b (ofDigits b l)).length) 0 := by
+  induction l using reverseRecOn with
+  | nil => simp
+  | append_singleton l x IH =>
+    cases x with
+    | zero =>
+      replace hl : ∀ x ∈ l, x < b := fun x hx ↦ hl x (mem_append_left [0] hx)
+      simp [ofDigits_append, IH hl, replicate_succ,
+        Nat.sub_add_comm (digits_ofDigits_len_le_len b hb l hl)]
+    | succ x => simp [digits_ofDigits b hb (l ++ [x.succ]) hl (by simp)]
+
+-- The list of digits can be restored by appending zeros.
+lemma digits_ofDigits_append_zeroes_eq_self {b : ℕ} (hb : 1 < b) (l : List ℕ)
+    (hl : ∀ x ∈ l, x < b) :
+    digits b (ofDigits b l) ++ replicate (l.length - (digits b (ofDigits b l)).length) 0 = l := by
+  rw [← reverse_inj]
+  simp only [reverse_append, reverse_replicate]
+  convert takeWhile_append_dropWhile (p := (· = 0)) (l := l.reverse) using 2
+  · rw [takeWhile_eq_zero_reverse_eq_replicate_sub_length_digits_ofDigits hb l hl]
+  · rw [reverse_digits_ofDigits_eq_dropWhile_reverse hb l hl]
 
 -- When we square an `n`-digit number with leading digit `x`, the result may have `2 * n` or
 -- `2 * n + 1` digits. The map of leading digits is monotonic except for this discontinuity.
@@ -495,8 +504,8 @@ lemma ten_pow_sub_one_div_nine (n : ℕ) :
   refine Nat.sub_eq_of_eq_add ?_
   exact ten_pow_eq_nine_mul_replicate_add_one n
 
--- TODO: rename
-lemma combined_result {s k : ℕ} (hs_ne : s ≠ 0) (hs_lt : 2 * s < 10) (x : ℕ) :
+-- The key lemma which lets us obtain an explicit form for `x`.
+lemma eq_iff_digits_eq_replicate_two_mul {s k : ℕ} (hs_ne : s ≠ 0) (hs_lt : 2 * s < 10) (x : ℕ) :
     x + 2 * s * 10 ^ k = 2 * s + 10 * x ↔ digits 10 x = replicate k (2 * s) := by
   calc x + 2 * s * 10 ^ k = 2 * s + 10 * x
   _ ↔ 2 * s * 10 ^ k + x = 10 * x + 2 * s := by simp [add_comm]
@@ -543,21 +552,16 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
   calc _
   -- Introduce variables for `b` and the digits of `a` and `c = b ^ 2`.
   _ ↔ ∃ (b : ℕ) (la lc : List ℕ),
-      digits 10 a = la ∧
-      b = ofDigits 10 (la.rotate 1) ∧
-      digits 10 (b ^ 2) = lc ∧
-      a ^ 2 = ofDigits 10 lc.rotateRight := by
+      digits 10 a = la ∧ b = ofDigits 10 (la.rotate 1) ∧
+      digits 10 (b ^ 2) = lc ∧ a ^ 2 = ofDigits 10 lc.rotateRight := by
     simp only [eq_comm (a := a ^ 2)]
     simp
 
   -- Separate the digit being moved from the rest of the list.
   _ ↔ ∃ (b : ℕ) (la lc : List ℕ) (s f : ℕ) (lx ly : List ℕ),
-      digits 10 a = la ∧
-      b = ofDigits 10 (la.rotate 1) ∧
-      digits 10 (b ^ 2) = lc ∧
-      a ^ 2 = ofDigits 10 lc.rotateRight ∧
-      la = s :: lx ∧
-      lc = ly ++ [f] := by
+      digits 10 a = la ∧ b = ofDigits 10 (la.rotate 1) ∧
+      digits 10 (b ^ 2) = lc ∧ a ^ 2 = ofDigits 10 lc.rotateRight ∧
+      la = s :: lx ∧ lc = ly ++ [f] := by
     refine exists₃_congr fun b la lc ↦ ?_
     simp only [exists_and_left, exists_and_right, and_congr_right_iff, iff_self_and]
     intro ha_dig hb hb2_dig ha2
@@ -676,7 +680,6 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
   -- s        =  1  2  3    4    5    6    7    8    9
   -- s^2 % 10 =  1  4  9    6    5    6    9    4    1
   -- f        ∈  ∅  ∅  1  1-2  2-3  3-4  4-6  6-8  8-9
-  -- We can see that `s^2 % 10` never coincides with feasible values for `f`.
   _ ↔ ∃ (b s f : ℕ) (lx ly : List ℕ),
       (digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s]) ∧
       (digits 10 (b ^ 2) = ly ++ [f] ∧ a ^ 2 = ofDigits 10 (f :: ly)) ∧
@@ -725,152 +728,88 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
   -- Move `s, k` to the front as these will parameterize the solutions.
   _ ↔ ∃ (s k b : ℕ) (lx ly : List ℕ),
       (s = 1 ∨ s = 2 ∨ s = 3) ∧
-      (lx.length = k ∧ digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s]) ∧
-      ly.length = 2 * k ∧ digits 10 (b ^ 2) = ly ++ [s ^ 2] ∧
-        a ^ 2 = ofDigits 10 (s ^ 2 :: ly) := by
+      (digits 10 a = s :: lx ∧ digits 10 b = lx ++ [s] ∧ lx.length = k) ∧
+      digits 10 (b ^ 2) = ly ++ [s ^ 2] ∧ a ^ 2 = ofDigits 10 (s ^ 2 :: ly) ∧
+      ly.length = 2 * k := by
     constructor
     · intro ⟨b, s, lx, ly, k, hs, ⟨ha, hb⟩, ⟨hb2, ha2⟩, hx_len, hy_len⟩
-      exact ⟨s, k, b, lx, ly, hs, ⟨hx_len, ha, hb⟩, hy_len, hb2, ha2⟩
-    · intro ⟨s, k, b, lx, ly, hs, ⟨hx_len, ha, hb⟩, hy_len, hb2, ha2⟩
+      exact ⟨s, k, b, lx, ly, hs, ⟨ha, hb, hx_len⟩, hb2, ha2, hy_len⟩
+    · intro ⟨s, k, b, lx, ly, hs, ⟨ha, hb, hx_len⟩, hb2, ha2, hy_len⟩
       exact ⟨b, s, lx, ly, k, hs, ⟨ha, hb⟩, ⟨hb2, ha2⟩, hx_len, hy_len⟩
 
-  -- TODO: Move/edit comment.
-  -- Since `s < 3` and hence `f = s ^ 2 < 10`, we know that both `c = b ^ 2` and `d` have
-  -- exactly `2 k` digits, where `a` has `k` digits. TODO: k + 1?
-  -- Let `b = s * 10 ^ k + r` with `r < 10 ^ k`, and therefore `a = 10 * r + s`.
-  -- From `c = b ^ 2`, we obtain
-  -- `c = (s * 10 ^ k + r) ^ 2 = s ^ 2 * 10 ^ (2 k) + 2 s r * 10 ^ k + r ^ 2`
-  -- Shifting the digits gives
-  -- `d = 2 s r * 10 ^ (k + 1) + r ^ 2 * 10 + s ^ 2`
-  -- Compare this to `d = a ^ 2`:
-  -- `d = (10 * r + s) ^ 2 = 10 (r ^ 2 * 10 + 2 r s) + s ^ 2`
-  -- Equating these gives
-  -- `r (2 s * 10 ^ k + r) = r (r * 10 + 2 s)`
-  -- Therefore, either `r = 0`, or `2 s * 10 ^ k + r = r * 10 + 2 s`.
-  -- If `r = 0`, then `a = b = s`, `c = d = s ^ 2`, and `d = a ^ 2` is satisfied by `s = 1`.
-  -- Otherwise, re-arranging gives
-  -- `2 s (10 ^ k - 1) = r (10 - 1)`
-  -- `r = (10 ^ k - 1) / 9 * 2 s`
-  -- `r = 11...1 * 2 s`
-  -- Our three cases are then `a = 22...21`, `a = 44...42`, and `a = 66...63`.
-  -- However, the latter two violate the condition that `a ^ 2` has `2 k` digits. (TODO)
-
-
-
-  -- While we cannot guarantee that `a ^ 2` has `2 k + 1` digits since `ly` could contain
-  -- leading zeros, we can guarantee that it has no more digits than `b ^ 2`.
-  -- This will later be sufficient, since `a` itself has `k + 1` digits.
-  -- Note that we don't *need* it for the `iff condition, but it is easier to derive now.
-  -- We could instead write `digits 10 y ≤ 2 * k`.
-  -- However, we will soon eliminate `y` anyway.
-
-  -- Idea: Maybe we should write in terms of `x` and `y` with
-  -- `(digits 10 x).length = k` and `(digits 10 y).length ≤ 2 * k`? Then we have...
-  -- `digits 10 a = s :: digits 10 x`
-  -- `digits 10 b = digits 10 x ++ [s]`
-  -- `digits 10 (b ^ 2) = digits 10 y ++ replicate (2 * k - (digits 10 y).length) 0 ++ [s ^ 2]`
-  -- `digits 10 (a ^ 2) = s ^ 2 :: digits 10 y`
-  -- From this, we easily obtain
-  -- `(digits 10 (b ^ 2)).length = 2 * k + 1`
-  -- `(digits 10 (a ^ 2)).length ≤ 2 * k + 1`,
-  -- as well as
-  -- `a = s + 10 * x`
-  -- `b = x + 10 ^ k * s`
-  -- `b ^ 2 = y + 10 ^ (2 * k) * s ^ 2`
-  -- `a ^ 2 = s ^ 2 + 10 * y`
-  -- Do we even need to eliminate `b`? Eventually yes...
-
+  -- Replace `lx, ly` with `x, y` to ease mathematical manipulation.
+  -- While we know that `x` has `k` digits, it's possible that `y` has less than `2 * k` digits.
+  -- To handle this, pad the digits of `y` with zeros to obtain the digits of `b ^ 2`.
   _ ↔ ∃ (s k b x y : ℕ),
       (s = 1 ∨ s = 2 ∨ s = 3) ∧
-      ((digits 10 x).length = k ∧
-        digits 10 a = s :: digits 10 x ∧
-        digits 10 b = digits 10 x ++ [s]) ∧
-      (digits 10 y).length ≤ 2 * k ∧
+      (digits 10 a = s :: digits 10 x ∧
+        digits 10 b = digits 10 x ++ [s] ∧
+        (digits 10 x).length = k) ∧
       digits 10 (b ^ 2) = digits 10 y ++ replicate (2 * k - (digits 10 y).length) 0 ++ [s ^ 2] ∧
-      digits 10 (a ^ 2) = s ^ 2 :: digits 10 y := by
+      digits 10 (a ^ 2) = s ^ 2 :: digits 10 y ∧
+      (digits 10 y).length ≤ 2 * k := by
     refine exists₃_congr fun s k b ↦ ?_
     simp only [exists_and_left, exists_and_right, and_congr_right_iff]
     intro hs
-    -- Group into separate statements for `x` and `y`, treat each separately.
+    -- Handle the transformation for `x` and `y` independently.
     refine and_congr ?_ ?_
     · -- The reverse direction for `x` is trivial.
       refine ⟨?_, Exists.imp' (digits 10) fun x ↦ id⟩
-      intro ⟨lx, hlx_len, ha_digits, hb_digits⟩
+      intro ⟨lx, ha_dig, hb_dig, hlx_len⟩
       use ofDigits 10 lx
       -- To show the forward direction, replace `digits 10 (ofDigits 10 lx)` with `lx`.
-      suffices digits 10 (ofDigits 10 lx) = lx by
-        simpa [this] using ⟨hlx_len, ha_digits, hb_digits⟩
+      suffices digits 10 (ofDigits 10 lx) = lx by simpa [this] using ⟨ha_dig, hb_dig, hlx_len⟩
       refine digits_ofDigits 10 (by norm_num) _ ?_ ?_
       · intro i hi
         suffices i ∈ digits 10 a from digits_lt_base' this
-        simpa [ha_digits] using mem_cons_of_mem s hi
+        simp [ha_dig, hi]
       · intro h
-        simpa [ha_digits, getLast_cons h] using getLast_digit_ne_zero 10 ha
-
-    · have hs_pos : 0 < s := by
-        suffices ∀ s, s = 1 ∨ s = 2 ∨ s = 3 → 0 < s from this s hs
-        simp
-      have hs2_digits : digits 10 (s ^ 2) = [s ^ 2] := by
+        simpa [ha_dig, getLast_cons h] using getLast_digit_ne_zero 10 ha
+    · -- For `y`, we need the fact that `digits 10 (s ^ 2) = [s ^ 2]`.
+      have hs2_dig : digits 10 (s ^ 2) = [s ^ 2] := by
         refine digits_of_lt 10 (s ^ 2) ?_ ?_
-        · exact pow_ne_zero 2 hs_pos.ne'
+        · suffices ∀ s, s = 1 ∨ s = 2 ∨ s = 3 → s ^ 2 ≠ 0 from this s hs
+          simp
         · suffices ∀ s, s = 1 ∨ s = 2 ∨ s = 3 → s ^ 2 < 10 from this s hs
           simp
-
       constructor
-      · intro ⟨ly, hly_len, hc_dig, hd⟩
-        use ofDigits 10 ly
+      -- For the forward direction, need to handle padding of `digits 10 y` with zeros.
+      · intro ⟨l, hb2_dig, ha2, h_len⟩
+        use ofDigits 10 l
         refine ⟨?_, ?_, ?_⟩
-        · refine le_of_le_of_eq ?_ hly_len
-          refine digits_ofDigits_len_le_len 10 (by norm_num) ly fun i hi ↦ ?_
-          exact digits_lt_base' (hc_dig ▸ mem_append_left [s ^ 2] hi)
-        · convert hc_dig
-          rw [← hly_len]
-          refine digits_ofDigits_append_zeroes_eq 10 (by norm_num) ly ?_
-          exact fun i hi ↦ digits_lt_base' (hc_dig ▸ mem_append_left [s ^ 2] hi)
-
-        · rw [hd, ofDigits_cons]
-          -- TODO: Could extract as lemma (like digits_append_digits).
-          have := digits_append_digits (b := 10) (n := s ^ 2) (m := ofDigits 10 ly) (by norm_num)
-          simpa [hs2_digits] using this.symm  -- TODO: Need to instantiate first?
-
-      · intro ⟨y, hy_len, hc_dig, hd_dig⟩
+        · convert hb2_dig
+          rw [← h_len]
+          refine digits_ofDigits_append_zeroes_eq_self (by norm_num) l fun i hi ↦ ?_
+          suffices i ∈ digits 10 (b ^ 2) from digits_lt_base' this
+          simp [hb2_dig, hi]
+        · rw [ha2, ofDigits_cons]
+          have := digits_append_digits (b := 10) (n := s ^ 2) (m := ofDigits 10 l) (by norm_num)
+          simpa [hs2_dig] using this.symm  -- TODO: Need to instantiate first?
+        · refine le_of_le_of_eq ?_ h_len
+          refine digits_ofDigits_len_le_len 10 (by norm_num) l fun i hi ↦ ?_
+          suffices i ∈ digits 10 (b ^ 2) from digits_lt_base' this
+          simp [hb2_dig, hi]
+      -- The reverse direction for `y` is also simpler.
+      · intro ⟨y, hb2_dig, ha2_dig, hy_len⟩
         use digits 10 y ++ replicate (2 * k - (digits 10 y).length) 0
-        refine ⟨?_, hc_dig, ?_⟩
-        · simp [hy_len]
-        · convert congrArg (ofDigits 10) hd_dig using 1
+        refine ⟨hb2_dig, ?_, ?_⟩
+        · convert congrArg (ofDigits 10) ha2_dig using 1
           · simp [ofDigits_digits]
-          · simp [ofDigits_cons, ofDigits_append, ofDigits_replicate_zero, ofDigits_digits]
+          · simp [ofDigits_cons, ofDigits_append, ofDigits_replicate_zero]
+        · simp [hy_len]
 
-  -- Re-order.
-  _ ↔ ∃ (s k b x y : ℕ),
-      (s = 1 ∨ s = 2 ∨ s = 3) ∧
-      digits 10 a = s :: digits 10 x ∧
-      digits 10 b = digits 10 x ++ [s] ∧
-      (digits 10 x).length = k ∧
-      (digits 10 y).length ≤ 2 * k ∧
-      digits 10 (b ^ 2) = digits 10 y ++ replicate (2 * k - (digits 10 y).length) 0 ++ [s ^ 2] ∧
-      digits 10 (a ^ 2) = s ^ 2 :: digits 10 y := by
-    refine exists₅_congr fun s k b x y ↦ ?_
-    simp only [and_congr_right_iff]
-    intro hs
-    simp only [← and_assoc, and_congr_left_iff]
-    intro ha2_dig hb2_dig hy_len
-    simp only [and_assoc]
-    constructor
-    · exact fun ⟨hx_len, ha_dig, hb_dig⟩ ↦ ⟨ha_dig, hb_dig, hx_len⟩
-    · exact fun ⟨ha_dig, hb_dig, hx_len⟩ ↦ ⟨hx_len, ha_dig, hb_dig⟩
-
-  -- Eliminate constraint on length of `a ^ 2, b ^ 2`.
-  -- Since this is used to eliminate `s = 2, 3` when `k ≠ 0`, must split cases here.
+  -- Next replace `y` and the length constraints on `a ^ 2, b ^ 2` with the form of `x`.
+  -- Since the number of digits in `a ^ 2` and `b ^ 2` is used to eliminate the case where
+  -- `k > 0` and `s ∈ {2, 3}`, we split on `k` here.
   _ ↔ ∃ (s k b x : ℕ),
       (s = 1 ∨ s = 2 ∨ s = 3) ∧
       digits 10 a = s :: digits 10 x ∧
       digits 10 b = digits 10 x ++ [s] ∧
       (k = 0 ∧ x = 0 ∨ k ≠ 0 ∧ s = 1 ∧ digits 10 x = replicate k (2 * s)) := by
     refine exists₄_congr fun s k b x ↦ ?_
-    simp only [exists_and_left, and_congr_right_iff]
+    simp only [and_assoc, exists_and_left, and_congr_right_iff]
     intro hs ha_dig hb_dig
-
+    -- Establish properties of `s` that we will need.
     have hs_zero : s ≠ 0 := by
       suffices ∀ s, s = 1 ∨ s = 2 ∨ s = 3 → s ≠ 0 from this s hs
       simp
@@ -880,10 +819,10 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
     have hs_sq_lt : s ^ 2 < 10 := by
       suffices ∀ s, s = 1 ∨ s = 2 ∨ s = 3 → s ^ 2 < 10 from this s hs
       simp
-
     have hs2_dig : digits 10 (s ^ 2) = [s ^ 2] :=
       digits_of_lt 10 (s ^ 2) (by simpa using hs_zero) hs_sq_lt
 
+    -- Split based on whether `a` has one or more digits.
     cases eq_or_ne k 0 with
     | inl hk =>
       rcases hk with rfl
@@ -892,100 +831,97 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
       rintro rfl
       convert And.intro hs2_dig hs2_dig
       · have := congrArg (ofDigits 10) hb_dig
-        simpa [ofDigits_digits] using this  -- TODO: why??
+        simpa [ofDigits_digits] using this
       · have := congrArg (ofDigits 10) ha_dig
         simpa [ofDigits_digits] using this
 
     | inr hk =>
-      simp only [hk, false_and, ne_eq, not_false_eq_true, true_and, false_or]
-
-      have ha : a = s + 10 * x := by
-        have := congrArg (ofDigits 10) ha_dig
-        simpa [ofDigits_digits, ofDigits_cons] using this  -- TODO: why??
-
-      -- Not sure how to get nice condition from here.
+      -- It remains to show that (1) the specified `x` satisfies the equations for `s = 1`, and
+      -- (2) that the equations are inconsistent with `s = 2, 3` for `k ≠ 0`.
+      -- Simplify the right side.
+      refine Iff.trans (b := s = 1 ∧ digits 10 x = replicate k (2 * s)) ?_ (by simp [hk])
       constructor
-      · intro ⟨hx_len, y, hy_len, hb2_dig, ha2_dig⟩
+      -- Show that the equations imply `s = 1`.
+      · intro ⟨hx_len, y, hb2_dig, ha2_dig, hy_len⟩
+        suffices hx_dig : digits 10 x = replicate k (2 * s) by
+          refine ⟨hs.resolve_right ?_, hx_dig⟩
+          intro hs
+          -- Find contradiction using number of digits in `a ^ 2`.
+          -- First use the fact that `a ^ 2` is a digit rotation of `b ^ 2`.
+          -- Due to this fact, `a ^ 2` has at most the same number of digits, which is `2 k + 1`.
+          have ha2_len : (digits 10 (a ^ 2)).length ≤ 2 * k + 1 := by simp [ha2_dig, hy_len]
+          refine ha2_len.not_lt ?_
+          -- Now consider the number of digits obtained by squaring `a`.
+          -- Since `a` has `k + 1` digits, `a ^ 2` may have either `2 k + 1` or `2 k + 2` digits.
+          -- However, the leading digit of `a` is `2 * s` with `s` being 2 or 3.
+          -- Since `10 ≤ (2 * s) ^ 2`, `a ^ 2` has `2 k + 2` digits, providing the contradiction.
+          -- Replace `k` with `m + 1` for easier simplification.
+          obtain ⟨m, rfl⟩ : ∃ m, m + 1 = k := exists_add_one_eq.mpr (zero_lt_of_ne_zero hk)
+          suffices (digits 10 (a ^ 2)).length = 2 * (digits 10 a).length by
+            simp [this, ha_dig, hx_dig, mul_add]
+          refine len_digits_eq_of_le_getLast_sq (b := 10) (by norm_num) a ?_
+          suffices 10 ≤ (2 * s) ^ 2 by simpa [ha_dig, hx_dig] using this
+          suffices ∀ s, s = 2 ∨ s = 3 → 10 ≤ (2 * s) ^ 2 from this s hs
+          simp
 
+        rw [← eq_iff_digits_eq_replicate_two_mul hs_zero hs_two_mul_lt]
+        -- We will obtain two equations for `y` by substituting expressions for `a, b` in
+        -- the equations for `a ^ 2, b ^ 2`.
+        suffices x * (x + 2 * s * 10 ^ k) = x * (2 * s + 10 * x) by
+          rw [mul_eq_mul_left_iff] at this
+          refine this.resolve_right ?_
+          refine mt (fun hx ↦ ?_) hk
+          simpa [hx] using hx_len.symm
+        -- Obtain `a, b, a ^ 2, b ^ 2` from their digits.
+        have ha : a = s + 10 * x := by
+          have := congrArg (ofDigits 10) ha_dig
+          simpa [ofDigits_digits, ofDigits_cons] using this
         have hb : b = x + 10 ^ k * s := by
           have := congrArg (ofDigits 10) hb_dig
           simpa [ofDigits_digits, ofDigits_append, hx_len] using this
+        have ha2 : a ^ 2 = s ^ 2 + 10 * y := by
+          have := congrArg (ofDigits 10) ha2_dig
+          simpa [ofDigits_digits, ofDigits_cons, hy_len] using this
+        have hb2 : b ^ 2 = y + 10 ^ (2 * k) * s ^ 2 := by
+          have := congrArg (ofDigits 10) hb2_dig
+          simpa [ofDigits_digits, ofDigits_replicate_zero, ofDigits_append, -append_assoc,
+            ← pow_add, hy_len] using this
+        -- Substitute the definitions for `a, b`.
+        rw [ha] at ha2
+        rw [hb] at hb2
+        -- Eliminate common terms on both sides to obtain two definitions for `y`.
+        have ha2 : x * (2 * s + 10 * x) = y := by
+          suffices s ^ 2 + 10 * (x * (2 * s + 10 * x)) = s ^ 2 + 10 * y by simpa
+          convert ha2 using 1
+          ring
+        have hb2 : x * (x + 2 * s * 10 ^ k) = y := by
+          suffices x * (x + 2 * s * 10 ^ k) + 10 ^ (2 * k) * s ^ 2 = y + 10 ^ (2 * k) * s ^ 2 by
+            simpa
+          convert hb2 using 1
+          ring
+        exact hb2.trans ha2.symm
 
-        -- TODO: long?
-        have hx : x + 2 * s * 10 ^ k = 2 * s + 10 * x := by
-          have ha2 : a ^ 2 = s ^ 2 + 10 * y := by
-            have := congrArg (ofDigits 10) ha2_dig
-            simpa [ofDigits_digits, ofDigits_cons, hy_len] using this
-          have hb2 : b ^ 2 = y + 10 ^ (2 * k) * s ^ 2 := by
-            have := congrArg (ofDigits 10) hb2_dig
-            simpa [ofDigits_digits, ofDigits_replicate_zero, ofDigits_append, -append_assoc,
-              ← pow_add, hy_len] using this
-
-          rw [ha] at ha2
-          rw [hb] at hb2
-
-          have hx_zero : x ≠ 0 := by
-            refine mt (fun h ↦ ?_) hk
-            simp [← hx_len, h]
-
-          have ha2 : y = x * (2 * s + 10 * x) := by
-            suffices s ^ 2 + 10 * y = s ^ 2 + 10 * (x * (2 * s + 10 * x)) by
-              simpa [hx_zero] using this
-            rw [← ha2]
-            ring
-          have hb2 : y = x * (x + 2 * s * 10 ^ k) := by
-            suffices y + 10 ^ (2 * k) * s ^ 2 = x * (x + 2 * s * 10 ^ k) + 10 ^ (2 * k) * s ^ 2 by
-              simpa using this
-            rw [← hb2]
-            ring
-
-          have hy := hb2.symm.trans ha2
-          simpa [hx_zero] using hy
-
-        have hx_dig : digits 10 x = replicate k (2 * s) :=
-          (combined_result hs_zero hs_two_mul_lt x).mp hx
-
-        refine ⟨hs.resolve_right ?_, hx_dig⟩
-
-        intro hs
-        -- Find contradiction using number of digits in `a ^ 2`.
-
-        -- First use the fact that `a ^ 2` is a digit rotation of `b ^ 2`.
-        -- Due to this fact, `a ^ 2` has at most the same number of digits, which is `2 k + 1`.
-        have ha2_len : (digits 10 (a ^ 2)).length ≤ 2 * k + 1 := by simp [ha2_dig, hy_len]
-        refine ha2_len.not_lt ?_
-        -- Now consider the number of digits obtained by squaring `a`.
-        -- Since `a` has `k + 1` digits, `a ^ 2` may have either `2 k + 1` or `2 k + 2` digits.
-        -- However, the leading digit of `a` is `2 * s` with `s` being 2 or 3.
-        -- Since `10 ≤ (2 * s) ^ 2`, `a ^ 2` has `2 k + 2` digits, providing the contradiction.
-
-        -- Replace `k` with `m + 1` for easier simplification.
-        obtain ⟨m, rfl⟩ : ∃ m, m + 1 = k := exists_add_one_eq.mpr (zero_lt_of_ne_zero hk)
-
-        suffices (digits 10 (a ^ 2)).length = 2 * (digits 10 a).length by
-          simp [this, ha_dig, hx_dig, mul_add]
-        refine len_digits_eq_of_le_getLast_sq (b := 10) (by norm_num) a ?_
-        suffices 10 ≤ (2 * s) ^ 2 by simpa [ha_dig, hx_dig] using this
-        suffices ∀ s, s = 2 ∨ s = 3 → 10 ≤ (2 * s) ^ 2 from this s hs
-        simp
-
+      -- Show that the specified `x` satisfies the constraints.
       · intro ⟨hs, hx_dig⟩
-
-        let y := x * (2 * s + 10 * x)
-        -- TODO: Need to use `combined_result` twice?
-        have hx : x + 2 * s * 10 ^ k = 2 * s + 10 * x :=
-          (combined_result hs_zero hs_two_mul_lt x).mpr hx_dig
-
+        -- The length constraint is trivial.
         have hx_len : (digits 10 x).length = k := by
           have := congrArg length hx_dig
           simpa using this
         refine ⟨hx_len, ?_⟩
-
-        -- TODO: avoid doing this twice?
+        -- It remains to show that the `y` resulting from `x` gives the digits of `b ^ 2, a ^ 2`
+        -- and satsfies the length constraint.
+        -- Obtain the two forms of `y` back from the digits form.
+        have hx : x + 2 * s * 10 ^ k = 2 * s + 10 * x :=
+          (eq_iff_digits_eq_replicate_two_mul hs_zero hs_two_mul_lt x).mpr hx_dig
+        let y := x * (2 * s + 10 * x)
+        use y
+        -- Show that `a ^ 2` and `b ^ 2` can be written using `y`.
+        have ha : a = s + 10 * x := by
+          have := congrArg (ofDigits 10) ha_dig
+          simpa [ofDigits_digits, ofDigits_cons] using this
         have hb : b = x + 10 ^ k * s := by
           have := congrArg (ofDigits 10) hb_dig
           simpa [ofDigits_digits, ofDigits_append, hx_len] using this
-
         have ha2 : a ^ 2 = s ^ 2 + y * 10 := by
           unfold y
           rw [ha]
@@ -995,46 +931,30 @@ theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
           rw [← hx, hb]
           ring
 
-        -- Rewrite `k` as `m + 1` for simplification.
-        obtain ⟨m, hm⟩ : ∃ m, m + 1 = k := exists_add_one_eq.mpr (zero_lt_of_ne_zero hk)
-
-        have ha_nil : digits 10 a ≠ [] := by simp [ha_dig]
-        -- TOD: Might be nicer to use `_.length = _ - 1` here?
-        have ha2_len : (digits 10 (a ^ 2)).length + 1 = 2 * (digits 10 a).length :=
-          len_digits_add_one_eq_of_getLast_add_one_sq_lt (b := 10) (by norm_num) a
-            ⟨ha_nil, by simp [ha_dig, hx_dig, hs, ← hm]⟩
-
+        -- Since `a` has `k + 1` digits with leading digit satisfying `(d + 1) ^ 2 < 10`, we know
+        -- that `a ^ 2` will have exactly `2 k + 1` digits, the smaller of the two possible cases.
+        have ha2_len : (digits 10 (a ^ 2)).length + 1 = 2 * (digits 10 a).length := by
+          refine len_digits_add_one_eq_of_getLast_add_one_sq_lt (b := 10) (by norm_num) a ?_
+          cases k <;> simp [ha_dig, hx_dig, hs]
+        -- Connect the digits of `a ^ 2` to those of `y` to subsequently obtain the length of `y`.
         have ha2_dig : digits 10 (a ^ 2) = s ^ 2 :: digits 10 y := by
-          calc _
-          _ = digits 10 (s ^ 2) ++ digits 10 y := by
-            rw [digits_append_digits (b := 10) (by norm_num)]
-            simp only [hs2_dig, length_singleton]
-            congr 1
-            convert ha2 using 1
-            ring
-          _ = s ^ 2 :: digits 10 y := by simp [hs2_dig]
-
-        -- TODO: Could strengthen assumption? Here we can prove stronger. Could even remove zeros?
+          suffices digits 10 (a ^ 2) = digits 10 (s ^ 2) ++ digits 10 y by simpa [hs2_dig]
+          convert (digits_append_digits (b := 10) (by norm_num)).symm using 2
+          simp only [ha2, hs2_dig, length_singleton]
+          ring
+        -- In fact, we can show the stronger result that `y` has exactly `2 * k` digits.
         have hy_len : (digits 10 y).length = 2 * k := by
           suffices (digits 10 y).length + 2 = 2 * (k + 1) by simpa [mul_add]
           calc (digits 10 y).length + 2
           _ = (digits 10 (a ^ 2)).length + 1 := by simp [ha2_dig]
           _ = 2 * (digits 10 a).length := by rw [ha2_len]
           _ = 2 * (k + 1) := by simp [ha_dig, hx_len]
-
-        use y
-        refine ⟨?_, ?_, ?_⟩
-        · exact hy_len.le
-        · -- TODO: cleanup
-          rw [hy_len]
-          simp
-          rw [← hs2_dig]
-          rw [digits_append_digits (b := 10) (by norm_num)]
-          rw [hb2]
-          congr 1
-          rw [hy_len]
-          ring
-        · exact ha2_dig
+        refine ⟨?_, ha2_dig, hy_len.le⟩
+        -- The length constraint can finally be applied to obtain the digits of `b ^ 2`.
+        suffices digits 10 (b ^ 2) = digits 10 y ++ digits 10 (s ^ 2) by simpa [hy_len, hs2_dig]
+        convert (digits_append_digits (b := 10) (by norm_num)).symm using 2
+        simp only [hb2, hy_len]
+        ring
 
   -- Eliminate `b` and `x`.
   _ ↔ ∃ (s k : ℕ),
