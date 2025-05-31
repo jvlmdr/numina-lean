@@ -30,10 +30,11 @@ lemma Ioc_sub_one_sub_one_eq_Ico {a : ℕ} (ha : a ≠ 0) (b : ℕ) :
     exact Nat.sub_le_sub_right hab 1
 
 -- The supremum below `n` will be constant between `nth p k` and `nth p (k + 1)`.
-lemma csSup_le_eq_of_mem_Ico_nth {p : ℕ → Prop} {n k : ℕ} (hn : n ∈ Ico (nth p k) (nth p (k + 1)))
+lemma csSup_le_eq_of_mem_Ico_nth {p : ℕ → Prop} {n k : ℕ}
+    (hn : n ∈ Set.Ico (nth p k) (nth p (k + 1)))
     (hp : ∀ (hf : (setOf p).Finite), k < #hf.toFinset) :
     sSup {x | p x ∧ x ≤ n} = nth p k := by
-  simp only [mem_Ico] at hn
+  simp only [Set.mem_Ico] at hn
   refine csSup_eq_of_is_forall_le_of_forall_le_imp_ge ?_ ?_ ?_
   · suffices nth p k ∈ {x | p x ∧ x ≤ n} from Set.nonempty_of_mem this
     simpa [Set.mem_setOf_eq] using ⟨nth_mem k hp, hn.1⟩
@@ -63,10 +64,11 @@ lemma nth_succ_le_of_nth_lt {p : ℕ → Prop} {k a : ℕ}
   exact lt_of_nth_lt_nth hp h
 
 -- The infimum above `n` will be constant between `nth p k` and `nth p (k + 1)`.
-lemma csInf_lt_eq_of_mem_Ico_nth {p : ℕ → Prop} {n k : ℕ} (hn : n ∈ Ico (nth p k) (nth p (k + 1)))
+lemma csInf_lt_eq_of_mem_Ico_nth {p : ℕ → Prop} {n k : ℕ}
+    (hn : n ∈ Set.Ico (nth p k) (nth p (k + 1)))
     (hp : ∀ (hf : (setOf p).Finite), k + 1 < #hf.toFinset) :
     sInf {x | p x ∧ n < x} = nth p (k + 1) := by
-  simp only [mem_Ico] at hn
+  simp only [Set.mem_Ico] at hn
   refine csInf_eq_of_forall_ge_of_forall_gt_exists_lt ?_ ?_ ?_
   · suffices nth p (k + 1) ∈ {x | p x ∧ n < x} from Set.nonempty_of_mem this
     simpa [Set.mem_setOf_eq] using ⟨nth_mem (k + 1) hp, hn.2⟩
@@ -82,11 +84,11 @@ theorem number_theory_122216 {P N : ℕ → ℕ}
     (hP : ∀ n, P n = sSup {p | p.Prime ∧ p ≤ n})
     (hN : ∀ n, N n = sInf {p | p.Prime ∧ n < p})
     (n : ℕ) (hn : 1 < n) (h_prime : (n + 1).Prime) :
-    ∑ i ∈ Finset.Icc 2 n, 1 / (P i * N i : ℚ) = (n - 1) / (2 * n + 2) := by
+    ∑ i ∈ Icc 2 n, 1 / (P i * N i : ℚ) = (n - 1) / (2 * n + 2) := by
 
   -- Rewrite in terms of `n + 1`.
   revert n
-  suffices ∀ n > 2, n.Prime → ∑ i ∈ Finset.Ico 2 n, (1 / (P i * N i) : ℚ) = (n - 2) / (2 * n) by
+  suffices ∀ n > 2, n.Prime → ∑ i ∈ Ico 2 n, (1 / (P i * N i) : ℚ) = (n - 2) / (2 * n) by
     intro n hn h_prime
     convert this _ (add_lt_add_right hn 1) h_prime using 1
     · simp only [cast_add]
@@ -109,7 +111,7 @@ theorem number_theory_122216 {P N : ℕ → ℕ}
     -- We want to split the interval into a union of `Finset.Ico` intervals.
     -- We have `Monotone.biUnion_Ico_Ioc_map_succ`, which uses `Set.Ioc`.
     -- Since primes start at 2, we can use `Ioc` and subtract 1.
-    refine Finset.coe_injective ?_
+    refine coe_injective ?_
     symm
     convert Monotone.biUnion_Ico_Ioc_map_succ (f := fun i ↦ nth Nat.Prime i - 1) ?_ 0 k
     · rw [coe_biUnion]
@@ -133,10 +135,10 @@ theorem number_theory_122216 {P N : ℕ → ℕ}
     refine sum_congr rfl fun i hi ↦ ?_
     congr
     · rw [hP]
-      refine csSup_le_eq_of_mem_Ico_nth hi ?_
+      refine csSup_le_eq_of_mem_Ico_nth (by simpa using hi) ?_
       simp [h_not_fin]
     · rw [hN]
-      refine csInf_lt_eq_of_mem_Ico_nth hi ?_
+      refine csInf_lt_eq_of_mem_Ico_nth (by simpa using hi) ?_
       simp [h_not_fin]
   -- Replace the constant sums with multiplication.
   _ = ∑ j ∈ range k, ↑(nth Nat.Prime (j + 1) - nth Nat.Prime j) /
