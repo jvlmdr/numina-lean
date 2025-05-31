@@ -13,7 +13,9 @@ $$
 $$
 -/
 
-lemma Ioc_sub_one_sub_one_eq_Ico (a b : ℕ) (ha : a ≠ 0) :
+-- Since we have `Monotone.biUnion_Ico_Ioc_map_succ` for `Ioc` and no equivalent for `Ico`,
+-- define a lemma to convert `Ioc` with preceding elements to `Ico`.
+lemma Ioc_sub_one_sub_one_eq_Ico {a : ℕ} (ha : a ≠ 0) (b : ℕ) :
     Set.Ioc (a - 1) (b - 1) = Set.Ico a b := by
   by_cases hab : a < b
   · ext x
@@ -27,33 +29,7 @@ lemma Ioc_sub_one_sub_one_eq_Ico (a b : ℕ) (ha : a ≠ 0) :
     simp only [not_lt] at hab ⊢
     exact Nat.sub_le_sub_right hab 1
 
-lemma Ico_eq_union (k : ℕ) :
-    Ico 2 (nth Nat.Prime k) =
-      (range k).biUnion fun i ↦ Ico (nth Nat.Prime i) (nth Nat.Prime (i + 1)) := by
-  -- Coerce from `Finset` to `Set` to use `Monotone.biUnion_Ico_Ioc_map_succ`.
-  refine Finset.coe_injective ?_
-  simp only [coe_Ico, coe_biUnion, coe_range]
-  symm
-  -- Unfortunately, this lemma only exists for `Ioc`.
-  -- Therefore we must subtract one to obtain `Ico`.
-  convert Monotone.biUnion_Ico_Ioc_map_succ (f := (nth Nat.Prime · - 1)) ?_ 0 k using 1
-  · have (a b) := Ioc_sub_one_sub_one_eq_Ico (nth Nat.Prime a) (nth Nat.Prime b)
-      (prime_nth_prime a).ne_zero
-    simp [this]
-  · rw [Ioc_sub_one_sub_one_eq_Ico _ _ (by simp)]
-    simp
-  · intro a b h
-    refine Nat.sub_le_sub_right ?_ 1
-    exact nth_monotone infinite_setOf_prime h
-
--- lemma sum_Ico_eq_sum_sum (k : ℕ) (g : ℕ → ℚ) :
---     ∑ i in Ico 2 (nth Nat.Prime k), g i =
---       (∑ i in range k, ∑ j in Ico (nth Nat.Prime i) (nth Nat.Prime (i + 1)), g j) := by
---   rw [Ico_eq_union k]
---   simp only [Finset.biUnion, Finset.coe_union, Finset.coe_Ico, Finset.coe_range,
---     Finset.sum_biUnion]
---   rfl
-
+-- The supremum below `n` will be constant between `nth p k` and `nth p (k + 1)`.
 lemma csSup_le_eq_of_mem_Ico_nth {p : ℕ → Prop} {n k : ℕ} (hn : n ∈ Ico (nth p k) (nth p (k + 1)))
     (hp : ∀ (hf : (setOf p).Finite), k < #hf.toFinset) :
     sSup {x | p x ∧ x ≤ n} = nth p k := by
@@ -61,14 +37,11 @@ lemma csSup_le_eq_of_mem_Ico_nth {p : ℕ → Prop} {n k : ℕ} (hn : n ∈ Ico 
   refine csSup_eq_of_is_forall_le_of_forall_le_imp_ge ?_ ?_ ?_
   · suffices nth p k ∈ {x | p x ∧ x ≤ n} from Set.nonempty_of_mem this
     simpa [Set.mem_setOf_eq] using ⟨nth_mem k hp, hn.1⟩
-  · -- All elements in the set are less than or equal to `nth p k`.
-    simp only [Set.mem_setOf_eq, and_imp]
+  · simp only [Set.mem_setOf_eq, and_imp]
     intro a ha han
     refine le_nth_of_lt_nth_succ ?_ ha
     exact lt_of_le_of_lt han hn.2
-  · -- Any upper bound in the set is greater than or equal to `nth p k`.
-    -- TODO: I do not understand this.
-    simp only [Set.mem_setOf_eq, and_imp]
+  · simp only [Set.mem_setOf_eq, and_imp]
     intro b hb
     exact hb (nth p k) (nth_mem k hp) hn.1
 
@@ -89,6 +62,7 @@ lemma nth_succ_le_of_nth_lt {p : ℕ → Prop} {k a : ℕ}
   suffices k < i from nth_le_nth' this hi
   exact lt_of_nth_lt_nth hp h
 
+-- The infimum above `n` will be constant between `nth p k` and `nth p (k + 1)`.
 lemma csInf_lt_eq_of_mem_Ico_nth {p : ℕ → Prop} {n k : ℕ} (hn : n ∈ Ico (nth p k) (nth p (k + 1)))
     (hp : ∀ (hf : (setOf p).Finite), k + 1 < #hf.toFinset) :
     sInf {x | p x ∧ n < x} = nth p (k + 1) := by
@@ -129,8 +103,29 @@ theorem number_theory_122216 {P N : ℕ → ℕ}
   _ = ∑ i ∈ Ico (nth Nat.Prime 0) (nth Nat.Prime k), 1 / (P i * N i : ℚ) := by
     rw [nth_prime_zero_eq_two, hk]
   -- Partition the interval into a union of intervals.
-  _ = ∑ k ∈ range k, ∑ i ∈ Ico (nth Nat.Prime k) (nth Nat.Prime (k + 1)), 1 / (P i * N i : ℚ) := by
-    sorry
+  _ = ∑ i ∈ (range k).biUnion fun j ↦ Ico (nth Nat.Prime j) (nth Nat.Prime (j + 1)),
+      1 / (P i * N i : ℚ) := by
+    congr
+    -- We want to split the interval into a union of `Finset.Ico` intervals.
+    -- We have `Monotone.biUnion_Ico_Ioc_map_succ`, which uses `Set.Ioc`.
+    -- Since primes start at 2, we can use `Ioc` and subtract 1.
+    refine Finset.coe_injective ?_
+    symm
+    convert Monotone.biUnion_Ico_Ioc_map_succ (f := fun i ↦ nth Nat.Prime i - 1) ?_ 0 k
+    · rw [coe_biUnion]
+      refine Set.iUnion_congr fun i ↦ ?_
+      simp [Ioc_sub_one_sub_one_eq_Ico (prime_nth_prime i).ne_zero]
+    · rw [coe_Ico, Ioc_sub_one_sub_one_eq_Ico]
+      simp
+    · intro i j hij
+      refine Nat.sub_le_sub_right ?_ 1
+      exact (nth_le_nth h_not_fin).mpr hij
+  -- Use disjointness to sum over indexed union as a nested sum.
+  _ = ∑ j ∈ range k, ∑ i ∈ Ico (nth Nat.Prime j) (nth Nat.Prime (j + 1)), 1 / (P i * N i : ℚ) := by
+    refine sum_biUnion ?_
+    rw [← pairwiseDisjoint_coe]
+    intro j hj i hi hij
+    simpa using (nth_monotone h_not_fin).pairwise_disjoint_on_Ico_succ hij
   -- Replace `P i` and `N i` with constant within interval.
   _ = ∑ j ∈ range k, ∑ i ∈ Ico (nth Nat.Prime j) (nth Nat.Prime (j + 1)),
       1 / (nth Nat.Prime j * nth Nat.Prime (j + 1) : ℚ) := by
