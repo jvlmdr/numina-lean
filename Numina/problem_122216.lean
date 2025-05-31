@@ -54,8 +54,7 @@ lemma Ico_eq_union (k : ℕ) :
 --     Finset.sum_biUnion]
 --   rfl
 
-lemma csSup_le_eq_of_mem_Ico_nth {p : ℕ → Prop}
-    {n k : ℕ} (hn : n ∈ Ico (nth p k) (nth p (k + 1)))
+lemma csSup_le_eq_of_mem_Ico_nth {p : ℕ → Prop} {n k : ℕ} (hn : n ∈ Ico (nth p k) (nth p (k + 1)))
     (hp : ∀ (hf : (setOf p).Finite), k < #hf.toFinset) :
     sSup {x | p x ∧ x ≤ n} = nth p k := by
   simp only [mem_Ico] at hn
@@ -90,8 +89,7 @@ lemma nth_succ_le_of_nth_lt {p : ℕ → Prop} {k a : ℕ}
   suffices k < i from nth_le_nth' this hi
   exact lt_of_nth_lt_nth hp h
 
-lemma csInf_lt_eq_of_mem_Ico_nth (p : ℕ → Prop)
-    {n k : ℕ} (hn : n ∈ Ico (nth p k) (nth p (k + 1)))
+lemma csInf_lt_eq_of_mem_Ico_nth {p : ℕ → Prop} {n k : ℕ} (hn : n ∈ Ico (nth p k) (nth p (k + 1)))
     (hp : ∀ (hf : (setOf p).Finite), k + 1 < #hf.toFinset) :
     sInf {x | p x ∧ n < x} = nth p (k + 1) := by
   simp only [mem_Ico] at hn
@@ -121,18 +119,44 @@ theorem number_theory_122216 {P N : ℕ → ℕ}
       ring
   intro n hn hn_prime
 
-  -- Obtain `i` such that `nth Nat.Prime i = n`.
+  -- Obtain `k` such that `n = nth Nat.Prime k`.
   have h_not_fin : ¬(setOf Nat.Prime).Finite := infinite_setOf_prime
-  obtain ⟨i, hi⟩ : ∃ i, nth Nat.Prime i = n := by
+  obtain ⟨k, hk⟩ : ∃ k, nth Nat.Prime k = n := by
     simpa [h_not_fin] using exists_lt_card_nth_eq hn_prime
 
   calc _
   -- Rewrite as sum over interval from `nth Nat.Prime 0` to `nth Nat.Prime i`.
-  _ = ∑ i ∈ Ico (nth Nat.Prime 0) (nth Nat.Prime i), 1 / (P i * N i : ℚ) := by
-    rw [nth_prime_zero_eq_two, hi]
+  _ = ∑ i ∈ Ico (nth Nat.Prime 0) (nth Nat.Prime k), 1 / (P i * N i : ℚ) := by
+    rw [nth_prime_zero_eq_two, hk]
   -- Partition the interval into a union of intervals.
-  _ = ∑ i ∈ Ico (nth Nat.Prime 0) (nth Nat.Prime i), 1 / (P i * N i : ℚ) := by
+  _ = ∑ k ∈ range k, ∑ i ∈ Ico (nth Nat.Prime k) (nth Nat.Prime (k + 1)), 1 / (P i * N i : ℚ) := by
     sorry
+  -- Replace `P i` and `N i` with constant within interval.
+  _ = ∑ j ∈ range k, ∑ i ∈ Ico (nth Nat.Prime j) (nth Nat.Prime (j + 1)),
+      1 / (nth Nat.Prime j * nth Nat.Prime (j + 1) : ℚ) := by
+    refine sum_congr rfl fun j _ ↦ ?_
+    refine sum_congr rfl fun i hi ↦ ?_
+    congr
+    · rw [hP]
+      refine csSup_le_eq_of_mem_Ico_nth hi ?_
+      simp [h_not_fin]
+    · rw [hN]
+      refine csInf_lt_eq_of_mem_Ico_nth hi ?_
+      simp [h_not_fin]
+  -- Replace the constant sums with multiplication.
+  _ = ∑ j ∈ range k, ↑(nth Nat.Prime (j + 1) - nth Nat.Prime j) /
+      (nth Nat.Prime j * nth Nat.Prime (j + 1) : ℚ) := by simp [div_eq_mul_inv]
+  -- Rewrite difference over product as difference of reciprocals.
+  _ = ∑ j ∈ range k, (1 / nth Nat.Prime j - 1 / nth Nat.Prime (j + 1) : ℚ) := by
+    simp only [one_div]
+    refine sum_congr rfl fun j _ ↦ ?_
+    rw [cast_sub (nth_monotone infinite_setOf_prime (j.le_add_right 1))]
+    refine (inv_sub_inv ?_ ?_).symm
+    · simpa using (prime_nth_prime j).ne_zero
+    · simpa using (prime_nth_prime (j + 1)).ne_zero
+  -- Cancel terms in telescoping sum.
   _ = _ := by
-
-    sorry
+    rw [sum_range_sub', hk]
+    simp only [nth_prime_zero_eq_two, one_div]
+    refine inv_sub_inv two_ne_zero ?_
+    simpa using hn_prime.ne_zero
