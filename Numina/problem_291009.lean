@@ -26,15 +26,34 @@ lemma mersenne_succ (n : ℕ) : mersenne (n + 1) = 2 * mersenne n + 1 := by
   simp only [succ_mersenne, pow_succ']
 
 -- Defined in analogy to `Nat.digits_add`.
--- For the sum of the digits, we do not require `x ≠ 0` or `y ≠ 0`.
+-- For the digit sum, we do not require `x ≠ 0` or `y ≠ 0`.
 lemma sum_digits_add {b : ℕ} (hb : 1 < b) {x y : ℕ} (hxb : x < b) :
-    (Nat.digits b (x + b * y)).sum = x + (Nat.digits b y).sum := by
+    (b.digits (x + b * y)).sum = x + (b.digits y).sum := by
   cases y with
   | zero =>
     cases x with
     | zero => simp
     | succ x => simp [hxb]
   | succ y => rw [Nat.digits_add b hb _ _ hxb] <;> simp
+
+-- For the digit sum, we can ignore whether `y` is non-zero, whether zeros must be inserted.
+lemma sum_digits_add_base_pow_mul {b : ℕ} (hb : 1 < b) {x k y : ℕ} (hxb : x < b ^ k) :
+    (b.digits (x + b ^ k * y)).sum = (b.digits x).sum + (b.digits y).sum := by
+  cases y.eq_zero_or_pos with
+  | inl hy => simp [hy]
+  | inr hy =>
+    calc _
+    _ = (b.digits x ++ List.replicate (k - (b.digits x).length) 0 ++
+        b.digits y).sum := by
+      rw [Nat.digits_append_zeroes_append_digits hb hy]
+      congr
+      suffices (b.digits x).length ≤ k from (Nat.add_sub_of_le this).symm
+      cases eq_or_ne x 0 with
+      | inl hx => simp [hx]
+      | inr hx =>
+        rw [Nat.digits_len _ _ hb hx]
+        exact Nat.log_lt_of_lt_pow hx hxb
+    _ = _ := by simp
 
 -- Given that two numbers sum to `11⋯1` in binary, they will have complementary digits.
 -- We cannot have a carry in any place, otherwise a zero would result in `a + b`.
@@ -77,52 +96,41 @@ lemma sum_digits_of_add_eq_mersenne (n a b : ℕ) (hab : a + b = mersenne n) :
 
 theorem number_theory_291009 (n : ℕ) :
     (Nat.digits 2 (n * (2 ^ n - 1))).count 1 = n := by
-  cases n with | zero => simp | succ n =>
-  cases n with | zero => simp | succ n =>
-  simp only [add_assoc, Nat.reduceAdd]
+  -- Introduce the assumption that `1 < n`; trivial to show for `n = 0` or `n = 1`.
+  wlog hn : 1 < n
+  · rw [not_lt] at hn
+    interval_cases n <;> simp
 
-  let t := 2 ^ (n + 2) - (n + 2)
-  let s := n + 1
-  have ht_int : (t : ℤ) = 2 ^ (n + 2) - (n + 2) := by
-    unfold t
-    simp [Nat.cast_sub Nat.lt_two_pow_self.le]
+  let s := n - 1
+  let t := 2 ^ n - n
+  -- Show that both `s` and `t` are positive.
+  have hs_pos : 0 < s := by simpa [s] using hn
+  have ht_pos : 0 < t := by simpa [t] using Nat.lt_two_pow_self
+  -- Show that the subtraction in the natural numbers does not result in a truncation.
+  -- This will be useful for using the `ring` tactic in `ℤ`.
+  have hs_int : (s : ℤ) = n - 1 := by simp [Nat.cast_sub hn.le]
+  have ht_int : (t : ℤ) = 2 ^ n - n := by simp [Nat.cast_sub Nat.lt_two_pow_self.le]
 
-  have h_eq : (n + 2) * (2 ^ (n + 2) - 1) = 2 ^ (n + 2) * s + t := by
-    suffices (n + 2) * (2 ^ (n + 2) - 1) = 2 ^ (n + 2) * s + (t : ℤ) by simpa [← @Nat.cast_inj ℤ]
-    unfold s
-    simp only [ht_int, Nat.cast_add, Nat.cast_one]
+  -- Show that we can rewrite `n * (2 ^ n - 1)` as a combination of `t < 2 ^ n` and `2 ^ n * s`.
+  have h_eq : n * (2 ^ n - 1) = t + 2 ^ n * s := by
+    suffices n * (2 ^ n - 1) = (t + 2 ^ n * s : ℤ) by
+      rw [← @Nat.cast_inj ℤ]
+      simpa
+    rw [hs_int, ht_int]
+    ring
+  -- Show that the two numbers add to give `2 ^ n - 1`, which is a string of 1s in binary.
+  have h_add : t + s = 2 ^ n - 1 := by
+    suffices (t + s : ℤ) = 2 ^ n - 1 by
+      rw [← @Nat.cast_inj ℤ]
+      simpa
+    rw [hs_int, ht_int]
     ring
 
-  have h_add : s + t = 2 ^ (n + 2) - 1 := by
-    suffices s + (t : ℤ) = 2 ^ (n + 2) - 1 by simpa [← @Nat.cast_inj ℤ]
-    unfold s
-    simp only [ht_int, Nat.cast_add, Nat.cast_one]
-    ring
-
-  have ht_pos : 0 < t := by
-    unfold t
-    simpa [t] using Nat.lt_two_pow_self
-
-  have h_digits : Nat.digits 2 ((n + 2) * (2 ^ (n + 2) - 1)) =
-      Nat.digits 2 t ++ List.replicate ((n + 2) - (Nat.digits 2 t).length) 0 ++ Nat.digits 2 s := by
-    rw [Nat.digits_append_zeroes_append_digits one_lt_two n.zero_lt_succ]
-    congr 1
-    convert h_eq using 1
-    have : (Nat.digits 2 t).length ≤ n + 2 := by
-      rw [Nat.digits_len _ _ one_lt_two ht_pos.ne']
-      change Nat.log 2 t < n + 2
-      refine Nat.log_lt_of_lt_pow ht_pos.ne' ?_
-      unfold t
-      simp
-    simp [this]  -- TODO
-    ring
-
-  rw [h_digits]
-
-  simp only [List.count_append]
-  rw [List.count_replicate]
-  simp only [Nat.reduceBEq, Bool.false_eq_true, ↓reduceIte, add_zero]  -- TODO: lemma?
-
-  simp only [count_one_digits_two_eq_sum]
-  rw [add_comm]
-  exact sum_digits_of_add_eq_mersenne (n + 2) s t h_add
+  -- Switch from count of 1s to sum of digits.
+  rw [count_one_digits_two_eq_sum]
+  -- Substitute expression using `s, t`.
+  rw [h_eq]
+  -- Separate into sums of digits of each.
+  rw [sum_digits_add_base_pow_mul one_lt_two (by simp [t, Nat.zero_lt_of_lt hn])]
+  -- Use the result for two natural numbers that add to a Mersenne number.
+  exact sum_digits_of_add_eq_mersenne n t s h_add
