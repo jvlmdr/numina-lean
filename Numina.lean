@@ -77,6 +77,7 @@ import Numina.problem_280132
 import Numina.problem_287054
 import Numina.problem_289784
 import Numina.problem_290058
+import Numina.problem_291009
 import Numina.problem_295444
 import Numina.problem_99850
 import Numina.problem_def
