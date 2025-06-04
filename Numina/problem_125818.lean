@@ -6,20 +6,20 @@ import Mathlib
 /- Find all integers $k > 1$ such that for some distinct positive integers $a, b$, the number
 $k^a + 1$ can be obtained from $k^b + 1$ by reversing the order of its (decimal) digits. -/
 
-lemma digits_pow_add_one_of_ne_zero {b : ℕ} (hb : 1 < b) {n : ℕ} (hn : n ≠ 0) :
-    Nat.digits b (b ^ n + 1) = 1 :: (List.replicate (n - 1) 0 ++ [1]) := by
-  calc _
-  _ = Nat.digits b (1 + b ^ n) := by rw [add_comm]
-  _ = Nat.digits b 1 ++ List.replicate (n - 1) 0 ++ Nat.digits b 1 := by
-    rw [Nat.digits_append_zeroes_append_digits hb one_pos]
-    congr 1
-    have hn : 1 ≤ n := Nat.one_le_iff_ne_zero.mpr hn
-    simp [hb, hn]
-  _ = _ := by simp [hb]
+-- The number `b ^ (n + 1) + 1` is 100⋯01 (with `n` zeros) in base `b`.
+lemma digits_succ_base_pow_succ {b : ℕ} (hb : 1 < b) (n : ℕ) :
+    b.digits (b ^ (n + 1) + 1) = 1 :: (List.replicate n 0 ++ [1]) := by
+  simpa [hb, add_comm 1] using (@Nat.digits_append_zeroes_append_digits b n 1 1 hb one_pos).symm
+
+-- -- The number `b ^ n + 1` is 100⋯01 (with `n - 1` zeros) in base `b` for `n ≠ 0`.
+-- lemma digits_succ_base_pow_of_ne_zero {b : ℕ} (hb : 1 < b) {n : ℕ} (hn : n ≠ 0) :
+--     b.digits (b ^ n + 1) = 1 :: (List.replicate (n - 1) 0 ++ [1]) := by
+--   suffices 1 ≤ n by simpa [this] using digits_succ_base_pow_succ hb (n - 1)
+--   simpa [Nat.one_le_iff_ne_zero]
 
 -- Need to exclude the case where `n = 0` and `b = 2`, where `2 ^ 0 + 1 = 2 = 10 (base 2)`.
 lemma digits_pow_add_one_palindrome {b : ℕ} (hb : 1 < b) (n : ℕ) (h : b ≠ 2 ∨ n ≠ 0) :
-    (Nat.digits b (b ^ n + 1)).Palindrome := by
+    (b.digits (b ^ n + 1)).Palindrome := by
   refine .of_reverse_eq ?_
   cases n with
   | zero =>
@@ -28,16 +28,15 @@ lemma digits_pow_add_one_palindrome {b : ℕ} (hb : 1 < b) (n : ℕ) (h : b ≠ 
       suffices 2 < b by simp [this]
       exact Nat.lt_of_le_of_ne hb h.symm
     | inr h => contradiction
-  | succ n =>
-    rw [digits_pow_add_one_of_ne_zero hb (by simp)]
-    simp
+  | succ n => simp [digits_succ_base_pow_succ hb]
 
+-- The reverse of a list is a palindrome iff the list is a palindrome.
 lemma reverse_palindrome (l : List ℕ) : l.reverse.Palindrome ↔ l.Palindrome := by
   simp [List.Palindrome.iff_reverse_eq, eq_comm]
 
 lemma strictMono_len_digits_pow_add_one_of_base_lt {b : ℕ} (hb : 1 < b) {k : ℕ} (hk : b < k)
     {x y : ℕ} (hx : x ≠ 0) (hy : y ≠ 0) (hxy : x < y) :
-    (Nat.digits b (k ^ x + 1)).length < (Nat.digits b (k ^ y + 1)).length := by
+    (b.digits (k ^ x + 1)).length < (b.digits (k ^ y + 1)).length := by
   simp only [Nat.digits_len b _ hb (Nat.add_one_ne_zero _)]
   rw [add_lt_add_iff_right]
   suffices (k ^ x + 1) * b ≤ k ^ y + 1 by
@@ -57,13 +56,41 @@ lemma strictMono_len_digits_pow_add_one_of_base_lt {b : ℕ} (hb : 1 < b) {k : �
   _ = k ^ (x + 1) + 1 := by ring
   _ ≤ _ := by gcongr <;> linarith
 
-lemma base_le_of_not_digits_palindrome (b : ℕ) {x : ℕ} (hx : ¬(Nat.digits b x).Palindrome) :
+lemma base_le_of_not_digits_palindrome (b : ℕ) {x : ℕ} (hx : ¬(b.digits x).Palindrome) :
     b ≤ x := by
   contrapose! hx
   cases x with
   | zero => simpa using List.Palindrome.nil
   | succ x => simpa [Nat.digits_of_lt _ _ _ hx] using List.Palindrome.singleton _
 
+-- -- Defined in analogy to `List.exists_cons_of_ne_nil`.
+-- lemma exist_concat_of_ne_nil {α : Type*} {l : List α} (hl : l ≠ []) :
+--     ∃ (s : List α) (x : α), l = s ++ [x] := by
+--   obtain ⟨x, s, h⟩ := List.exists_cons_of_ne_nil (List.reverse_ne_nil_iff.mpr hl)
+--   use s.reverse, x
+--   simpa using h
+
+-- The last digit of a number is the number divided by `10 ^ (m - 1)`
+lemma digits_getLast_eq_div_base_pow {b : ℕ} (hb : 1 < b) {n : ℕ} (h_nil : b.digits n ≠ []) :
+    (b.digits n).getLast h_nil = n / b ^ ((b.digits n).length - 1) := by
+  symm
+  simpa [List.drop_length_sub_one h_nil, Nat.ofDigits_digits] using
+    Nat.ofDigits_div_pow_eq_ofDigits_drop ((b.digits n).length - 1)
+      (Nat.zero_lt_of_lt hb) (b.digits n) fun _ ↦ Nat.digits_lt_base hb
+
+-- Iff version of `Nat.div_eq_of_lt_le`.
+lemma nat_div_eq_iff {k x y : ℕ} (h : 0 < k) : x / k = y ↔ y * k ≤ x ∧ x < (y + 1) * k := by
+  rw [Nat.eq_iff_le_and_ge, and_comm]
+  refine and_congr ?_ ?_
+  · rw [Nat.le_div_iff_mul_le h]
+  · rw [← Nat.lt_add_one_iff, Nat.div_lt_iff_lt_mul h]
+
+lemma digits_getLast_eq_iff_mem_Ico {b : ℕ} (hb : 1 < b) {n : ℕ} (h_nil : b.digits n ≠ []) (x : ℕ) :
+    (b.digits n).getLast h_nil = x ↔
+    n ∈ Set.Ico (x * b ^ ((b.digits n).length - 1)) ((x + 1) * b ^ ((b.digits n).length - 1)) := by
+  rw [digits_getLast_eq_div_base_pow hb]
+  rw [nat_div_eq_iff (Nat.pow_pos <| Nat.zero_lt_of_lt hb)]
+  simp
 
 theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
     (∃ a b, 0 < a ∧ 0 < b ∧ a ≠ b ∧
@@ -166,7 +193,7 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
     refine Nat.sub_le_of_le_add ?_
     simpa [two_mul] using hba
 
-  have : k ^ b + 1 > (k ^ a + 1) * (k ^ (b - a) - 1) := by
+  have h_x_mul_lt_y : k ^ b + 1 > (k ^ a + 1) * (k ^ (b - a) - 1) := by
     calc _
     _ > k ^ b - 1 := Nat.sub_lt_succ _ 1
     _ ≥ k ^ b - (k ^ a - k ^ (b - a)) - 1 := by
@@ -181,6 +208,8 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
       suffices k ^ b = k ^ a * k ^ (b - a) by simp [mul_tsub, Nat.sub_add_eq, add_mul, this]
       rw [← pow_add]
       simp [hab.le]
+
+  replace h_mul_x_lt_y : (k ^ (b - a) - 1) * (k ^ a + 1) < k ^ b + 1 := by sorry
 
   have : k ^ (b - a) - 1 < 9 := by
     refine Nat.lt_of_le_of_ne ?_ ?_
@@ -197,4 +226,68 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
 
   refine hk.resolve_right fun hk ↦ ?_
 
-  sorry
+  have : 5 ≤ k ^ (b - a) - 1 := by
+    suffices 6 ≤ k ^ (b - a) from le_tsub_of_add_le_right this
+    suffices 6 ≤ k by
+      refine le_trans this (Nat.le_self_pow ?_ k)
+      simpa [Nat.sub_ne_zero_iff_lt]
+    suffices ∀ k, k = 6 ∨ k = 9 → 6 ≤ k from this k hk
+    simp
+
+  replace h_mul_x_lt_y : 5 * (k ^ a + 1) < k ^ b + 1 := by
+    refine lt_of_le_of_lt ?_ h_mul_x_lt_y
+    gcongr
+
+  -- Since `k ^ b + 1 > (k ^ (b - a) - 1) * (k ^ a + 1)` and `k ^ (b - a) - 1 ≥ 5`, the first digit
+  -- of `k ^ a + 1` must be 1. Otherwise, `k ^ b + 1` would have more digits than `k ^ a + 1`.
+  -- Due to the reverse relation, this means that the last digit of `k ^ b + 1` is 1.
+  -- Therefore, the last digit of `k ^ b` is 0. This is impossible: it implies that `10 ∣ k ^ b`.
+  have h_not_ten_dvd : ¬10 ∣ k ^ b := by
+    change ¬2 * 5 ∣ k ^ b
+    suffices ¬5 ∣ k ^ b from mt dvd_of_mul_left_dvd this
+    suffices ¬5 ∣ k from mt Nat.prime_five.dvd_of_dvd_pow this
+    suffices ∀ k, k = 6 ∨ k = 9 → ¬5 ∣ k from this k hk
+    norm_num
+
+  have h_len : (Nat.digits 10 (k ^ a + 1)).length = (Nat.digits 10 (k ^ b + 1)).length := by
+    simpa using congrArg List.length h_dig
+
+  have hx_nil : Nat.digits 10 (k ^ a + 1) ≠ [] := by simp
+  --   exact Nat.le_of_lt_succ ha_pow_ge
+  have hx_getLast : (Nat.digits 10 (k ^ a + 1)).getLast hx_nil = 1 := by
+    rw [digits_getLast_eq_iff_mem_Ico (by norm_num)]
+    -- generalize hm : (Nat.digits 10 (k ^ a + 1)).length = m
+    -- We know that `k ^ b + 1` has the same number of digits as `k ^ a + 1`.
+    -- We have `5 * (k ^ a + 1) < k ^ b + 1 < 10 ^ (m + 1)` and `10 ^ (m - 1) ≤ k ^ a + 1`.
+    -- Therefore, `k ^ a + 1 < 10 ^ (m + 1) / 5 = 2 * 10 ^ m`.
+    simp only [one_mul, Nat.reduceAdd, Set.mem_Ico]
+    constructor
+    -- The lower bound is simply from the order of magnitude.
+    · suffices 10 ^ ((Nat.digits 10 (k ^ a + 1)).length - 1 + 1) ≤ 10 * (k ^ a + 1) by
+        simpa [Nat.pow_succ']
+      rw [Nat.sub_add_cancel (by simp)]
+      exact Nat.base_pow_length_digits_le 10 _ (by norm_num) (by simp)
+    -- TODO: Comment here.
+    · have : 5 * (k ^ a + 1) < 10 ^ (Nat.digits 10 (k ^ a + 1)).length := by
+        calc _
+        _ < k ^ b + 1 := h_mul_x_lt_y
+        _ < 10 ^ (Nat.digits 10 (k ^ b + 1)).length :=
+          Nat.lt_base_pow_length_digits'
+        _ = _ := by rw [h_len]
+      -- TODO: Might be easier to multiply on right?
+      suffices 5 * (k ^ a + 1) < 5 * (2 * 10 ^ ((Nat.digits 10 (k ^ a + 1)).length - 1)) by
+        simpa
+      convert this using 1  -- TODO: Combine?
+      calc _
+      _ = 10 ^ ((Nat.digits 10 (k ^ a + 1)).length - 1 + 1) := by ring
+      _ = _ := by simp
+
+  have hy_nil : Nat.digits 10 (k ^ b + 1) ≠ [] := by simp
+  have hy_head : (Nat.digits 10 (k ^ b + 1)).head hy_nil = 1 := by
+    rw [List.head_eq_getLast_reverse]
+    simpa only [h_dig] using hx_getLast
+  have hy_mod : (k ^ b + 1) % 10 = 1 := by simpa using hy_head
+  have hy_mod : k ^ b ≡ 0 [MOD 10] := Nat.ModEq.add_right_cancel' 1 hy_mod
+  have hy_mod : 10 ∣ k ^ b := Nat.dvd_of_mod_eq_zero hy_mod
+
+  exact h_not_ten_dvd hy_mod
