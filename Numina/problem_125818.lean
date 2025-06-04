@@ -92,6 +92,19 @@ lemma digits_getLast_eq_iff_mem_Ico {b : ℕ} (hb : 1 < b) {n : ℕ} (h_nil : b.
   rw [nat_div_eq_iff (Nat.pow_pos <| Nat.zero_lt_of_lt hb)]
   simp
 
+lemma pow_eq_iff_eq_of_factorization_eq_one (n p x : ℕ) (hp : p.Prime)
+    (h : n.factorization p = 1) :
+    (∃ k, x ^ k = n) ↔ x = n := by
+  constructor
+  · intro ⟨k, hn⟩
+    have h : (x ^ k).factorization p = 1 := by rw [hn, h]
+    -- TODO: clean up
+    have ⟨hk, h⟩ : k = 1 ∧ x.factorization p = 1 := by simpa using h
+    simpa [hk] using hn
+  · intro h
+    use 1
+    simp [h]
+
 theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
     (∃ a b, 0 < a ∧ 0 < b ∧ a ≠ b ∧
       Nat.digits 10 (k ^ a + 1) = (Nat.digits 10 (k ^ b + 1)).reverse) ↔
@@ -147,6 +160,7 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
   -- Combining these, we have `10 < k ^ a + 1`.
   have ha_pow_gt : 10 < k ^ a + 1 := Nat.lt_of_le_of_ne ha_pow_ge ha_pow_ne.symm
 
+  -- TODO: is this needed?
   have hb_pow_gt : 10 < k ^ b + 1 := Nat.lt_of_le_of_ne sorry sorry
 
   -- Since `k ^ a + 1` and `k ^ b + 1` have the same number of digits,
@@ -209,12 +223,23 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
       rw [← pow_add]
       simp [hab.le]
 
-  replace h_mul_x_lt_y : (k ^ (b - a) - 1) * (k ^ a + 1) < k ^ b + 1 := by sorry
+  -- TODO: use this form above
+  replace h_mul_x_lt_y : (k ^ (b - a) - 1) * (k ^ a + 1) < k ^ b + 1 := by
+    simpa [mul_comm] using h_x_mul_lt_y
 
   have : k ^ (b - a) - 1 < 9 := by
     refine Nat.lt_of_le_of_ne ?_ ?_
-    · sorry
-    · sorry
+    · suffices k ^ (b - a) - 1 < 10 from Nat.le_of_lt_succ this
+      -- TODO: if only used here, move inside?
+      simpa using lt_trans (h_mul_x_lt_y) hb_pow_lt_ten_mul
+    · suffices k ^ (b - a) ≠ 10 by simpa
+      -- Since 10 contains factors with multiplicity one, the only way to satisfy
+      -- `k ^ r = 10` is with `k = 10`. This is a contradiction since `k < 10`.
+      intro h
+      suffices k = 10 by simp [this] at hk_lt
+      refine (pow_eq_iff_eq_of_factorization_eq_one 10 2 k Nat.prime_two ?_).mp ⟨_, h⟩
+      suffices Nat.factorization (2 * 5) 2 = 1 by simpa
+      rw [Nat.factorization_mul_of_coprime] <;> norm_num
 
   have hk : k = 3 ∨ k = 6 ∨ k = 9 := by
     suffices 3 ∣ k by
