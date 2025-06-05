@@ -11,30 +11,14 @@ lemma digits_succ_base_pow_succ {b : ℕ} (hb : 1 < b) (n : ℕ) :
     b.digits (b ^ (n + 1) + 1) = 1 :: (List.replicate n 0 ++ [1]) := by
   simpa [hb, add_comm 1] using (@Nat.digits_append_zeroes_append_digits b n 1 1 hb one_pos).symm
 
--- -- The number `b ^ n + 1` is 100⋯01 (with `n - 1` zeros) in base `b` for `n ≠ 0`.
--- lemma digits_succ_base_pow_of_ne_zero {b : ℕ} (hb : 1 < b) {n : ℕ} (hn : n ≠ 0) :
---     b.digits (b ^ n + 1) = 1 :: (List.replicate (n - 1) 0 ++ [1]) := by
---   suffices 1 ≤ n by simpa [this] using digits_succ_base_pow_succ hb (n - 1)
---   simpa [Nat.one_le_iff_ne_zero]
+-- The number `b ^ n + 1` is 100⋯01 (with `n - 1` zeros) in base `b` for `n ≠ 0`.
+lemma digits_succ_base_pow_of_ne_zero {b : ℕ} (hb : 1 < b) {n : ℕ} (hn : n ≠ 0) :
+    b.digits (b ^ n + 1) = 1 :: (List.replicate (n - 1) 0 ++ [1]) := by
+  suffices 1 ≤ n by simpa [this] using digits_succ_base_pow_succ hb (n - 1)
+  simpa [Nat.one_le_iff_ne_zero]
 
--- Need to exclude the case where `n = 0` and `b = 2`, where `2 ^ 0 + 1 = 2 = 10 (base 2)`.
-lemma digits_pow_add_one_palindrome {b : ℕ} (hb : 1 < b) (n : ℕ) (h : b ≠ 2 ∨ n ≠ 0) :
-    (b.digits (b ^ n + 1)).Palindrome := by
-  refine .of_reverse_eq ?_
-  cases n with
-  | zero =>
-    cases h with
-    | inl h =>
-      suffices 2 < b by simp [this]
-      exact Nat.lt_of_le_of_ne hb h.symm
-    | inr h => contradiction
-  | succ n => simp [digits_succ_base_pow_succ hb]
-
--- The reverse of a list is a palindrome iff the list is a palindrome.
-lemma reverse_palindrome (l : List ℕ) : l.reverse.Palindrome ↔ l.Palindrome := by
-  simp [List.Palindrome.iff_reverse_eq, eq_comm]
-
-lemma strictMono_len_digits_pow_add_one_of_base_lt {b : ℕ} (hb : 1 < b) {k : ℕ} (hk : b < k)
+-- The number of digits in `k ^ · + 1` in base `b` is *strictly* increasing for `b < k`.
+lemma strictMono_len_digits_succ_pow_of_base_lt {b : ℕ} (hb : 1 < b) {k : ℕ} (hk : b < k)
     {x y : ℕ} (hx : x ≠ 0) (hy : y ≠ 0) (hxy : x < y) :
     (b.digits (k ^ x + 1)).length < (b.digits (k ^ y + 1)).length := by
   simp only [Nat.digits_len b _ hb (Nat.add_one_ne_zero _)]
@@ -56,20 +40,18 @@ lemma strictMono_len_digits_pow_add_one_of_base_lt {b : ℕ} (hb : 1 < b) {k : �
   _ = k ^ (x + 1) + 1 := by ring
   _ ≤ _ := by gcongr <;> linarith
 
-lemma base_le_of_not_digits_palindrome (b : ℕ) {x : ℕ} (hx : ¬(b.digits x).Palindrome) :
-    b ≤ x := by
-  contrapose! hx
-  cases x with
-  | zero => simpa using List.Palindrome.nil
-  | succ x => simpa [Nat.digits_of_lt _ _ _ hx] using List.Palindrome.singleton _
+-- Extend this result to include `b = k`.
+lemma strictMono_len_digits_succ_pow_of_base_le {b : ℕ} (hb : 1 < b) {k : ℕ} (hk : b ≤ k)
+    {x y : ℕ} (hx : x ≠ 0) (hy : y ≠ 0) (hxy : x < y) :
+    (b.digits (k ^ x + 1)).length < (b.digits (k ^ y + 1)).length := by
+  refine hk.eq_or_lt.elim ?_ fun hk ↦ strictMono_len_digits_succ_pow_of_base_lt hb hk hx hy hxy
+  rintro rfl
+  -- Replace `x, y` with `x + 1, y + 1`.
+  obtain ⟨x, rfl⟩ := Nat.exists_eq_succ_of_ne_zero hx
+  obtain ⟨y, rfl⟩ := Nat.exists_eq_succ_of_ne_zero hy
+  simpa [digits_succ_base_pow_succ hb] using hxy
 
--- -- Defined in analogy to `List.exists_cons_of_ne_nil`.
--- lemma exist_concat_of_ne_nil {α : Type*} {l : List α} (hl : l ≠ []) :
---     ∃ (s : List α) (x : α), l = s ++ [x] := by
---   obtain ⟨x, s, h⟩ := List.exists_cons_of_ne_nil (List.reverse_ne_nil_iff.mpr hl)
---   use s.reverse, x
---   simpa using h
-
+-- The difference of two numbers is divisible by 9 if the sum of their digits is equal.
 lemma nine_dvd_sub_of_digits_eq {x y : ℕ} (h : (Nat.digits 10 x).sum = (Nat.digits 10 y).sum) :
     (9 : ℤ) ∣ y - x := by
   refine Nat.modEq_iff_dvd.mp ?_
@@ -78,8 +60,7 @@ lemma nine_dvd_sub_of_digits_eq {x y : ℕ} (h : (Nat.digits 10 x).sum = (Nat.di
   _ ≡ (Nat.digits 10 y).sum [MOD 9] := by rw [h]
   _ ≡ _ [MOD 9] := (Nat.modEq_nine_digits_sum y).symm
 
--- Could be useful?
--- TODO: Remove if not.
+-- The same result using truncated subtraction; trivial since any numbers divides zero.
 lemma nine_dvd_tsub_of_digits_eq {x y : ℕ} (h : (Nat.digits 10 x).sum = (Nat.digits 10 y).sum) :
     9 ∣ y - x := by
   cases le_or_lt y x with
@@ -89,8 +70,7 @@ lemma nine_dvd_tsub_of_digits_eq {x y : ℕ} (h : (Nat.digits 10 x).sum = (Nat.d
     rw [Nat.cast_sub hxy.le]
     exact nine_dvd_sub_of_digits_eq h
 
-
--- The last digit of a number is the number divided by `10 ^ (m - 1)`
+-- The last digit of a number is its division by `b ^ (m - 1)` where `m` is the number of digits.
 lemma digits_getLast_eq_div_base_pow {b : ℕ} (hb : 1 < b) {n : ℕ} (h_nil : b.digits n ≠ []) :
     (b.digits n).getLast h_nil = n / b ^ ((b.digits n).length - 1) := by
   symm
@@ -105,6 +85,7 @@ lemma nat_div_eq_iff {k x y : ℕ} (h : 0 < k) : x / k = y ↔ y * k ≤ x ∧ x
   · rw [Nat.le_div_iff_mul_le h]
   · rw [← Nat.lt_add_one_iff, Nat.div_lt_iff_lt_mul h]
 
+-- The last digit of a number corresponds to an interval in which the number lies.
 lemma digits_getLast_eq_iff_mem_Ico {b : ℕ} (hb : 1 < b) {n : ℕ} (h_nil : b.digits n ≠ []) (x : ℕ) :
     (b.digits n).getLast h_nil = x ↔
     n ∈ Set.Ico (x * b ^ ((b.digits n).length - 1)) ((x + 1) * b ^ ((b.digits n).length - 1)) := by
@@ -112,6 +93,7 @@ lemma digits_getLast_eq_iff_mem_Ico {b : ℕ} (hb : 1 < b) {n : ℕ} (h_nil : b.
   rw [nat_div_eq_iff (Nat.pow_pos <| Nat.zero_lt_of_lt hb)]
   simp
 
+-- TODO: clean up. should be easier... k * factorization ≠ 0?
 lemma pow_eq_iff_eq_of_factorization_eq_one (n p x : ℕ) (hp : p.Prime)
     (h : n.factorization p = 1) :
     (∃ k, x ^ k = n) ↔ x = n := by
@@ -124,6 +106,27 @@ lemma pow_eq_iff_eq_of_factorization_eq_one (n p x : ℕ) (hp : p.Prime)
   · intro h
     use 1
     simp [h]
+
+-- If two numbers have the same number of digits, then each must be less than `b` times the other.
+lemma lt_base_mul_of_digits_len_eq {b : ℕ} (hb : 1 < b) {x y : ℕ} (h_zero : x ≠ 0 ∨ y ≠ 0)
+    (h_len : (Nat.digits b x).length = (Nat.digits b y).length) : y < b * x := by
+  -- Since `x, y` have the same number of digits, it suffices to show that either is not zero.
+  have ⟨hx, hy⟩ : x ≠ 0 ∧ y ≠ 0 := by
+    suffices x ≠ 0 ↔ y ≠ 0 by refine h_zero.elim ?_ ?_ <;> simp [this]
+    suffices (b.digits x).length ≠ 0 ↔ (b.digits y).length ≠ 0 by
+      simpa [Nat.digits_ne_nil_iff_ne_zero] using this
+    rw [h_len]
+  -- Use the fact that `b.log (b * n) = b.log n + 1`.
+  suffices y < b * b ^ b.log x by
+    refine lt_of_lt_of_le this ?_
+    gcongr
+    exact Nat.pow_log_le_self b hx
+  suffices y < b ^ (b.log x + 1) by simpa [pow_succ']
+  suffices b.log y < b.log x + 1 from (Nat.lt_pow_iff_log_lt hb hy).mpr this
+  rw [Nat.lt_add_one_iff]
+  -- This follows from the fact that they have the same number of digits.
+  refine ge_of_eq ?_
+  simpa [Nat.digits_len, hb, hx, hy] using h_len
 
 theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
     (∃ a b, 0 < a ∧ 0 < b ∧ a ≠ b ∧
@@ -140,170 +143,139 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
     · simpa using congrArg List.reverse h_dig.symm
     · exact lt_of_le_of_ne hab h_ne.symm
 
-  -- We know that both numbers cannot be palindromes, as this would imply `a = b`.
-  have hb_npal : ¬(Nat.digits 10 (k ^ b + 1)).Palindrome := by
-    refine mt (fun h ↦ ?_) h_ne
-    suffices k ^ a = k ^ b from Nat.pow_right_injective hk_gt this
-    rw [h.reverse_eq] at h_dig
-    simpa using Nat.digits.injective 10 h_dig
-  have ha_npal : ¬(Nat.digits 10 (k ^ a + 1)).Palindrome := by
-    simpa only [h_dig, reverse_palindrome]
+  -- Properties of the digits which are unaffected by the reversal:
+  have h_len : (Nat.digits 10 (k ^ a + 1)).length = (Nat.digits 10 (k ^ b + 1)).length := by
+    simpa only [List.length_reverse] using congrArg List.length h_dig
+  have h_sum : (Nat.digits 10 (k ^ a + 1)).sum = (Nat.digits 10 (k ^ b + 1)).sum := by
+    simpa only [List.sum_reverse] using congrArg List.sum h_dig
 
-  -- Eliminate the case where `k = 10` as the number is a palindrome.
-  have hk_ne : k ≠ 10 := by
-    refine mt (fun hk ↦ ?_) hb_npal
-    rw [hk]
-    exact digits_pow_add_one_palindrome (by norm_num) b (by simp)
-  -- We cannot have `k > 10` as `k ^ b + 1` will have more digits than `k ^ a + 1`.
-  have hk_le : k ≤ 10 := by
-    refine le_of_not_lt fun hk_gt ↦ ?_
-    suffices (Nat.digits 10 (k ^ a + 1)).length ≠ (Nat.digits 10 (k ^ b + 1)).length by
-      refine this ?_
-      simpa using congrArg List.length h_dig
+  -- We cannot have `10 ≤ k` as `k ^ b + 1` will have more digits than `k ^ a + 1`.
+  have hk_lt : k < 10 := by
+    contrapose! h_len with hk_ge
     refine ne_of_lt ?_
-    exact strictMono_len_digits_pow_add_one_of_base_lt (by norm_num) hk_gt ha.ne' hb.ne' hab
-  -- Combine these results into `k < 10`. TODO: Do we need this?
-  have hk_lt : k < 10 := Nat.lt_of_le_of_ne hk_le hk_ne
+    exact strictMono_len_digits_succ_pow_of_base_le (by norm_num) hk_ge ha.ne' hb.ne' hab
 
-  -- The numbers `k ^ _ + 1` must be at least 10, otherwise they are trivial palindromes.
-  have ha_pow_ge : 10 ≤ k ^ a + 1 := base_le_of_not_digits_palindrome 10 ha_npal
-  -- Clearly `k ^ a + 1` cannot be 10; this would imply the first digit of `k ^ b + 1` is 0.
-  have ha_pow_ne : k ^ a + 1 ≠ 10 := by
-    intro ha_pow
-    refine Nat.getLast_digit_ne_zero 10 (m := k ^ b + 1) (by simp) ?_
-    suffices Nat.digits 10 (k ^ b + 1) = [1, 0] by
-      simp only [this]
-      simp
+  -- Observe that the function `k ^ · + 1` is strictly increasing, hence injective.
+  have hf_strictMono : StrictMono (k ^ · + 1) := (pow_right_strictMono₀ hk_gt).add_const 1
+  -- The number `k ^ a + 1` must be at *least* 10, otherwise its digits are a (trivial) palindrome
+  -- and therefore it is equal to `k ^ b + 1`.
+  have hfa_ge : 10 ≤ k ^ a + 1 := by
+    contrapose! h_ne with hfa
+    suffices k ^ a + 1 = k ^ b + 1 from hf_strictMono.injective this
+    refine Nat.digits.injective 10 ?_
+    have ha_dig := Nat.digits_of_lt 10 _ (by simp) hfa
+    rw [← List.reverse_inj, ← h_dig, ha_dig]
+    simp
+  -- Furthermore, `k ^ a + 1` cannot be equal to 10: the first digit of `k ^ b + 1` would be 0.
+  have hfa_ne : k ^ a + 1 ≠ 10 := by
+    refine mt (fun ha_pow ↦ ?_) (Nat.getLast_digit_ne_zero 10 (m := k ^ b + 1) (by simp))
+    suffices Nat.digits 10 (k ^ b + 1) = [1, 0] by simp [this, -Nat.digits_of_two_le_of_pos]
     calc _
     _ = (Nat.digits 10 (k ^ a + 1)).reverse := List.reverse_eq_iff.mp h_dig.symm
     _ = _ := by simp [ha_pow]
   -- Combining these, we have `10 < k ^ a + 1`.
-  have ha_pow_gt : 10 < k ^ a + 1 := Nat.lt_of_le_of_ne ha_pow_ge ha_pow_ne.symm
+  have hfa_gt : 10 < k ^ a + 1 := Nat.lt_of_le_of_ne hfa_ge hfa_ne.symm
 
-  -- Since `k ^ a + 1` and `k ^ b + 1` have the same number of digits,
-  -- `k ^ b + 1` cannot exceed `10 * (k ^ a + 1)`.
-  have hb_pow_lt_ten_mul : k ^ b + 1 < 10 * (k ^ a + 1) := by
-    -- TODO: clean up?
-    suffices k ^ b + 1 < 10 * 10 ^ Nat.log 10 (k ^ a + 1) by
-      refine lt_of_lt_of_le this ?_
-      gcongr
-      exact Nat.pow_log_le_self 10 (by simp)
-    suffices Nat.log 10 (k ^ b + 1) < Nat.log 10 (k ^ a + 1) + 1 by
-      rw [← pow_succ', Nat.lt_pow_iff_log_lt (by norm_num) (by simp)]
-      exact this
-    rw [Nat.lt_add_one_iff]
-    -- This follows from the fact that they have the same number of digits.
-    refine ge_of_eq ?_
-    simpa [Nat.digits_len 10, -Nat.digits_of_two_le_of_pos] using congrArg List.length h_dig
+  -- Since `k ^ a + 1 < k ^ b + 1` have the same number of digits, we can also bound
+  -- `k ^ b + 1` from above using `10 * (k ^ a + 1)`.
+  have hfb_lt_mul_hfa : k ^ b + 1 < 10 * (k ^ a + 1) :=
+    lt_base_mul_of_digits_len_eq (by norm_num) (by simp) h_len
 
-  -- From this, we can see that we cannot have `2 * a < b`.
+  -- From this, we determine an upper bound on `b`.
   have hba : b ≤ 2 * a := by
+    -- Show that `2 * a < b` leads to a contradiction.
     refine le_of_not_lt fun hab ↦ ?_
-    -- To find a contradiction, we will show that `k ^ a < 10`.
-    suffices k ^ a < 10 from ha_pow_gt.not_le this
-    suffices k ^ a * (k ^ a + 1) < 10 * (k ^ a + 1) from Nat.lt_of_mul_lt_mul_right this
+    -- To find a contradiction, we will prove `k ^ a < 10`.
+    suffices k ^ a < 10 from hfa_gt.not_le this
+    -- This follows from `k ^ a * (k ^ a + 1) ≤ k ^ b < 10 * (k ^ a + 1)`.
+    -- In fact we can prove the strict version of this inequality.
+    suffices k ^ a * (k ^ a + 1) < k ^ b + 1 from
+      Nat.lt_of_mul_lt_mul_right (lt_trans this hfb_lt_mul_hfa)
     calc _
-    _ ≤ k ^ a * k ^ (a + 1) := by
-      gcongr
-      cases k with
-      | zero => contradiction
-      | succ k =>
-        rw [pow_succ', add_mul]
-        gcongr
-        · simpa using hk_gt
-        · simpa using Nat.one_le_pow' a k
+    _ ≤ k ^ a * k ^ (a + 1) := Nat.mul_le_mul_left (k ^ a) (Nat.pow_lt_pow_succ hk_gt)
     _ = k ^ (2 * a + 1) := by ring
-    _ ≤ k ^ b := by
-      gcongr
-      · exact hk_gt.le
-      · exact hab
-    _ < k ^ b + 1 := by simp
-    _ < _ := hb_pow_lt_ten_mul
-  -- ...from which we obtain `b - a ≤ a`.
-  have hba : b - a ≤ a := by
+    _ ≤ k ^ b := Nat.pow_le_pow_of_le hk_gt hab
+    _ < _ := lt_add_one _
+
+  -- This is equivalent to `b - a ≤ a`.
+  -- We use this to bound `k ^ (b - a) ≤ k ^ a`.
+  have hba_sub : b - a ≤ a := by
     refine Nat.sub_le_of_le_add ?_
     simpa [two_mul] using hba
 
-  have h_x_mul_lt_y : k ^ b + 1 > (k ^ a + 1) * (k ^ (b - a) - 1) := by
+  -- Introduce a constant `z = k ^ (b - a) - 1` and show that `z * f a < f b`.
+  let z := k ^ (b - a) - 1
+  have hz : z ≠ 0 := by
+    suffices 1 < k ^ (b - a) from Nat.sub_ne_zero_iff_lt.mpr this
+    refine lt_of_lt_of_le hk_gt (Nat.le_self_pow ?_ k)
+    exact Nat.sub_ne_zero_iff_lt.mpr hab
+  -- Provide an expression for `z` in `ℤ` using non-truncated subtraction.
+  have hz_int : (z : ℤ) = k ^ (b - a) - 1 := by
+    suffices 1 ≤ k ^ (b - a) by simp [Nat.cast_sub this]
+    exact Nat.one_le_pow _ k (Nat.zero_lt_of_lt hk_gt)
+  -- Show that `z * (k ^ a + 1) < k ^ b + 1`.
+  have hz_mul_fa_lt_fb : z * (k ^ a + 1) < k ^ b + 1 := by
+    -- Here it will be easier to work in `ℤ`.
+    suffices (z : ℤ) * (k ^ a + 1) < k ^ b + 1 by simpa [← Int.ofNat_lt]
+    rw [hz_int]
+    calc  _
+    _ = (k ^ (b - a + a) + k ^ (b - a) - k ^ a - 1 : ℤ) := by ring
+    _ = (k ^ b + k ^ (b - a) - k ^ a - 1 : ℤ) := by rw [Nat.sub_add_cancel hab.le]
+    _ ≤ (k ^ b - 1 : ℤ) := by
+      suffices k ^ (b - a) ≤ k ^ a by simpa using Int.ofNat_le.mpr this
+      exact Nat.pow_le_pow_of_le hk_gt hba_sub
+    _ < _ := by linarith
+
+  -- We can see that `z < 10` by combining lower and upper bounds on `k ^ b + 1`:
+  -- `z * (k ^ a + 1) < k ^ b + 1 < 10 * (k ^ a + 1)`.
+  have hz_lt : z < 10 := by simpa using lt_trans hz_mul_fa_lt_fb hfb_lt_mul_hfa
+  -- We can further establish that `z ≠ 9`.
+  have hz_ne : z ≠ 9 := by
+    unfold z
+    suffices k ^ (b - a) ≠ 10 by simpa
+    -- Since 10 contains factors with multiplicity one, the only way to satisfy
+    -- `k ^ r = 10` is with `k = 10`. This is a contradiction since `k < 10`.
+    refine mt (fun h ↦ ?_) hk_lt.ne
+    -- TODO: clean up?
+    refine (pow_eq_iff_eq_of_factorization_eq_one 10 2 k Nat.prime_two ?_).mp ⟨_, h⟩
+    suffices Nat.factorization (2 * 5) 2 = 1 by simpa
+    rw [Nat.factorization_mul_of_coprime] <;> norm_num
+  -- Combine these to obtain `z < 9`.
+  have hz_lt : z < 9 := Nat.lt_of_le_of_ne (Nat.le_of_lt_succ hz_lt) hz_ne
+
+  -- Note that `z` multiplied by `k ^ a` gives `f b - f a`.
+  have hz_mul_eq_sub : z * k ^ a = (k ^ b + 1) - (k ^ a + 1) := by
+    unfold z
     calc _
-    _ > k ^ b - 1 := Nat.sub_lt_succ _ 1
-    _ ≥ k ^ b - (k ^ a - k ^ (b - a)) - 1 := by
-      gcongr
-      simp
-    _ = k ^ b + k ^ (b - a) - k ^ a - 1 := by
-      congr 1
-      refine tsub_tsub_eq_add_tsub_of_le ?_
-      gcongr
-      exact hk_gt.le
-    _ = _ := by
-      suffices k ^ b = k ^ a * k ^ (b - a) by simp [mul_tsub, Nat.sub_add_eq, add_mul, this]
-      rw [← pow_add]
-      simp [hab.le]
+    _ = k ^ (b - a + a) - k ^ a := by simp [pow_add, tsub_mul]
+    _ = _ := by simp [hab.le]
+  -- Since these numbers have the same digit sum, their difference is divisible by 9.
+  have hz_dvd : 9 ∣ z * k ^ a := by
+    rw [hz_mul_eq_sub]
+    exact nine_dvd_tsub_of_digits_eq h_sum
 
-  -- TODO: use this form above
-  replace h_mul_x_lt_y : (k ^ (b - a) - 1) * (k ^ a + 1) < k ^ b + 1 := by
-    simpa [mul_comm] using h_x_mul_lt_y
-
-  have hz_lt : k ^ (b - a) - 1 < 9 := by
-    refine Nat.lt_of_le_of_ne ?_ ?_
-    · suffices k ^ (b - a) - 1 < 10 from Nat.le_of_lt_succ this
-      -- TODO: if only used here, move inside?
-      simpa using lt_trans (h_mul_x_lt_y) hb_pow_lt_ten_mul
-    · suffices k ^ (b - a) ≠ 10 by simpa
-      -- Since 10 contains factors with multiplicity one, the only way to satisfy
-      -- `k ^ r = 10` is with `k = 10`. This is a contradiction since `k < 10`.
-      intro h
-      suffices k = 10 by simp [this] at hk_lt
-      refine (pow_eq_iff_eq_of_factorization_eq_one 10 2 k Nat.prime_two ?_).mp ⟨_, h⟩
-      suffices Nat.factorization (2 * 5) 2 = 1 by simpa
-      rw [Nat.factorization_mul_of_coprime] <;> norm_num
-
-  have hk : k = 3 ∨ k = 6 ∨ k = 9 := by
-    suffices 3 ∣ k by
-      revert this  -- TODO: ok?
-      interval_cases k <;> norm_num
+  -- Since `z < 9`, this means that `k ^ a` (and hence `k`) must be divisible by 3.
+  have hk : 3 ∣ k := by
     suffices 3 ∣ k ^ a from Nat.prime_three.dvd_of_dvd_pow this
-    -- suffices 9 ∣ k ^ a from Nat.dvd_of_pow_dvd one_le_two this
-    -- suffices 9 ∣ (k ^ b - a)
+    change 3 ^ 2 ∣ z * k ^ a at hz_dvd
+    -- We can't put both 3's in `z < 9`, hence we must have at least `3 ∣ k ^ a`.
+    -- Need both factors to be non-zero for factorization.
+    have hk_pow : k ^ a ≠ 0 := pow_ne_zero _ (Nat.not_eq_zero_of_lt hk_gt)
+    rw [Nat.prime_three.dvd_iff_one_le_factorization hk_pow]
+    rw [Nat.prime_three.pow_dvd_iff_le_factorization (mul_ne_zero hz hk_pow),
+      Nat.factorization_mul hz hk_pow, Finsupp.add_apply] at hz_dvd
+    -- It will suffice to show that the multiplicity of 3 in `z` does not exceed one.
+    suffices z.factorization 3 < 2 by linarith
+    suffices ¬3 ^ 2 ∣ z by
+      rw [Nat.prime_three.pow_dvd_iff_le_factorization hz] at this
+      simpa using this
+    exact Nat.not_dvd_of_pos_of_lt (Nat.zero_lt_of_ne_zero hz) hz_lt
 
-    -- TODO: use 9 here?
-    -- We can't put both 3's in `k ^ (b - a) - 1 < 9`, hence we must have `3 ∣ k ^ a`.
-    suffices 3 ^ 2 ∣ (k ^ (b - a) - 1) * k ^ a by
-      -- TODO: Possible to avoid multiple uses? Or move outside even?
-      have h₁ : 0 < k ^ (b - a) - 1 := by
-        rw [tsub_pos_iff_lt]
-        calc _
-        _ < k := hk_gt
-        _ ≤ k ^ (b - a) := by
-          refine Nat.le_self_pow ?_ k
-          simpa [Nat.sub_ne_zero_iff_lt] using hab
-      have h₂ : k ^ a ≠ 0 := pow_ne_zero _ (Nat.not_eq_zero_of_lt hk_gt)
-
-      rw [Nat.prime_three.dvd_iff_one_le_factorization h₂]
-
-      rw [Nat.prime_three.pow_dvd_iff_le_factorization (mul_ne_zero h₁.ne' h₂)] at this
-      rw [Nat.factorization_mul h₁.ne' h₂] at this
-      rw [Finsupp.add_apply] at this
-      suffices (k ^ (b - a) - 1).factorization 3 < 2 by linarith
-      suffices ¬3 ^ 2 ∣ k ^ (b - a) - 1 by
-        rw [Nat.prime_three.pow_dvd_iff_le_factorization h₁.ne'] at this
-        simpa using this
-      exact Nat.not_dvd_of_pos_of_lt h₁ hz_lt
-
-    -- TODO: cleanup
-    have : (k ^ (b - a) - 1) * k ^ a = (k ^ b + 1) - (k ^ a + 1) := by
-      calc _
-      _ = k ^ (b - a + a) - k ^ a := by simp [pow_add, tsub_mul]
-      _ = k ^ b - k ^ a := by simp [hab.le]
-      _ = _ := by simp
-
-    suffices 9 ∣ (k ^ (b - a) - 1) * k ^ a by simpa
-    rw [this]
-    refine nine_dvd_tsub_of_digits_eq ?_
-    -- rw [Nat.cast_sub sorry]
-    -- refine nine_dvd_sub_of_digits_eq ?_
-    simpa only [List.sum_reverse] using congrArg List.sum h_dig
-
+  -- Since we have `1 < k < 10` and `3 ∣ k`, there are only three possibilities.
+  have hk : k = 3 ∨ k = 6 ∨ k = 9 := by
+    revert hk
+    interval_cases k <;> norm_num
+  -- It suffices to exclude the cases `k = 6` and `k = 9`.
   refine hk.resolve_right fun hk ↦ ?_
 
   have : 5 ≤ k ^ (b - a) - 1 := by
@@ -314,8 +286,8 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
     suffices ∀ k, k = 6 ∨ k = 9 → 6 ≤ k from this k hk
     simp
 
-  replace h_mul_x_lt_y : 5 * (k ^ a + 1) < k ^ b + 1 := by
-    refine lt_of_le_of_lt ?_ h_mul_x_lt_y
+  replace hz_mul_fa_lt_fb : 5 * (k ^ a + 1) < k ^ b + 1 := by
+    refine lt_of_le_of_lt ?_ hz_mul_fa_lt_fb
     gcongr
 
   -- Since `k ^ b + 1 > (k ^ (b - a) - 1) * (k ^ a + 1)` and `k ^ (b - a) - 1 ≥ 5`, the first digit
@@ -329,11 +301,12 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
     suffices ∀ k, k = 6 ∨ k = 9 → ¬5 ∣ k from this k hk
     norm_num
 
+  -- TODO: use everywhere or eliminate?
   have h_len : (Nat.digits 10 (k ^ a + 1)).length = (Nat.digits 10 (k ^ b + 1)).length := by
     simpa using congrArg List.length h_dig
 
   have hx_nil : Nat.digits 10 (k ^ a + 1) ≠ [] := by simp
-  --   exact Nat.le_of_lt_succ ha_pow_ge
+  --   exact Nat.le_of_lt_succ hfa_ge
   have hx_getLast : (Nat.digits 10 (k ^ a + 1)).getLast hx_nil = 1 := by
     rw [digits_getLast_eq_iff_mem_Ico (by norm_num)]
     -- generalize hm : (Nat.digits 10 (k ^ a + 1)).length = m
@@ -350,7 +323,7 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
     -- TODO: Comment here.
     · have : 5 * (k ^ a + 1) < 10 ^ (Nat.digits 10 (k ^ a + 1)).length := by
         calc _
-        _ < k ^ b + 1 := h_mul_x_lt_y
+        _ < k ^ b + 1 := hz_mul_fa_lt_fb
         _ < 10 ^ (Nat.digits 10 (k ^ b + 1)).length :=
           Nat.lt_base_pow_length_digits'
         _ = _ := by rw [h_len]
