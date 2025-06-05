@@ -278,69 +278,58 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
   -- It suffices to exclude the cases `k = 6` and `k = 9`.
   refine hk.resolve_right fun hk ↦ ?_
 
-  have : 5 ≤ k ^ (b - a) - 1 := by
+  -- Since `z = k ^ (b - a) - 1` and `6 ≤ k`, we know `5 ≤ z`.
+  have hz : 5 ≤ z := by
     suffices 6 ≤ k ^ (b - a) from le_tsub_of_add_le_right this
     suffices 6 ≤ k by
       refine le_trans this (Nat.le_self_pow ?_ k)
-      simpa [Nat.sub_ne_zero_iff_lt]
+      exact Nat.sub_ne_zero_iff_lt.mpr hab
     suffices ∀ k, k = 6 ∨ k = 9 → 6 ≤ k from this k hk
     simp
-
+  -- This provides a new inequality relating `f a` and `f b`.
   replace hz_mul_fa_lt_fb : 5 * (k ^ a + 1) < k ^ b + 1 := by
     refine lt_of_le_of_lt ?_ hz_mul_fa_lt_fb
     gcongr
 
-  -- Since `k ^ b + 1 > (k ^ (b - a) - 1) * (k ^ a + 1)` and `k ^ (b - a) - 1 ≥ 5`, the first digit
-  -- of `k ^ a + 1` must be 1. Otherwise, `k ^ b + 1` would have more digits than `k ^ a + 1`.
-  -- Due to the reverse relation, this means that the last digit of `k ^ b + 1` is 1.
-  -- Therefore, the last digit of `k ^ b` is 0. This is impossible: it implies that `10 ∣ k ^ b`.
+  -- Since `5 * f a < f b`, the first digit of `f a` must be 1.
+  -- Otherwise `f b` will have more digits than `f a`.
+  have hfa_nil : Nat.digits 10 (k ^ a + 1) ≠ [] := by simp
+  have hfa_getLast : (Nat.digits 10 (k ^ a + 1)).getLast hfa_nil = 1 := by
+    -- Rewrite equality of the first digit as membership in an interval.
+    rw [digits_getLast_eq_iff_mem_Ico (by norm_num)]
+    simp only [one_mul, Nat.reduceAdd, Set.mem_Ico]
+    constructor
+    · -- The lower bound for the first digit to be 1 is simply the order of magnitude.
+      -- Multiply by 10 on both sides to match the form of `Nat.base_pow_length_digits_le`.
+      suffices 10 ^ ((Nat.digits 10 (k ^ a + 1)).length - 1 + 1) ≤ 10 * (k ^ a + 1) by
+        simpa [Nat.pow_succ']
+      rw [Nat.sub_add_cancel (by simp)]
+      exact Nat.base_pow_length_digits_le 10 _ (by norm_num) (by simp)
+    · -- For the upper bound, we need to combine the constraints
+      -- `5 * f a < f b < 10 ^ (m + 1)` and `10 ^ m ≤ f a`,
+      -- where `m + 1` is the number of digits.
+      -- First multiply by 5 on either side.
+      refine Nat.lt_of_mul_lt_mul_left (a := 5) ?_
+      -- Then combine the new inequality with the upper bound from the number of digits of `b`.
+      refine lt_trans hz_mul_fa_lt_fb ?_
+      convert @Nat.lt_base_pow_length_digits 10 (k ^ b + 1) (by norm_num) using 1
+      rw [h_len]
+      calc _
+      _ = 10 ^ ((Nat.digits 10 (k ^ b + 1)).length - 1 + 1) := by ring
+      _ = _ := by simp
+
+  -- Due to the reverse relation, this means that the last digit of `f b = k ^ b + 1` is 1.
+  simp only [h_dig, List.getLast_reverse] at hfa_getLast
+  -- This implies that the last digit of `k ^ b = k ^ b + 1 - 1` is 0.
+  -- This provides the contradiction: we cannot have `10 ∣ k ^ b` with `k ∈ {6, 9}` and `b ≠ 0`.
   have h_not_ten_dvd : ¬10 ∣ k ^ b := by
+    -- This follows from the fact that `5` is not a divisor of `k`.
     change ¬2 * 5 ∣ k ^ b
     suffices ¬5 ∣ k ^ b from mt dvd_of_mul_left_dvd this
     suffices ¬5 ∣ k from mt Nat.prime_five.dvd_of_dvd_pow this
     suffices ∀ k, k = 6 ∨ k = 9 → ¬5 ∣ k from this k hk
     norm_num
-
-  -- TODO: use everywhere or eliminate?
-  have h_len : (Nat.digits 10 (k ^ a + 1)).length = (Nat.digits 10 (k ^ b + 1)).length := by
-    simpa using congrArg List.length h_dig
-
-  have hx_nil : Nat.digits 10 (k ^ a + 1) ≠ [] := by simp
-  --   exact Nat.le_of_lt_succ hfa_ge
-  have hx_getLast : (Nat.digits 10 (k ^ a + 1)).getLast hx_nil = 1 := by
-    rw [digits_getLast_eq_iff_mem_Ico (by norm_num)]
-    -- generalize hm : (Nat.digits 10 (k ^ a + 1)).length = m
-    -- We know that `k ^ b + 1` has the same number of digits as `k ^ a + 1`.
-    -- We have `5 * (k ^ a + 1) < k ^ b + 1 < 10 ^ (m + 1)` and `10 ^ (m - 1) ≤ k ^ a + 1`.
-    -- Therefore, `k ^ a + 1 < 10 ^ (m + 1) / 5 = 2 * 10 ^ m`.
-    simp only [one_mul, Nat.reduceAdd, Set.mem_Ico]
-    constructor
-    -- The lower bound is simply from the order of magnitude.
-    · suffices 10 ^ ((Nat.digits 10 (k ^ a + 1)).length - 1 + 1) ≤ 10 * (k ^ a + 1) by
-        simpa [Nat.pow_succ']
-      rw [Nat.sub_add_cancel (by simp)]
-      exact Nat.base_pow_length_digits_le 10 _ (by norm_num) (by simp)
-    -- TODO: Comment here.
-    · have : 5 * (k ^ a + 1) < 10 ^ (Nat.digits 10 (k ^ a + 1)).length := by
-        calc _
-        _ < k ^ b + 1 := hz_mul_fa_lt_fb
-        _ < 10 ^ (Nat.digits 10 (k ^ b + 1)).length :=
-          Nat.lt_base_pow_length_digits'
-        _ = _ := by rw [h_len]
-      -- TODO: Might be easier to multiply on right?
-      suffices 5 * (k ^ a + 1) < 5 * (2 * 10 ^ ((Nat.digits 10 (k ^ a + 1)).length - 1)) by
-        simpa
-      convert this using 1  -- TODO: Combine?
-      calc _
-      _ = 10 ^ ((Nat.digits 10 (k ^ a + 1)).length - 1 + 1) := by ring
-      _ = _ := by simp
-
-  have hy_nil : Nat.digits 10 (k ^ b + 1) ≠ [] := by simp
-  have hy_head : (Nat.digits 10 (k ^ b + 1)).head hy_nil = 1 := by
-    rw [List.head_eq_getLast_reverse]
-    simpa only [h_dig] using hx_getLast
-  have hy_mod : (k ^ b + 1) % 10 = 1 := by simpa using hy_head
-  have hy_mod : k ^ b ≡ 0 [MOD 10] := Nat.ModEq.add_right_cancel' 1 hy_mod
-  have hy_mod : 10 ∣ k ^ b := Nat.dvd_of_mod_eq_zero hy_mod
-
-  exact h_not_ten_dvd hy_mod
+  refine h_not_ten_dvd ?_
+  suffices k ^ b ≡ 0 [MOD 10] from Nat.dvd_of_mod_eq_zero this
+  suffices (k ^ b + 1) % 10 = 1 from Nat.ModEq.add_right_cancel' 1 this
+  simpa using hfa_getLast
