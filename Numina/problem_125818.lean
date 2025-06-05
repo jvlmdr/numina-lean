@@ -70,6 +70,26 @@ lemma base_le_of_not_digits_palindrome (b : ℕ) {x : ℕ} (hx : ¬(b.digits x).
 --   use s.reverse, x
 --   simpa using h
 
+lemma nine_dvd_sub_of_digits_eq {x y : ℕ} (h : (Nat.digits 10 x).sum = (Nat.digits 10 y).sum) :
+    (9 : ℤ) ∣ y - x := by
+  refine Nat.modEq_iff_dvd.mp ?_
+  calc _
+  _ ≡ (Nat.digits 10 x).sum [MOD 9] := Nat.modEq_nine_digits_sum x
+  _ ≡ (Nat.digits 10 y).sum [MOD 9] := by rw [h]
+  _ ≡ _ [MOD 9] := (Nat.modEq_nine_digits_sum y).symm
+
+-- Could be useful?
+-- TODO: Remove if not.
+lemma nine_dvd_tsub_of_digits_eq {x y : ℕ} (h : (Nat.digits 10 x).sum = (Nat.digits 10 y).sum) :
+    9 ∣ y - x := by
+  cases le_or_lt y x with
+  | inl hxy => simp [hxy]
+  | inr hxy =>
+    suffices (9 : ℤ) ∣ ↑(y - x) from Int.ofNat_dvd.mp this
+    rw [Nat.cast_sub hxy.le]
+    exact nine_dvd_sub_of_digits_eq h
+
+
 -- The last digit of a number is the number divided by `10 ^ (m - 1)`
 lemma digits_getLast_eq_div_base_pow {b : ℕ} (hb : 1 < b) {n : ℕ} (h_nil : b.digits n ≠ []) :
     (b.digits n).getLast h_nil = n / b ^ ((b.digits n).length - 1) := by
@@ -160,9 +180,6 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
   -- Combining these, we have `10 < k ^ a + 1`.
   have ha_pow_gt : 10 < k ^ a + 1 := Nat.lt_of_le_of_ne ha_pow_ge ha_pow_ne.symm
 
-  -- TODO: is this needed?
-  have hb_pow_gt : 10 < k ^ b + 1 := Nat.lt_of_le_of_ne sorry sorry
-
   -- Since `k ^ a + 1` and `k ^ b + 1` have the same number of digits,
   -- `k ^ b + 1` cannot exceed `10 * (k ^ a + 1)`.
   have hb_pow_lt_ten_mul : k ^ b + 1 < 10 * (k ^ a + 1) := by
@@ -227,7 +244,7 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
   replace h_mul_x_lt_y : (k ^ (b - a) - 1) * (k ^ a + 1) < k ^ b + 1 := by
     simpa [mul_comm] using h_x_mul_lt_y
 
-  have : k ^ (b - a) - 1 < 9 := by
+  have hz_lt : k ^ (b - a) - 1 < 9 := by
     refine Nat.lt_of_le_of_ne ?_ ?_
     · suffices k ^ (b - a) - 1 < 10 from Nat.le_of_lt_succ this
       -- TODO: if only used here, move inside?
@@ -246,8 +263,46 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
       revert this  -- TODO: ok?
       interval_cases k <;> norm_num
     suffices 3 ∣ k ^ a from Nat.prime_three.dvd_of_dvd_pow this
-    suffices 9 ∣ k ^ a from Nat.dvd_of_pow_dvd one_le_two this
-    sorry
+    -- suffices 9 ∣ k ^ a from Nat.dvd_of_pow_dvd one_le_two this
+    -- suffices 9 ∣ (k ^ b - a)
+
+    -- TODO: use 9 here?
+    -- We can't put both 3's in `k ^ (b - a) - 1 < 9`, hence we must have `3 ∣ k ^ a`.
+    suffices 3 ^ 2 ∣ (k ^ (b - a) - 1) * k ^ a by
+      -- TODO: Possible to avoid multiple uses? Or move outside even?
+      have h₁ : 0 < k ^ (b - a) - 1 := by
+        rw [tsub_pos_iff_lt]
+        calc _
+        _ < k := hk_gt
+        _ ≤ k ^ (b - a) := by
+          refine Nat.le_self_pow ?_ k
+          simpa [Nat.sub_ne_zero_iff_lt] using hab
+      have h₂ : k ^ a ≠ 0 := pow_ne_zero _ (Nat.not_eq_zero_of_lt hk_gt)
+
+      rw [Nat.prime_three.dvd_iff_one_le_factorization h₂]
+
+      rw [Nat.prime_three.pow_dvd_iff_le_factorization (mul_ne_zero h₁.ne' h₂)] at this
+      rw [Nat.factorization_mul h₁.ne' h₂] at this
+      rw [Finsupp.add_apply] at this
+      suffices (k ^ (b - a) - 1).factorization 3 < 2 by linarith
+      suffices ¬3 ^ 2 ∣ k ^ (b - a) - 1 by
+        rw [Nat.prime_three.pow_dvd_iff_le_factorization h₁.ne'] at this
+        simpa using this
+      exact Nat.not_dvd_of_pos_of_lt h₁ hz_lt
+
+    -- TODO: cleanup
+    have : (k ^ (b - a) - 1) * k ^ a = (k ^ b + 1) - (k ^ a + 1) := by
+      calc _
+      _ = k ^ (b - a + a) - k ^ a := by simp [pow_add, tsub_mul]
+      _ = k ^ b - k ^ a := by simp [hab.le]
+      _ = _ := by simp
+
+    suffices 9 ∣ (k ^ (b - a) - 1) * k ^ a by simpa
+    rw [this]
+    refine nine_dvd_tsub_of_digits_eq ?_
+    -- rw [Nat.cast_sub sorry]
+    -- refine nine_dvd_sub_of_digits_eq ?_
+    simpa only [List.sum_reverse] using congrArg List.sum h_dig
 
   refine hk.resolve_right fun hk ↦ ?_
 
