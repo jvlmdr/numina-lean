@@ -7,6 +7,7 @@ open Real Set
 /- Let $0 < x_{i} < π$ ($i = 1, 2, \cdots, n$), prove that:
 $\prod_{i=1}^{n} \sin x_{i} \leqslant [\sin (\frac{1}{n} \sum_{i=1}^{n} x_{i})]^{n}$. -/
 
+-- The image of `(0, π)` under `sin` is `(0, 1]`.
 lemma image_sin_Ioo_zero_pi : Set.image sin (Ioo 0 π) = Ioc 0 1 := by
   ext y
   rw [mem_image]
@@ -26,7 +27,7 @@ lemma image_sin_Ioo_zero_pi : Set.image sin (Ioo 0 π) = Ioc 0 1 := by
         _ < π := by simp [pi_pos]
     · refine sin_arcsin ?_ ?_ <;> linarith
 
--- Note: Could prove `strictConcaveOn` for `Ioo 0 π` but it's stronger than we require.
+-- The function `sin` is concave on `Icc 0 π`.
 lemma concaveOn_Icc_sin : ConcaveOn ℝ (Icc 0 π) sin := by
   refine concaveOn_of_deriv2_nonpos (convex_Icc 0 π) continuousOn_sin ?_ ?_ ?_
   · exact differentiable_sin.differentiableOn
@@ -34,8 +35,9 @@ lemma concaveOn_Icc_sin : ConcaveOn ℝ (Icc 0 π) sin := by
   · suffices ∀ x ∈ Ioo 0 π, 0 ≤ sin x by simpa
     exact fun x hx ↦ (sin_pos_of_mem_Ioo hx).le
 
-lemma concaveOn_log_sin : ConcaveOn ℝ (Ioo 0 π) fun x ↦ log (sin x) := by
-  refine ConcaveOn.comp (g := log) (f := sin) ?_ ?_ ?_
+-- The function `log ∘ sin` is concave on `Ioo 0 π`.
+lemma concaveOn_Ioo_log_comp_sin : ConcaveOn ℝ (Ioo 0 π) fun x ↦ log (sin x) := by
+  refine ConcaveOn.comp (f := sin) (g := log) ?_ ?_ ?_
   · rw [image_sin_Ioo_zero_pi]
     exact strictConcaveOn_log_Ioi.concaveOn.subset Ioc_subset_Ioi_self (convex_Ioc 0 1)
   · exact concaveOn_Icc_sin.subset Ioo_subset_Icc_self (convex_Ioo 0 π)
@@ -63,4 +65,4 @@ theorem inequalities_159991 {n : ℕ} (hn : 0 < n) (x : Fin n → ℝ) (hx : ∀
     simpa only [one_div, inv_mul_le_iff₀ hn_real]
   -- Move the weight `1 / n` inside the summation for `ConcaveOn.le_map_sum`.
   simp only [Finset.mul_sum]
-  exact concaveOn_log_sin.le_map_sum (by simp) (by simp [hn_real.ne']) fun i _ ↦ hx i
+  exact concaveOn_Ioo_log_comp_sin.le_map_sum (by simp) (by simp [hn_real.ne']) fun i _ ↦ hx i
