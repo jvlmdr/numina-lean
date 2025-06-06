@@ -11,12 +11,6 @@ lemma digits_succ_base_pow_succ {b : ℕ} (hb : 1 < b) (n : ℕ) :
     b.digits (b ^ (n + 1) + 1) = 1 :: (List.replicate n 0 ++ [1]) := by
   simpa [hb, add_comm 1] using (@Nat.digits_append_zeroes_append_digits b n 1 1 hb one_pos).symm
 
--- The number `b ^ n + 1` is 100⋯01 (with `n - 1` zeros) in base `b` for `n ≠ 0`.
-lemma digits_succ_base_pow_of_ne_zero {b : ℕ} (hb : 1 < b) {n : ℕ} (hn : n ≠ 0) :
-    b.digits (b ^ n + 1) = 1 :: (List.replicate (n - 1) 0 ++ [1]) := by
-  suffices 1 ≤ n by simpa [this] using digits_succ_base_pow_succ hb (n - 1)
-  simpa [Nat.one_le_iff_ne_zero]
-
 -- The number of digits in `k ^ · + 1` in base `b` is *strictly* increasing for `b < k`.
 lemma strictMono_len_digits_succ_pow_of_base_lt {b : ℕ} (hb : 1 < b) {k : ℕ} (hk : b < k)
     {x y : ℕ} (hx : x ≠ 0) (hy : y ≠ 0) (hxy : x < y) :
@@ -40,7 +34,7 @@ lemma strictMono_len_digits_succ_pow_of_base_lt {b : ℕ} (hb : 1 < b) {k : ℕ}
   _ = k ^ (x + 1) + 1 := by ring
   _ ≤ _ := by gcongr <;> linarith
 
--- Extend this result to include `b = k`.
+-- Extend the above result to include `b = k`.
 lemma strictMono_len_digits_succ_pow_of_base_le {b : ℕ} (hb : 1 < b) {k : ℕ} (hk : b ≤ k)
     {x y : ℕ} (hx : x ≠ 0) (hy : y ≠ 0) (hxy : x < y) :
     (b.digits (k ^ x + 1)).length < (b.digits (k ^ y + 1)).length := by
@@ -93,20 +87,6 @@ lemma digits_getLast_eq_iff_mem_Ico {b : ℕ} (hb : 1 < b) {n : ℕ} (h_nil : b.
   rw [nat_div_eq_iff (Nat.pow_pos <| Nat.zero_lt_of_lt hb)]
   simp
 
--- TODO: clean up. should be easier... k * factorization ≠ 0?
-lemma pow_eq_iff_eq_of_factorization_eq_one (n p x : ℕ) (hp : p.Prime)
-    (h : n.factorization p = 1) :
-    (∃ k, x ^ k = n) ↔ x = n := by
-  constructor
-  · intro ⟨k, hn⟩
-    have h : (x ^ k).factorization p = 1 := by rw [hn, h]
-    -- TODO: clean up
-    have ⟨hk, h⟩ : k = 1 ∧ x.factorization p = 1 := by simpa using h
-    simpa [hk] using hn
-  · intro h
-    use 1
-    simp [h]
-
 -- If two numbers have the same number of digits, then each must be less than `b` times the other.
 lemma lt_base_mul_of_digits_len_eq {b : ℕ} (hb : 1 < b) {x y : ℕ} (h_zero : x ≠ 0 ∨ y ≠ 0)
     (h_len : (Nat.digits b x).length = (Nat.digits b y).length) : y < b * x := by
@@ -143,7 +123,7 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
     · simpa using congrArg List.reverse h_dig.symm
     · exact lt_of_le_of_ne hab h_ne.symm
 
-  -- Properties of the digits which are unaffected by the reversal:
+  -- Properties of the digits which are unaffected by `List.reverse`.
   have h_len : (Nat.digits 10 (k ^ a + 1)).length = (Nat.digits 10 (k ^ b + 1)).length := by
     simpa only [List.length_reverse] using congrArg List.length h_dig
   have h_sum : (Nat.digits 10 (k ^ a + 1)).sum = (Nat.digits 10 (k ^ b + 1)).sum := by
@@ -198,11 +178,10 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
     _ < _ := lt_add_one _
 
   -- This is equivalent to `b - a ≤ a`.
-  -- We use this to bound `k ^ (b - a) ≤ k ^ a`.
+  -- We subsequently use this to bound `k ^ (b - a) ≤ k ^ a`.
   have hba_sub : b - a ≤ a := by
     refine Nat.sub_le_of_le_add ?_
     simpa [two_mul] using hba
-
   -- Introduce a constant `z = k ^ (b - a) - 1` and show that `z * f a < f b`.
   let z := k ^ (b - a) - 1
   have hz : z ≠ 0 := by
@@ -233,13 +212,17 @@ theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
   have hz_ne : z ≠ 9 := by
     unfold z
     suffices k ^ (b - a) ≠ 10 by simpa
-    -- Since 10 contains factors with multiplicity one, the only way to satisfy
-    -- `k ^ r = 10` is with `k = 10`. This is a contradiction since `k < 10`.
-    refine mt (fun h ↦ ?_) hk_lt.ne
-    -- TODO: clean up?
-    refine (pow_eq_iff_eq_of_factorization_eq_one 10 2 k Nat.prime_two ?_).mp ⟨_, h⟩
+    -- Since 10 contains factors with multiplicity one, the only way to satisfy `k ^ r = 10`
+    -- is with `r = 1`, `k = 10`. This is a contradiction since `k < 10`.
+    contrapose! hk_lt with h
+    refine ge_of_eq ?_
+    -- Suffices to show that the factor 2 has multiplicity one.
+    suffices Nat.factorization (k ^ (b - a)) 2 = 1 by
+      have : b - a = 1 ∧ k.factorization 2 = 1 := by simpa using this
+      simpa [this.1] using h
+    rw [h]
     suffices Nat.factorization (2 * 5) 2 = 1 by simpa
-    rw [Nat.factorization_mul_of_coprime] <;> norm_num
+    rw [Nat.factorization_mul] <;> norm_num
   -- Combine these to obtain `z < 9`.
   have hz_lt : z < 9 := Nat.lt_of_le_of_ne (Nat.le_of_lt_succ hz_lt) hz_ne
 
