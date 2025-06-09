@@ -9,9 +9,34 @@ open scoped Finset
 numbers. Explanation: the condition means that the greatest common divisor of any two numbers used
 in the sum is 1. -/
 
-lemma filter_prime_Iic_23 : {p ∈ Finset.Iic 23 | p.Prime} = {2, 3, 5, 7, 11, 13, 17, 19, 23} := rfl
+lemma filter_prime_range_29 :
+    {p ∈ Finset.range 29 | p.Prime} = {2, 3, 5, 7, 11, 13, 17, 19, 23} := rfl
 
-lemma sum_filter_prime_Iic_23 : ∑ x ∈ {p ∈ Finset.Iic 23 | p = 1 ∨ p.Prime}, x = 101 := rfl
+lemma sum_filter_one_or_prime_range_29 :
+    ∑ x ∈ {p ∈ Finset.range 29 | p = 1 ∨ p.Prime}, x = 101 := rfl
+
+lemma nth_eq_of_count_eq {p : ℕ → Prop} [DecidablePred p]
+    {n x : ℕ} (h_count : count p x = n) (hpx : p x) : nth p n = x :=
+  h_count ▸ nth_count hpx
+
+-- TODO: do we need these?
+
+lemma nth_prime_eight : nth Nat.Prime 8 = 23 := by
+  refine nth_eq_of_count_eq ?_ (by norm_num)
+  exact count_eq_card_filter_range _ _
+
+lemma nth_prime_nine : nth Nat.Prime 9 = 29 := by
+  refine nth_eq_of_count_eq ?_ (by norm_num)
+  exact count_eq_card_filter_range _ _
+
+lemma nth_one_or_prime_nine : nth (fun x ↦ x = 1 ∨ x.Prime) 9 = 23 := by
+  refine nth_eq_of_count_eq ?_ (by norm_num)
+  exact count_eq_card_filter_range _ _
+
+lemma nth_one_or_prime_ten : nth (fun x ↦ x = 1 ∨ x.Prime) 10 = 29 := by
+  refine nth_eq_of_count_eq ?_ (by norm_num)
+  exact count_eq_card_filter_range _ _
+
 
 -- How to show that the product of a set of `n` distinct prime numbers is at least the product of
 -- the first `n` primes?
@@ -75,18 +100,6 @@ lemma exists_image_nth_eq {p : ℕ → Prop} (hp : (setOf p).Infinite) (s : Fins
 --     rw [← h]
 --     sorry
 --   sorry
-
-lemma nth_eq_of_count_eq {p : ℕ → Prop} [DecidablePred p]
-    {n x : ℕ} (h_count : count p x = n) (hpx : p x) : nth p n = x :=
-  h_count ▸ nth_count hpx
-
-lemma nth_prime_eight : nth Nat.Prime 8 = 23 := by
-  refine nth_eq_of_count_eq ?_ (by norm_num)
-  exact count_eq_card_filter_range _ _
-
-lemma nth_eq_one_or_prime_nine : nth (fun x ↦ x = 1 ∨ x.Prime) 9 = 23 := by
-  refine nth_eq_of_count_eq ?_ (by norm_num)
-  exact count_eq_card_filter_range _ _
 
 -- lemma set_image_nth_Ico_of_infinite {p : ℕ → Prop} (hp : (setOf p).Infinite)
 --     (n : ℕ) :
@@ -190,7 +203,7 @@ lemma sum_primes_le_sum_prime_pows {s : Finset ℕ} (h_mem : ∀ x ∈ s, IsPrim
 -- Maybe easiest to use `Nat.factorization` of the product? Otherwise need (p, k) pairs?
 
 
-lemma setOf_eq_one_or_prime_infinite : (setOf fun x ↦ x = 1 ∨ x.Prime).Infinite :=
+lemma setOf_one_or_prime_infinite : (setOf fun x ↦ x = 1 ∨ x.Prime).Infinite :=
   Set.infinite_union.mpr (.inr infinite_setOf_prime)
 
 -- The sum of 10 or more numbers that are either 1 or prime is at greater than 100.
@@ -203,14 +216,14 @@ lemma sum_of_prime_or_one {s : Finset ℕ} (h_card : 10 ≤ #s)
   _ = ∑ x ∈ {p ∈ Finset.range 29 | p = 1 ∨ p.Prime}, x := rfl
   _ = ∑ x ∈ (Finset.range 10).image (nth fun a ↦ a = 1 ∨ a.Prime), x := by
     congr
-    rw [image_nth_range_of_infinite setOf_eq_one_or_prime_infinite]
+    rw [image_nth_range_of_infinite setOf_one_or_prime_infinite]
     suffices nth (fun x ↦ x = 1 ∨ x.Prime) 10 = 29 by simp [this]
     exact nth_eq_of_count_eq rfl (by norm_num)
   _ = ∑ i ∈ Finset.range 10, nth (fun a ↦ a = 1 ∨ a.Prime) i :=
-    Finset.sum_image fun x _ y _ h ↦ nth_injective setOf_eq_one_or_prime_infinite h
+    Finset.sum_image fun x _ y _ h ↦ nth_injective setOf_one_or_prime_infinite h
   _ ≤ ∑ i ∈ Finset.range #s, nth (fun a ↦ a = 1 ∨ a.Prime) i :=
     Finset.sum_le_sum_of_subset <| by simpa using h_card
-  _ ≤ _ := sum_range_card_nth_le_sum setOf_eq_one_or_prime_infinite s h_mem
+  _ ≤ _ := sum_range_card_nth_le_sum setOf_one_or_prime_infinite s h_mem
 
 
 lemma subset_of_coprime_of_zero_mem {s : Finset ℕ} (hs : Set.Pairwise s Coprime)
@@ -329,17 +342,20 @@ lemma exists_lt_card_and_sum_le (s : Finset ℕ) (h_coprime : Set.Pairwise s Cop
 
 
 theorem number_theory_245605 :
-    IsMaxOn Finset.card {s | ∑ x ∈ s, x = 100 ∧ Set.Pairwise s Coprime}
+    IsMaxOn Finset.card {s | Set.Pairwise s Coprime ∧ ∑ x ∈ s, x = 100}
       {2, 3, 5, 7, 11, 13, 17, 19, 23} := by
   -- Replace the numbers with the first nine primes; the primes up to 23.
-  rw [← filter_prime_Iic_23]
-  rw [isMaxOn_iff]
-  simp only [Set.mem_setOf_eq, and_imp]
-  intro s hs_sum hs_coprime
+  -- rw [← filter_prime_range_29]
+  -- rw [← nth_prime_nine]
 
-  -- TODO: extract as lemma?
+  suffices ∀ (s : Finset ℕ), Set.Pairwise s Coprime → ¬(∑ x ∈ s, x = 100 ∧ 9 < #s) by
+    simpa [isMaxOn_iff]
+  intro s hs_coprime ⟨hs_sum, hs_card⟩
+  -- rw [and_comm]
+
   -- The set cannot contain a zero.
-  -- If so, the only other element it could is 1, since `Nat.gcd 0 x = x`.
+  -- If so, the only other element it could contain is 1, since `Nat.gcd 0 x = x`.
+  -- However, a subset of {0, 1} cannot have a sum of 100.
   have h_zero : 0 ∉ s := by
     contrapose! hs_sum with hs_zero
     refine _root_.ne_of_lt ?_
@@ -347,6 +363,58 @@ theorem number_theory_245605 :
     _ ≤ ∑ x ∈ {0, 1}, x :=
       Finset.sum_le_sum_of_subset (subset_of_coprime_of_zero_mem hs_coprime hs_zero)
     _ < 100 := by simp
+
+  change 10 ≤ #s at hs_card
+
+  -- We know that every element of `s` is either 1 or prime.
+  -- Otherwise, we could take `s` and form such a set `t` with sum ≤ 100 and cardinality ≥ 10.
+  -- This contradicts the observation that the sum of the first 10 such numbers exceeds 100.
+
+  have h_sum_nth_one_or_prime :
+      ∑ i ∈ Finset.range 10, nth (fun x ↦ x = 1 ∨ x.Prime) i = 101 := by
+    sorry
+
+  have h_injOn {s : Finset ℕ} (hs : Set.Pairwise s Coprime) : Set.InjOn minFac s := by
+    -- rw [Set.injOn_iff_pairwise_ne]
+    -- refine hs_coprime.imp fun x y h ↦ ?_
+    intro x hx y hy h_minFac
+    -- TODO: extract as lemma? `minFac_injOn_of_pairwise_coprime`?
+    specialize hs hx hy
+    contrapose! h_minFac with h_ne
+    -- TODO: avoid doing specialize / contrapose! this twice?
+    specialize hs h_ne
+    contrapose! h_ne with h_minFac
+    suffices x = 1 ∧ y = 1 by simp [this]
+    suffices x.minFac = 1 ∧ y.minFac = 1 by simpa
+    suffices x.minFac = 1 by simpa [← h_minFac]
+    have h_dvd : ∀ (c : ℕ), c ∣ x → c ∣ y → c = 1 := by
+      simpa [coprime_iff_gcd_eq_one, gcd_eq_iff] using hs
+    exact h_dvd x.minFac (minFac_dvd x) (h_minFac ▸ minFac_dvd y)
+
+  have : ∀ x ∈ s, x = 1 ∨ x.Prime := by
+    let t := s.image minFac
+    have ht_card : #t = #s := Finset.card_image_of_injOn (h_injOn hs_coprime)
+    have ht_sum : ∑ x ∈ t, x ≤ ∑ x ∈ s, x := by
+      rw [Finset.sum_image (h_injOn hs_coprime)]
+      refine Finset.sum_le_sum fun i hi ↦ ?_
+      refine minFac_le ?_
+      suffices i ≠ 0 from zero_lt_of_ne_zero this
+      exact ne_of_mem_of_not_mem hi h_zero
+
+    sorry
+
+
+  suffices ∀ x ∈ s, x = 1 ∨ x.Prime by
+
+    sorry
+
+
+
+
+
+  -- That is, it results in a contradiction? Contradiction of what?
+
+
 
   -- The elements of the set must have at most one prime factor.
   -- If one element had two distinct prime factors, it could be split to obtain a set with more
