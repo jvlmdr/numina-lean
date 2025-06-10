@@ -56,7 +56,6 @@ lemma injOn_minFac_of_coprime {s : Set ℕ} (hs : Set.Pairwise s Coprime) :
   intro x hx y hy h_minFac
   specialize hs hx hy
   contrapose! h_minFac with h_ne
-  -- TODO: avoid doing specialize / contrapose! this twice?
   specialize hs h_ne
   contrapose! h_ne with h_minFac
   suffices x = 1 ∧ y = 1 by simp [this]
@@ -84,11 +83,9 @@ lemma forall₂_nth_range'_le_of_sorted_lt {p : ℕ → Prop} (hp : (setOf p).In
   induction hl_lt generalizing i with
   | nil => simp
   | @cons y l hyl hl_lt IH =>
-    -- TODO: cleanup?
     change l.Sorted (· < ·) at hl_lt
-    simp only [List.mem_cons, forall_eq_or_imp] at hpl
+    simp only [List.mem_cons, forall_eq_or_imp] at hpl hil
     rcases hpl with ⟨hpy, hpl⟩
-    simp only [List.mem_cons, forall_eq_or_imp] at hil
     rcases hil with ⟨hiy, hil⟩
     simp only [List.length_cons, List.range'_succ, List.forall₂_cons]
     refine ⟨hiy, ?_⟩
