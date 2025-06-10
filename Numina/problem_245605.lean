@@ -15,6 +15,9 @@ lemma nth_eq_of_count_eq {p : ℕ → Prop} [DecidablePred p]
     {n x : ℕ} (h_count : count p x = n) (hpx : p x) : nth p n = x :=
   h_count ▸ nth_count hpx
 
+lemma filter_prime_range_29 :
+    (Finset.range 29).filter Nat.Prime = {2, 3, 5, 7, 11, 13, 17, 19, 23} := rfl
+
 -- lemma sublist_filter_range_of_sorted {p : ℕ → Prop} [hp : DecidablePred p]
 --     {l : List ℕ} (hpl : ∀ x ∈ l, p x) (hl : l.Sorted (· ≤ ·)) (n : ℕ) (hn : ∀ x ∈ l, x < n) :
 --     l <+ List.filter p (List.range n) := by
@@ -139,10 +142,19 @@ lemma forall₂_nth_range_le_of_sorted_lt {p : ℕ → Prop} (hp : (setOf p).Inf
 
 
 theorem number_theory_245605 :
-    IsMaxOn Finset.card {s | Set.Pairwise s Coprime ∧ ∑ x ∈ s, x = 100}
+    {2, 3, 5, 7, 11, 13, 17, 19, 23} ∈ {s : Finset ℕ | Set.Pairwise s Coprime ∧ ∑ x ∈ s, x = 100} ∧
+    IsMaxOn Finset.card {s : Finset ℕ | Set.Pairwise s Coprime ∧ ∑ x ∈ s, x = 100}
       {2, 3, 5, 7, 11, 13, 17, 19, 23} := by
-  -- TODO: use `10 ≤` here?
-  suffices ∀ (s : Finset ℕ), Set.Pairwise s Coprime → ∑ x ∈ s, x = 100 → ¬9 < #s by
+  constructor
+  · rw [Set.mem_setOf_eq]
+    constructor
+    · rw [← filter_prime_range_29]
+      intro x hx y hy
+      simp only [Finset.mem_coe, Finset.mem_filter] at hx hy
+      exact (coprime_primes hx.2 hy.2).mpr
+    · rfl
+
+  suffices ∀ s : Finset ℕ, Set.Pairwise s Coprime → ∑ x ∈ s, x = 100 → ¬9 < #s by
     simpa [isMaxOn_iff]
   intro s hs_coprime hs_sum hs_card
 
