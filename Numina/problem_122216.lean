@@ -2,6 +2,8 @@
 
 import Mathlib
 
+namespace problem_122216
+
 open Finset Nat
 
 /- For any positive integer $n  >1$, let $P(n)$ denote the largest prime not exceeding $n$.
@@ -157,3 +159,5 @@ theorem number_theory_122216 {P N : ℕ → ℕ}
     simp only [nth_prime_zero_eq_two, one_div]
     refine inv_sub_inv two_ne_zero ?_
     simpa using hn_prime.ne_zero
+
+end problem_122216
