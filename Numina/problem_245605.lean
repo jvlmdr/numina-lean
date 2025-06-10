@@ -18,30 +18,96 @@ lemma nth_eq_of_count_eq {p : ℕ → Prop} [DecidablePred p]
 lemma filter_prime_range_29 :
     (Finset.range 29).filter Nat.Prime = {2, 3, 5, 7, 11, 13, 17, 19, 23} := rfl
 
--- lemma sublist_filter_range_of_sorted {p : ℕ → Prop} [hp : DecidablePred p]
---     {l : List ℕ} (hpl : ∀ x ∈ l, p x) (hl : l.Sorted (· ≤ ·)) (n : ℕ) (hn : ∀ x ∈ l, x < n) :
---     l <+ List.filter p (List.range n) := by
+lemma sublist_filter_Ico_of_sorted_lt {p : ℕ → Prop} [DecidablePred p] (hp : (setOf p).Infinite)
+    {l : List ℕ} (hpl : ∀ x ∈ l, p x) (hl_lt : l.Sorted (· < ·))
+    (a b : ℕ) (ha : ∀ x ∈ l, a ≤ x) (hb : ∀ x ∈ l, x < b) :
+    l <+ List.filter p (List.Ico a b) := by
+  induction hl_lt generalizing a with
+  | nil => simp
+  | @cons x l hx hl IH =>
+    simp only [List.mem_cons, forall_eq_or_imp] at hpl ha hb
+    rcases hpl with ⟨hpx, hpl⟩
+    rcases ha with ⟨hax, ha⟩
+    rcases hb with ⟨hxb, hb⟩
+    suffices [x] ++ l <+ List.filter p (List.Ico a (x + 1) ++ List.Ico (x + 1) b) by
+      convert this
+      refine (List.Ico.append_consecutive ?_ ?_).symm <;> linarith
+    rw [List.filter_append]
+    refine .append ?_ ?_
+    · suffices a ≤ x ∧ p x by simpa
+      exact ⟨hax, hpx⟩
+    · exact IH hpl (x + 1) hx hb
+
+lemma sublist_filter_range_of_sorted_lt {p : ℕ → Prop} [DecidablePred p] (hp : (setOf p).Infinite)
+    {l : List ℕ} (hpl : ∀ x ∈ l, p x) (hl : l.Sorted (· < ·)) (n : ℕ) (hn : ∀ x ∈ l, x < n) :
+    l <+ List.filter p (List.range n) := by
+  rw [← List.Ico.zero_bot]
+  exact sublist_filter_Ico_of_sorted_lt hp hpl hl 0 n (by simp) hn
+
+lemma forall₂_take_le_take_tail_of_sorted {l : List ℕ} (hl : l.Sorted (· ≤ ·))
+    (n : ℕ) (hn : n < l.length) :
+    List.Forall₂ (· ≤ ·) (l.take n) (l.tail.take n) := by
+  induction hl with
+  | nil => simp
+  | @cons y l hy hl IH =>
+    sorry
+
+-- lemma forall₂_take_cons_le_take_of_sorted {x : ℕ} {l : List ℕ} (hx : ∀ y ∈ l, x ≤ y)
+--     (hl : l.Sorted (· ≤ ·)) (n : ℕ) (hn : n ≤ l.length) :
+--     List.Forall₂ (· ≤ ·) ((x :: l).take n) (l.take n) := by
 --   induction hl with
---   | nil => simp
---   | @cons x l hx hl IH =>
---     simp at *
---     specialize IH hpl.2 hn.2
---     -- Split `range n` into elements `≤ x` and those after.
---     have h_range : List.range (x + 1) ++ List.Ico (x + 1) n = List.range n := by
---       simp [← List.Ico.zero_bot, List.Ico.append_consecutive _ hn.1]
---     suffices [x] ++ l <+ List.filter p (List.range (x + 1) ++ List.Ico (x + 1) n) by
---       simpa [h_range]
---     rw [List.filter_append]
---     refine List.Sublist.append ?_ ?_
---     · simp only [List.singleton_sublist, List.mem_filter, List.mem_range]
---       sorry
---     · rw [← h_range, List.filter_append] at IH
---       refine List.Sublist.of_sublist_append_right ?_ IH
---       intro y hy
---       suffices y < x + 1 → ¬p y by simpa
---       suffices ¬y < x + 1 by simp [this]
---       simp
---       sorry
+--   | nil => simpa using hn
+--   | @cons y l hy hl IH =>
+--     sorry
+
+lemma forall₂_take_le_of_sublist {s l : List ℕ} (hl : l.Sorted (· ≤ ·)) (hs : s <+ l) :
+    List.Forall₂ (· ≤ ·) (l.take s.length) s := by
+  induction hs with
+  | slnil => simp
+  | @cons₂ s l x hs IH =>
+    rw [List.sorted_cons] at hl
+    rcases hl with ⟨hx, hl⟩
+    simpa using IH hl
+  | @cons s l x hs IH =>
+    have := forall₂_take_le_take_tail_of_sorted hl s.length
+      (by simpa [Nat.lt_add_one_iff] using hs.length_le)
+    simp only [List.tail_cons] at this
+
+    rw [List.sorted_cons] at hl
+    rcases hl with ⟨hx, hl⟩
+    specialize IH hl
+    -- Here we need transitivity: `(x :: l).take n ≤ l.take n ≤ s`.
+    sorry
+
+    -- cases s with
+    -- | nil => simp
+    -- | cons y s =>
+    --   rw [List.length_cons, List.take_succ_cons, List.forall₂_cons]
+    --   constructor
+    --   · exact hx y (List.mem_of_cons_sublist hs)
+    --   · specialize IH hl
+    --     simp at IH
+    --     rw [add_comm] at IH
+    --     sorry
+
+
+lemma sum_take_le_of_sublist {s l : List ℕ} (hl : l.Sorted (· ≤ ·)) (hs : s <+ l) :
+    (l.take s.length).sum ≤ s.sum :=
+  (forall₂_take_le_of_sublist hl hs).sum_le_sum
+
+  -- induction hs with
+  -- | slnil => simp
+  -- | @cons₂ s l x hs IH =>
+  --   rw [List.sorted_cons] at hl
+  --   rcases hl with ⟨hx, hl⟩
+  --   simpa using IH hl
+  -- | @cons s l x hs IH =>
+  --   rw [List.sorted_cons] at hl
+  --   rcases hl with ⟨hx, hl⟩
+  --   simp
+  --   sorry
+
+
 
 lemma exists_nth_of_infinite {p : ℕ → Prop} (hp : (setOf p).Infinite) {n : ℕ} (hn : p n) :
     ∃ i, nth p i = n := by
@@ -90,14 +156,6 @@ lemma injOn_minFac_of_coprime {s : Set ℕ} (hs : Set.Pairwise s Coprime) :
   have h_dvd : ∀ (c : ℕ), c ∣ x → c ∣ y → c = 1 := by
     simpa [coprime_iff_gcd_eq_one, gcd_eq_iff] using hs
   exact h_dvd x.minFac (minFac_dvd x) (h_minFac ▸ minFac_dvd y)
-
--- lemma forall₂_map_nth_le_of_sorted_lt {p : ℕ → Prop} [DecidablePred p] (hp : (setOf p).Infinite)
---     {x : ℕ} {l : List ℕ} (hpx : p x) (hpl : ∀ a ∈ l, p a)
---     (hxl : ∀ a ∈ l, x < a) (hl_lt : l.Sorted (· < ·)) {i : ℕ} (hi : nth p i = x) :
---     List.Forall₂ (· ≤ ·) (.map (nth p) (.range' i l.length)) l := by
-
---   sorry
-
 
 -- Given a list of ordered natural numbers that satisfy `p` and an index `i` such that
 -- all elements of the list are at least `nth p i`, we can guarantee
