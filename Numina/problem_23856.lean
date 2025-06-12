@@ -176,21 +176,28 @@ lemma eq_on_binary {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
     simp [Fin.sum_univ_succ]
     simp [fin_prod_Iio_succ']
 
-    specialize IH a
-
     have h_eq_half_mul : ∑ x : Fin n, a x * (2 ^ (x + 2 : ℕ) : ℝ)⁻¹ =
         2⁻¹ * ∑ x : Fin n, a x * (2 ^ (x + 1 : ℕ) : ℝ)⁻¹ := by
-      sorry
-    rw [h_eq_half_mul]  -- TODO: move?
+      simp [Finset.mul_sum]
+      exact Finset.sum_congr rfl fun i _ ↦ by ring
+
+    rw [h_eq_half_mul]  -- TODO: move? use calc?
 
     rw [Fin.forall_fin_two]
+
+    -- TODO: extract as lemma?
+    have h_sum_mem_Icc : ∑ x, a x * (2 ^ (x + 1 : ℕ) : ℝ)⁻¹ ∈ Set.Icc 0 1 := by
+      -- TODO: depends on form that we will use...
+      sorry
 
     -- TODO: non-terminal simps
     split_ands
     · simp
       rw [← hf1]
       swap
-      · sorry
+      · suffices ∑ x, a x * (2 ^ (x + 1 : ℕ) : ℝ)⁻¹ ∈ Set.Icc 0 1 by simpa
+        -- Add as lemma? Relate to BitVec?
+        exact h_sum_mem_Icc
       congr
       simp
       rw [IH]
@@ -202,14 +209,21 @@ lemma eq_on_binary {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
     · simp
       rw [hf2]
       swap
-      · sorry
+      · -- TODO: better to use (pre)image of `fun x ↦ 2⁻¹ * (1 + x)`?
+        -- We have `Set.image_mul_left_Icc` etc.
+        suffices 2⁻¹ * (1 + ∑ x, a x * (2 ^ (x + 1 : ℕ) : ℝ)⁻¹) ∈ Set.Icc 2⁻¹ 1 by simpa [mul_add]
+        suffices 1 + ∑ x, a x * (2 ^ (x + 1 : ℕ) : ℝ)⁻¹ ∈ Set.Icc 1 2 by
+          simpa [inv_mul_le_iff₀ (two_pos : 0 < (2 : ℝ))]
+        suffices ∑ x, a x * (2 ^ (x + 1 : ℕ) : ℝ)⁻¹ ∈ Set.Icc 0 (2 - 1) by
+          simpa [le_sub_iff_add_le']
+        convert h_sum_mem_Icc
+        norm_num
+
       rw [← Fin.bot_eq_zero]
       simp [mul_add]
       rw [IH]
       simp only [Finset.mul_sum]
-      congr
-      funext i
-      ring
+      exact Finset.sum_congr rfl fun i _ ↦ by ring
 
 
 theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
