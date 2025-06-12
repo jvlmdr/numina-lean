@@ -1,3 +1,5 @@
+--
+
 import Mathlib
 
 /- Let $f : [0, 1] \rightarrow \mathbb{R}$ be continuous and satisfy:
@@ -109,6 +111,9 @@ lemma dense_binary_frac_Icc (x : ℝ) (hx : x ∈ Set.Icc 0 1) :
   sorry
 
 
+
+
+
 -- TODO: remove?
 lemma fin_Iio_succ' {n : ℕ} (m : Fin n) :
     Finset.Iio m.succ = {0} ∪ (Finset.Iio m).map (Fin.succEmb n) := by
@@ -149,6 +154,29 @@ lemma fin_prod_Iio_succ' {M : Type*} [CommMonoid M] {n : ℕ} (f : Fin (n + 1) �
   _ = _ := by simp
 
 
+example {n : ℕ} (a : Fin n → Bool) :
+    (∑ i, (a i).toNat * 2 ^ i.rev.val : ℝ) / (2 ^ n : ℝ) =
+      ∑ i, (a i).toNat * (2 ^ (i.val + 1) : ℝ)⁻¹ := by
+  rw [Finset.sum_div]
+  refine Finset.sum_congr rfl fun j _ ↦ ?_
+  rw [mul_div_assoc]
+  congr
+  rw [Fin.val_rev, pow_sub₀ (2 : ℝ) two_ne_zero j.prop]
+  simp
+
+
+-- Express a binary fraction as a sum of inverse powers.
+lemma sum_mul_two_pow_div_two_pow {n : ℕ} (a : Fin n → Fin 2) :
+    (∑ i, a i * 2 ^ (i.rev : ℕ) : ℝ) / (2 ^ n) = ∑ i, a i * (2 ^ (i + 1 : ℕ) : ℝ)⁻¹ := by
+  rw [Finset.sum_div]
+  refine Finset.sum_congr rfl fun j _ ↦ ?_
+  rw [mul_div_assoc]
+  congr
+  rw [Fin.val_rev, pow_sub₀ (2 : ℝ) two_ne_zero j.prop]
+  simp
+
+
+-- Note: We use `Fin 2` rather than `Bool` to avoid the need for `toNat` everywhere.
 lemma eq_on_binary {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
     (hf1 : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf2 : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
@@ -226,12 +254,62 @@ lemma eq_on_binary {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
       exact Finset.sum_congr rfl fun i _ ↦ by ring
 
 
+-- def bitVec_fin_equiv (n : ℕ) : BitVec n ≃ (Fin n → Bool) where
+--   toFun := BitVec.getLsb'
+--   -- invFun f := (BitVec.ofBoolListLE ((List.finRange n).map f)).cast (by simp)
+--   invFun f := Nat.ofDigits 2 ((List.finRange n).map fun i ↦ (f i).toNat)
+--   left_inv := by
+--     intro x
+--     simp
+--     sorry
+--   right_inv := by
+--     intro x
+--     simp
+--     sorry
+
+
+-- lemma exists_bitVec_iff_exists_fin (n : ℕ) (p : (Fin n → Bool) → Prop) :
+--     (∃ x : BitVec n, p x.getLsb') ↔ ∃ f : Fin n → Bool, p f := by
+--   refine ⟨fun ⟨x, hx⟩ ↦ ⟨x.getLsb', hx⟩, ?_⟩
+--   intro ⟨a, ha⟩
+
+--   use ∑ i, (a i).toNat * 2 ^ i.val
+--   simp
+--   sorry
+
+
+-- Note: We use `getMsbD` instead of `getMsb'` as it includes e.g. `getMsbD_cons_succ`.
+lemma sum_getMsbD_toNat_mul_two_pow {n : ℕ} (x : BitVec n) :
+    ∑ i : Fin n, (x.getMsbD i).toNat * 2 ^ i.rev.val = x.toNat := by
+  induction n with
+  | zero => simp [BitVec.of_length_zero]
+  | succ n IH =>
+    -- Replace `x` with `b.cons a` where `a = x.msb` and `b = x.setWidth n` (like tail).
+    obtain ⟨a, b, rfl⟩ : ∃ (a : Bool) (b : BitVec n), b.cons a = x :=
+      ⟨x.msb, x.setWidth n, x.cons_msb_setWidth⟩
+    calc _
+    -- Split `a` from the sum and simplify both terms.
+    _ = a.toNat * 2 ^ n + ∑ x : Fin n, (b.getMsbD x).toNat * 2 ^ (x.rev : ℕ) := by
+      simp [Fin.sum_univ_succ]
+    -- Apply the hypothesis from induction.
+    _ = a.toNat * 2 ^ n + b.toNat := by rw [IH]
+    -- Show equal to `(b.cons a).toNat`.
+    _ = _ := by
+      rw [BitVec.toNat_cons']
+      simp [Nat.shiftLeft_eq]
+
+
 theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     {b c : ℝ} (hb : b = (1 + c) / (2 + c)) (hc : 0 < c)
     (hf1 : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf2 : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1)) :
     ∀ x ∈ Set.Ioo 0 1, 0 < f x - x ∧ f x - x < c := by
 
+  have hb_lt : b < 1 := by
+    rw [hb]
+    refine (div_lt_one ?_).mpr ?_
+    · simp [add_pos, hc]
+    · simp
   -- TODO: keep one of these?
   have hb_gt : 1 / 2 < b := by
     rw [hb]
@@ -240,7 +318,8 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     · simp [add_mul, hc]
   have hb_two : 1 < 2 * b := (div_lt_iff₀' two_pos).mp hb_gt
 
-  have hb_lt : b < 1 := by sorry
+  have n : ℕ := sorry
+  have x : BitVec n := sorry
 
   intro x hx
   split_ands
