@@ -1,4 +1,4 @@
--- https://cloud.kili-technology.com/label/projects/review/cmbj2mmny000nv7ayeaimuiqo
+-- https://cloud.kili-technology.com/label/projects/label/cmbj2mmny000nv7ayeaimuiqo
 
 import Mathlib
 
