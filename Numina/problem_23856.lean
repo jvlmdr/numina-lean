@@ -34,6 +34,139 @@ example {f : ℝ → ℝ} (h_cont : Continuous f)
   _ < 0 := by simpa [lt_neg_iff_add_neg'] using h_cont q (by simpa [dist_comm])
 
 
+lemma toNat_ofNat_of_lt_two {x : ℕ} (hx : x < 2) :
+    (Bool.ofNat x).toNat = x := by
+  interval_cases x <;> rfl
+
+lemma toNat_ofNat_mod_two (x : ℕ) :
+    (Bool.ofNat (x % 2)).toNat = x % 2 :=
+  toNat_ofNat_of_lt_two (x.mod_lt two_pos)
+
+
+-- For any `x < b ^ n`, we can
+-- TODO: Does this not exist somewhere in Mathlib? Not from Nat.digits? Maybe with List.getD?
+lemma sum_div_pow_mod_mul_pow (b : ℕ) (n : ℕ) :
+    ∀ x < b ^ n, ∑ k ∈ Finset.range n, x / b ^ k % b * b ^ k = x := by
+  induction n with
+  | zero => simp
+  | succ n IH =>
+    intro x hx
+    specialize IH (x / b) (by
+      refine Nat.div_lt_of_lt_mul ?_
+      simpa [Nat.pow_succ'] using hx)
+    rw [Finset.sum_range_succ']
+    simp only [pow_zero, Nat.div_one, mul_one]  -- TODO?
+    convert Nat.div_add_mod' x b using 2
+    convert congrArg (· * b) IH
+    rw [Finset.sum_mul]
+    refine Finset.sum_congr rfl fun i hi ↦ ?_
+    simp only [Nat.div_div_eq_div_mul, Nat.pow_succ, mul_assoc]
+    congr 3
+    ring
+
+-- -- For `x` in `[0, 1)`, we can obtain `
+-- -- This is useful for approximating `x` with a
+-- -- TODO: write as `⌊x * 2 ^ n⌋₊ / 2 ^ n` with inverse powers? or build that on this?
+-- example {x : ℝ} (hx : x ∈ Set.Ico 0 1) (n : ℕ) :
+--     ∑ i ∈ Finset.range n, (⌊x * 2 ^ (i + 1)⌋₊ % 2) * 2 ^ (n - (i + 1)) =
+--       ⌊x * 2 ^ n⌋₊ := by
+--   rw [Set.mem_Ico] at hx
+--   -- TODO: clean up
+--   have := sum_div_pow_mod_mul_pow 2 n ⌊x * 2 ^ n⌋₊ (by
+--     rw [← @Nat.cast_lt ℝ]
+--     calc _
+--     _ ≤ x * 2 ^ n := Nat.floor_le (by simpa using hx.1)
+--     _ < _ := by simpa using hx.2)
+--   convert this using 1
+--   conv => rhs; rw [← Finset.sum_range_reflect]  -- TODO
+--   refine Finset.sum_congr rfl fun k hk ↦ ?_
+--   rw [Finset.mem_range] at hk
+--   have h_sub_sub : n - 1 - k = n - (k + 1) := by rw [add_comm, Nat.sub_add_eq]
+--   rw [h_sub_sub]
+--   congr
+--   rw [← Nat.floor_div_nat]
+--   simp [pow_sub₀ (2 : ℝ) two_ne_zero hk, div_mul_eq_div_div]
+
+-- The approximation `⌊x * b ^ n⌋₊ / b ^ n` for `x ∈ [0, 1)` as a sum of fractional digits.
+lemma sum_mul_pow_inv_eq_floor_div_pow (b : ℕ) (hb : 1 < b) (n : ℕ) (x : ℝ) (hx : x ∈ Set.Ico 0 1) :
+    ∑ i ∈ Finset.range n, (⌊x * b ^ (i + 1)⌋₊ % b : ℕ) * (b ^ (i + 1) : ℝ)⁻¹ =
+      (⌊x * b ^ n⌋₊ / b ^ n : ℝ) := by
+  rw [Set.mem_Ico] at hx
+  have hb_pos : 0 < b := Nat.zero_lt_of_lt hb
+  have hb_zero : b ≠ 0 := Nat.not_eq_zero_of_lt hb
+  rw [eq_div_iff (by simp [hb_zero])]
+  -- Move from `ℝ` back to `ℕ`.
+  -- Replace `b ^ n * (b ^ (i + 1))⁻¹` with `b ^ (n - (i + 1))`.
+  suffices ∑ i ∈ Finset.range n, ⌊x * b ^ (i + 1)⌋₊ % b * b ^ (n - (i + 1)) = ⌊x * b ^ n⌋₊ by
+    convert congrArg (Nat.cast : ℕ → ℝ) this using 1
+    simp only [Finset.sum_mul, Nat.cast_sum, Nat.cast_mul, Nat.cast_pow]
+    refine Finset.sum_congr rfl fun i hi ↦ ?_
+    rw [Finset.mem_range] at hi
+    rw [pow_sub₀ _ (by simpa) (Nat.add_one_le_of_lt hi)]
+    ring
+  convert sum_div_pow_mod_mul_pow b n ⌊x * b ^ n⌋₊ ?_ using 1
+  swap
+  · rw [← @Nat.cast_lt ℝ]
+    calc _
+    _ ≤ x * b ^ n := by
+      refine Nat.floor_le ?_
+      simpa [hb_pos] using hx.1
+    _ < _ := by
+      simpa [hb_pos] using hx.2
+  symm
+  -- Flip the sum such that they both start with the most significant bit.
+  rw [← Finset.sum_range_reflect]
+  refine Finset.sum_congr rfl fun k hk ↦ ?_
+  rw [Finset.mem_range] at hk
+  -- Replace `n - 1 - k` with `n - (k + 1)`.
+  rw [Nat.sub_sub, add_comm 1 k]
+  congr
+  -- Move the division (with truncation) inside the floor.
+  rw [← Nat.floor_div_nat]
+  congr
+  simp only [Nat.cast_pow]
+  -- Cancel the `b ^ n` terms.
+  rw [pow_sub₀ _ (by simpa using hb_zero) (Nat.add_one_le_of_lt hk)]
+  rw [div_mul_eq_div_div]
+  simp [hb_zero]
+
+
+-- For any real in `[0, 1)`, there exists a binary fraction defined by a function `ℕ → Bool`.
+-- Note that this could be generalized to an arbitrary base.
+lemma exists_binary_fraction {x : ℝ} (hx : x ∈ Set.Ico 0 1) :
+    ∃ (f : ℕ → Bool), HasSum (fun i ↦ (f i).toNat * (2 ^ (i + 1 : ℕ) : ℝ)⁻¹) x := by
+  let f : ℕ → Bool := fun k ↦ Bool.ofNat (⌊x * 2 ^ (k + 1)⌋₊ % 2)
+  use f
+  refine (hasSum_iff_tendsto_nat_of_nonneg (by simp) x).mpr ?_
+  rw [Metric.tendsto_atTop]
+  intro ε hε
+  use ⌈Real.logb 2 (ε⁻¹)⌉₊
+  intro n hn
+  rw [dist_comm, Real.dist_eq]
+  calc _
+  _ = |x - ⌊x * 2 ^ n⌋₊ / 2 ^ n| := by
+    congr
+    unfold f
+    simp only [toNat_ofNat_mod_two]
+    simpa using sum_mul_pow_inv_eq_floor_div_pow 2 one_lt_two n x hx
+  _ = |(x * 2 ^ n - ⌊x * 2 ^ n⌋₊)| / 2 ^ n := by simp [sub_div', abs_div]
+  _ < 1 / 2 ^ n := by
+    rw [div_lt_div_iff_of_pos_right (by simp)]
+    calc _
+    _ = |Int.fract (x * 2 ^ n)| := by
+      congr
+      refine natCast_floor_eq_intCast_floor ?_
+      rw [Set.mem_Ico] at hx
+      simpa using hx.1
+    _ = Int.fract (x * 2 ^ n) := by simp [abs_of_nonneg]
+    _ < 1 := Int.fract_lt_one _
+  _ ≤ ε := by
+    suffices ε⁻¹ ≤ 2 ^ (n : ℝ) by simpa [inv_le_comm₀, hε]
+    rw [← Real.logb_le_logb one_lt_two (by simpa) (by simp)]
+    rw [Real.logb_rpow two_pos (by simp)]
+    simpa using hn
+
+
 lemma dense_binary_rat_Ico (x : ℝ) (hx : x ∈ Set.Ico 0 1) :
     ∀ ε > 0, ∃ (n : ℕ) (a : BitVec n), dist x (a.toNat / (2 ^ n)) < ε := by
   intro ε hε
@@ -52,9 +185,7 @@ lemma dense_binary_rat_Ico (x : ℝ) (hx : x ∈ Set.Ico 0 1) :
     _ < (2 ^ n : ℝ) := by simpa using hx.2  -- Requires `x < 1`.
     _ = ((2 ^ n : ℕ) : ℝ) := by simp
 
-  -- suffices 2 ^ n * dist x (↑⌊2 ^ n * x⌋₊ / 2 ^ n) < 2 ^ n * ε by simpa
   rw [Real.dist_eq]
-  -- suffices 2 ^ n * |x - ⌊2 ^ n * x⌋₊ / 2 ^ n| < 2 ^ n * ε by simpa
   suffices |2 ^ n * (x - ⌊2 ^ n * x⌋₊ / 2 ^ n)| < 2 ^ n * ε by simpa [abs_mul]
   suffices |2 ^ n * x - ⌊2 ^ n * x⌋₊| < 2 ^ n * ε by simpa [mul_sub, mul_div_cancel₀]
 
@@ -79,7 +210,14 @@ lemma dense_binary_rat_Ico (x : ℝ) (hx : x ∈ Set.Ico 0 1) :
   _ = _ := by simp
 
 
--- TODO: If `Ico` satisfies, the solution is cleaner.
+-- TODO: if `Ico` suffices, the solution is cleaner.
+-- If we do really need this, can we implement it using the above?
+-- That is, find a number in `[0, 1)` which is at most `ε / 2` away, then apply the above.
+-- It feels ugly to scale by `n / (n + m)`.
+-- But then how?
+-- Round towards `1/2`?
+-- subtract `ε/2` and clip at 0? or just clip at `1 - ε/2`?
+
 lemma dense_binary_frac_Icc (x : ℝ) (hx : x ∈ Set.Icc 0 1) :
     ∀ ε > 0, ∃ (n : ℕ) (a : BitVec n), dist x (a.toNat / (2 ^ n)) < ε := by
   rw [Set.mem_Icc] at hx
@@ -109,9 +247,6 @@ lemma dense_binary_frac_Icc (x : ℝ) (hx : x ∈ Set.Icc 0 1) :
 
   -- TODO: come back and do this if needed
   sorry
-
-
-
 
 
 -- TODO: remove?
@@ -348,4 +483,25 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
       -- `b + (1 - b) * (2 * x - 1)`
       sorry
 
-  · sorry
+  · -- Need to write as a `≤` condition to use density of binary fractions.
+    -- However, the strictness comes from the fact that one of the `a j` is not zero since `x ≠ 0`?
+    -- Not sure how to express this.
+
+    suffices f x - x ≤ ∑' n : ℕ, (b⁻¹ ^ n - 2⁻¹ ^ n) by
+      sorry
+
+    suffices ∀ (n : ℕ) (a : Fin n → Fin 2),
+        (fun x ↦ f x - x) (∑ j, a j * (2 ^ (j + 1 : ℕ) : ℝ)⁻¹) - c < 0 by
+      sorry
+    intro k a
+    rw [sub_neg]
+
+    calc _
+    _ ≤
+    _ < b / (1 - b) - 1 := by
+
+      sorry
+
+    _ = c := by
+      rw [hb, one_sub_div (by linarith), div_div_div_cancel_right₀ (by linarith)]
+      ring
