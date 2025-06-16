@@ -399,7 +399,7 @@ lemma eq_on_finite_binary {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
     (hf2 : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
     (n : ℕ) (a : Fin n → Bool) :
     f (∑ j, (a j).toNat * (2 ^ (j + 1 : ℕ))⁻¹) =
-      ∑ i, b * (a i).toNat * ∏ k ∈ Finset.Iio i, if a k then 1 - b else b := by
+      ∑ i, (a i).toNat * (b * ∏ k ∈ Finset.Iio i, if a k then 1 - b else b) := by
   sorry
 
 
@@ -413,40 +413,42 @@ lemma ite_elim {α : Type*} (p : α → Prop) {q : Prop} [Decidable q] {x y : α
 
 
 -- If `a` is the binary expansion of `x`, then we can express `f x` as a series of products.
-lemma hasSum_binary_apply_of_hasSum_binary {f : ℝ → ℝ} (h_cont : Continuous f)
+lemma hasSum_binary_apply_of_hasSum_binary {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
     {b : ℝ} (hb : b ∈ Set.Ioo (2⁻¹) 1)
     (hf1 : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf2 : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
-    {x : ℝ} {a : ℕ → Bool}
-    (ha : HasSum (fun n ↦ (a n).toNat * (2 ^ (n + 1) : ℝ)⁻¹) x) :
-    HasSum (fun n ↦ b * (a n).toNat * ∏ k ∈ Finset.range n, if a k then 1 - b else b) (f x) := by
+    {x : ℝ} {a : ℕ → Bool} (ha : HasSum (fun n ↦ (a n).toNat * (2 ^ (n + 1) : ℝ)⁻¹) x) :
+    HasSum (fun n ↦ (a n).toNat * (b * ∏ k ∈ Finset.range n, if a k then 1 - b else b)) (f x) := by
   rw [Set.mem_Ioo] at hb
   refine (hasSum_iff_tendsto_nat_of_nonneg ?_ (f x)).mpr ?_
   · intro n
-    refine mul_nonneg ?_ ?_
-    · refine mul_nonneg ?_ ?_ <;> linarith
+    refine mul_nonneg ?_ (mul_nonneg ?_ ?_)
+    · linarith
+    · linarith
     · refine Finset.prod_nonneg fun k hk ↦ ?_
       refine ite_elim (0 ≤ ·) ?_ ?_ <;> linarith
   rw [Metric.tendsto_atTop]
   intro ε hε
   -- Given the `ε` for `f x`, we need to determine `ε'` for x. This will provide `N`.
+  -- TODO: lemma for this; should it be `Icc 0 1`?
+  have hx_mem : x ∈ Set.Ico 0 1 := by sorry
   rw [hasSum_iff_tendsto_nat_of_nonneg (by simp), Metric.tendsto_atTop] at ha
   -- We need to obtain `N` such that `∑ n < N, v n = f (∑ n < N, u n)` is close to `f x`.
-  rw [Metric.continuous_iff] at h_cont
-  specialize h_cont x ε hε
+  rw [Metric.continuousOn_iff] at h_cont
+  specialize h_cont x (Set.mem_Icc_of_Ico hx_mem) ε hε
   obtain ⟨δ, hδ, h_cont⟩ := h_cont
   specialize ha δ hδ
   obtain ⟨N, hN⟩ := ha
   use N
   intro n hn
   specialize hN n hn
-  convert h_cont (∑ i ∈ Finset.range n, (a i).toNat * (2 ^ (i + 1))⁻¹) hN
+  convert h_cont (∑ i ∈ Finset.range n, (a i).toNat * (2 ^ (i + 1))⁻¹) ?_ hN
   · symm
     convert eq_on_finite_binary hb.2.ne hf1 hf2 n (fun k ↦ a k.val) using 1
     · rw [Finset.sum_range]
     · rw [Finset.sum_range]
       refine Finset.sum_congr rfl fun i hi ↦ ?_
-      congr 1
+      congr 2
       calc _
       -- Rewrite product on `Fin n` as a product on `Finset.map`.
       _ = ∏ k ∈ (Finset.Iio i).map Fin.valEmbedding, if a k then 1 - b else b := by
@@ -454,39 +456,42 @@ lemma hasSum_binary_apply_of_hasSum_binary {f : ℝ → ℝ} (h_cont : Continuou
       _ = _ := by
         rw [Finset.prod_map]
         simp
+  · -- TODO: same lemma again? (but truncated)
+    refine Set.mem_Icc_of_Ico ?_
+    sorry
 
 
-lemma hasSum {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (2⁻¹) 1)
-    (hf1 : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
-    (hf2 : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
-    (x : ℝ) (a : ℕ → Bool)
-    (ha : HasSum (fun i ↦ (a i).toNat * (2 ^ (i + 1 : ℕ) : ℝ)⁻¹) x) :
-    HasSum (fun j ↦ b * (∏ k ∈ Finset.Iio j, if a k = false then b else 1 - b) * (a j).toNat)
-      (f x) := by
-  simp only [Set.mem_Ioo] at hb
-  rw [hasSum_iff_tendsto_nat_of_nonneg]
-  swap
-  · intro i
-    refine mul_nonneg (mul_nonneg ?_ ?_) (Nat.cast_nonneg _)
-    · linarith
-    · refine Finset.prod_nonneg fun k hk ↦ ?_
-      -- rw [apply_ite (f := fun x : ℝ ↦ 0 ≤ x)]
-      -- rw [ite_prop_iff_or]
-      -- refine (em (a k = false)).imp ?_ ?_
-      refine ite_elim _ ?_ ?_ <;> linarith
+-- lemma hasSum {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (2⁻¹) 1)
+--     (hf1 : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+--     (hf2 : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
+--     (x : ℝ) (a : ℕ → Bool)
+--     (ha : HasSum (fun i ↦ (a i).toNat * (2 ^ (i + 1 : ℕ) : ℝ)⁻¹) x) :
+--     HasSum (fun j ↦ b * (∏ k ∈ Finset.Iio j, if a k = false then b else 1 - b) * (a j).toNat)
+--       (f x) := by
+--   simp only [Set.mem_Ioo] at hb
+--   rw [hasSum_iff_tendsto_nat_of_nonneg]
+--   swap
+--   · intro i
+--     refine mul_nonneg (mul_nonneg ?_ ?_) (Nat.cast_nonneg _)
+--     · linarith
+--     · refine Finset.prod_nonneg fun k hk ↦ ?_
+--       -- rw [apply_ite (f := fun x : ℝ ↦ 0 ≤ x)]
+--       -- rw [ite_prop_iff_or]
+--       -- refine (em (a k = false)).imp ?_ ?_
+--       refine ite_elim _ ?_ ?_ <;> linarith
 
-  rw [hasSum_iff_tendsto_nat_of_nonneg (by simp)] at ha
+--   rw [hasSum_iff_tendsto_nat_of_nonneg (by simp)] at ha
 
-  rw [Metric.tendsto_atTop]
-  rw [Metric.tendsto_atTop] at ha
+--   rw [Metric.tendsto_atTop]
+--   rw [Metric.tendsto_atTop] at ha
 
-  intro ε hε
-  specialize ha ε hε
-  -- Not sure if we can bound this?
-  -- Perhaps, since it's bounded by a geometric series?
-  -- Seems like way too much work though.
+--   intro ε hε
+--   specialize ha ε hε
+--   -- Not sure if we can bound this?
+--   -- Perhaps, since it's bounded by a geometric series?
+--   -- Seems like way too much work though.
 
-  sorry
+--   sorry
 
 -- def bitVec_fin_equiv (n : ℕ) : BitVec n ≃ (Fin n → Bool) where
 --   toFun := BitVec.getLsb'
@@ -560,10 +565,10 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     · simp [add_mul, hc]
   have hb_two : 1 < 2 * b := (div_lt_iff₀' two_pos).mp hb_gt
 
-  intro x hx
+  intro x hx_mem
   split_ands
   · rw [sub_pos]
-    rw [Set.mem_Ioo] at hx
+    rw [Set.mem_Ioo] at hx_mem
     cases lt_or_le x (1 / 2) with
     | inl hx' =>
       suffices 2 * b * x ≤ f x by
@@ -590,135 +595,83 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
   · -- Need to write as a `≤` condition to use density of binary fractions.
     -- However, the strictness comes from the fact that one of the `a j` is not zero since `x ≠ 0`?
     -- Not sure how to express this.
+    -- Observe from the definition of `b` that `c = b / (1 - b) - 1`, and these are equal to the
+    -- infinite geometric series `∑ n ≥ 1, b ^ n` and `∑ n ≥ 1, (1/2) ^ n`.
+    have hc : c = b / (1 - b) - 1 := by
+      rw [hb, one_sub_div (by linarith), div_div_div_cancel_right₀ (by linarith)]
+      ring
+    have h_sum_b : HasSum (fun n ↦ b ^ (n + 1)) (b / (1 - b)) := by
+      rw [hasSum_nat_add_iff]
+      convert hasSum_geometric_of_lt_one (by linarith) hb_lt using 1
+      rw [div_add' _ _ _ (by linarith)]
+      simp
+    have h_sum_half : HasSum (fun n ↦ (2⁻¹ : ℝ) ^ (n + 1)) 1 := by
+      -- suffices HasSum (fun n ↦ (2⁻¹ : ℝ) ^ (n + 1)) 1 by simpa
+      rw [hasSum_nat_add_iff (f := fun n ↦ 2⁻¹ ^ n)]
+      simpa [one_add_one_eq_two] using hasSum_geometric_two
 
-    -- Rewrite the right side as an infinite sum.
-    suffices f x - x < ∑' n : ℕ, (b ^ (n + 1) - 2⁻¹ ^ (n + 1)) by
-      refine lt_of_lt_of_eq this ?_
+    -- Obtain the terms on the left side as infinite sums.
+    -- Replace `x` with an infinite binary fraction.
+    obtain ⟨a, hx_sum⟩ := exists_binary_fraction (Set.mem_Ico_of_Ioo hx_mem)
+    -- Then use the result from induction on the bits to obtain a sum for `f x`.
+    -- TODO: get on one line? use 2⁻¹ everywhere?
+    have hfx_sum :=
+      hasSum_binary_apply_of_hasSum_binary hf ⟨by simpa using hb_gt, hb_lt⟩ hf1 hf2 hx_sum
+
+    -- Replace both sides with an infinite sum.
+    rw [← (hfx_sum.sub hx_sum).tsum_eq]
+    rw [hc, ← (h_sum_b.sub h_sum_half).tsum_eq]
+
+    -- It remains to prove that the left sum is strictly less that the right.
+    -- It suffices to give some `i` such that
+    -- `(a i) * (b * (∏ k ∈ Finset.range i, if a k then 1 - b else b) - 2 ^ (i + 1))`
+    -- is strictly less than `b ^ (i + 1) - (1 / 2) ^ (i + 1)`.
+    -- If `a i = 0`, then the left side is zero and the right side is positive.
+    -- If `a i = 1`, then we need some `k < i` such that we can use `1 - b < b`.
+    -- Therefore, find `k` such that `a k = 1` and use `i = k + 1`.
+    rw [Set.mem_Ioo] at hx_mem
+    obtain ⟨k, hk⟩ := exists_bit_true_of_ne_zero a hx_sum hx_mem.1.ne'
+    refine tsum_lt_tsum (i := k + 1) ?_ ?_ (hfx_sum.sub hx_sum).summable
+      (h_sum_b.sub h_sum_half).summable
+    · intro n
+      simp only [inv_pow]
       calc _
-      _ = b / (1 - b) - 1 := by
-        refine (HasSum.sub ?_ ?_).tsum_eq
-        · rw [hasSum_nat_add_iff]
-          convert hasSum_geometric_of_lt_one (by linarith) hb_lt using 1
-          rw [div_add' _ _ _ (by linarith)]
-          simp
-        · rw [hasSum_nat_add_iff (f := fun n ↦ 2⁻¹ ^ n)]
-          simpa [one_add_one_eq_two] using hasSum_geometric_two
-      _ = c := by
-        rw [hb, one_sub_div (by linarith), div_div_div_cancel_right₀ (by linarith)]
-        ring
-
-    -- Now we need to show that `f x` tends to a sum as well?
-    -- However, this requires showing that the function is `Summable`.
-
-    -- Maybe we can obtain this easily by bounding the series by a geometric series?
-
-    let v (a : ℕ → Bool) (j : ℕ) : ℝ :=
-        (a j).toNat * (b * (∏ k in Finset.range j, if a k then 1 - b else b))
-
-
-    have hv_summable (a : ℕ → Bool) : Summable (v a) := by
-      refine Summable.of_nonneg_of_le (f := fun n ↦ b ^ (n + 1)) ?_ ?_ ?_
-      · intro j
-        refine mul_nonneg (by simp) (mul_nonneg (by linarith) ?_)
-        refine Finset.prod_nonneg fun k hk ↦ ite_elim _ ?_ ?_ <;> linarith
-      · intro j
-        unfold v
+      -- Bound `b` and `1 - b` above by `b`.
+      _ ≤ (a n).toNat * b ^ (n + 1) - (a n).toNat * (2 ^ (n + 1))⁻¹ := by
+        refine sub_le_sub_right ?_ _
+        rw [pow_succ']
+        refine mul_le_mul_of_nonneg_left ?_ (by simp)
+        refine mul_le_mul_of_nonneg_left ?_ (by linarith)
         calc _
-        _ ≤ b * ∏ k in Finset.range j, if a k then 1 - b else b := by
-          refine mul_le_of_le_one_left ?_ ?_
-          · refine mul_nonneg (by linarith) ?_
-            refine Finset.prod_nonneg fun k hk ↦ ite_elim _ ?_ ?_ <;> linarith
-          · simp [Bool.toNat_le]
-        _ ≤ b * ∏ k in Finset.range j, b := by
-          refine mul_le_mul_of_nonneg_left ?_ (by linarith)
+        _ ≤ ∏ _ ∈ Finset.range n, b := by
           refine Finset.prod_le_prod ?_ ?_
-          · refine fun k hk ↦ ite_elim _ ?_ ?_ <;> linarith  -- TODO: written three times..?
-          · refine fun k hk ↦ ?_
-            refine ite_elim (p := (· ≤ b)) (by linarith) (by simp)
-        _ = _ := by simp [pow_succ']
-      ·
-        -- refine summable_geometric_of_lt_one (by linarith) ?_
-        sorry
-
-    obtain ⟨a, ha⟩ := exists_binary_fraction (Set.mem_Ico_of_Ioo hx)
-
-    have hv : HasSum (v a) (f x) := by
-      -- TODO if useful
-      -- Could be tricky to handle infiniteness?
-      unfold v
-      rw [hasSum_iff_tendsto_nat_of_nonneg]
-      rw [Metric.tendsto_atTop]
-      intro ε hε
-      -- The remainder is less than `b ^ N / (1 - b) < 2 * b ^ N`.
-      sorry
-
-    -- Let `u n` be the series of binary fractions that approximates `x`.
-    -- TODO: Generalize to `u a n`?
-    let u : ℕ → ℝ := fun n ↦ (a n).toNat * (2 ^ (n + 1 : ℕ) : ℝ)⁻¹
-
-    have hu : ∑' k, u k = x := ha.tsum_eq
-
-    have ha_zero (hx : x ≠ 0) : ∃ n, a n := by
-      contrapose! hx with h
-      rw [← ha.tsum_eq]
-      simp [h]
-
-    have : ∑' n, (v a n - u n) < ∑' n, (b ^ (n + 1) - 2⁻¹ ^ (n + 1)) := by
-      suffices ∃ n, v a n - u n < b ^ (n + 1) - 2⁻¹ ^ (n + 1) by
-        rcases this with ⟨n, hn⟩
-        refine tsum_lt_tsum ?_ hn ?_ ?_
-        · -- Already proved somewhere?
-          sorry
-        · refine Summable.sub ?_ ?_
-          · sorry
-          · sorry
-        · refine Summable.sub ?_ ?_
-          · sorry
-          · sorry
-      -- Since `x ≠ 0`, there must be some `n` such that `a n ≠ 0`.
-      specialize ha_zero hx.1.ne'
-      refine ha_zero.imp fun m hm ↦ ?_
-      unfold v u
-      rw [← mul_sub]
-      simp [hm]
-
-      sorry
-
-
-    -- rcases ha.tsum_eq with rfl
-
-
-    suffices ∀ᶠ n in atTop, f (∑ k in Finset.range n, z k) - ∑ k in Finset.range n, z k < c by
-      rw [eventually_atTop] at this
-      rcases this with ⟨N, hN⟩
-      sorry
-
-    -- have : HasSum (fun i ↦ (a i).toNat * (2 ^ (i + 1 : ℕ) : ℝ)⁻¹) x := by sorry
-
-    -- have := ha.tendsto_sum_nat
-
-    -- have : ∃ N, ∀ n ≥ N, f () - () < c := by
-    --   sorry
-
-    rcases this with rfl
-
-    sorry
-
-    -- suffices f x - x ≤ ∑' n : ℕ, (b⁻¹ ^ n - 2⁻¹ ^ n) by
-    --   sorry
-
-    -- suffices ∀ (n : ℕ) (a : Fin n → Fin 2),
-    --     (fun x ↦ f x - x) (∑ j, a j * (2 ^ (j + 1 : ℕ) : ℝ)⁻¹) - c < 0 by
-    --   sorry
-    -- intro k a
-    -- rw [sub_neg]
-
-    -- calc _
-    -- _ ≤
-    -- _ < b / (1 - b) - 1 := by
-
-    --   sorry
-
-    -- _ = c := by
-    --   rw [hb, one_sub_div (by linarith), div_div_div_cancel_right₀ (by linarith)]
-    --   ring
+          · refine fun i hi ↦ ite_elim (p := (0 ≤ ·)) ?_ ?_ <;> linarith
+          · refine fun i hi ↦ ite_elim (p := (· ≤ b)) ?_ ?_ <;> linarith
+        _ = _ := by simp
+      -- Take out the factor of `a n`.
+      _ = (a n).toNat * (b ^ (n + 1) - (2 ^ (n + 1))⁻¹) := by ring
+      _ ≤ _ := by
+        refine mul_le_of_le_one_left ?_ (by simp [Bool.toNat_le])
+        suffices (2⁻¹ : ℝ) ^ (n + 1) ≤ b ^ (n + 1) by simpa
+        refine pow_le_pow_left₀ (by norm_num) ?_ (n + 1)
+        linarith  -- TODO: `hb_gt`
+    · -- TODO (and where to put `b`)
+      simp only [inv_pow]
+      cases a (k + 1) with
+      | false =>
+        -- The left side is zero. This case is trivial, it suffices to know that `2⁻¹ < b`.
+        suffices 2⁻¹ ^ (k + 1 + 1) < b ^ (k + 1 + 1) by simpa
+        gcongr
+        linarith
+      | true =>
+        have hb_pos : 0 < b := by linarith
+        suffices ((1 - b) * ∏ x ∈ Finset.range k, if a x then 1 - b else b) < b * b ^ k by
+          simpa [pow_succ', Finset.range_succ, hk, hb_pos]
+        refine mul_lt_mul_of_lt_of_le_of_nonneg_of_pos ?_ ?_ (by linarith) (pow_pos hb_pos k)
+        · linarith
+        · calc _
+          _ ≤ ∏ _ ∈ .range k, b := by
+            refine Finset.prod_le_prod ?_ ?_
+            · refine fun i hi ↦ ite_elim (p := (0 ≤ ·)) ?_ ?_ <;> linarith
+            · refine fun i hi ↦ ite_elim (p := (· ≤ b)) ?_ ?_ <;> linarith
+          _ = _ := by simp
