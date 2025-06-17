@@ -538,7 +538,36 @@ lemma sum_getMsbD_toNat_mul_two_pow {n : ℕ} (x : BitVec n) :
       simp [Nat.shiftLeft_eq]
 
 
-example (b : ℝ) (hb : b ∈ Set.Ioo (2⁻¹) 1)
+lemma sum_binary_fraction_mem_Ico (n : ℕ) (a : ℕ → Bool) :
+    ∑ i ∈ Finset.range n, (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹ ∈ Set.Ico 0 1 := by
+  rw [Set.mem_Ico]
+  constructor
+  · exact Finset.sum_nonneg (by simp)
+  · calc _
+    _ ≤ ∑ i ∈ Finset.range n, (2⁻¹ : ℝ) ^ (i + 1) :=
+      Finset.sum_le_sum fun i _ ↦ by simp [Bool.toNat_le]
+    _ = 2⁻¹ * ∑ i ∈ Finset.range n, (2⁻¹ : ℝ) ^ i := by
+      rw [Finset.mul_sum]
+      congr
+      funext i
+      ring
+    _ = 1 - (2 ^ n : ℝ)⁻¹ := by
+      rw [geom_sum_eq (by norm_num)]
+      simp only [inv_pow]
+      ring
+    _ < _ := by simp
+
+
+lemma tsum_binary_fraction_mem_Icc (a : ℕ → Bool) :
+    ∑' i, (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹ ∈ Set.Icc 0 1 := by
+  rw [Set.mem_Icc]
+  constructor
+  · exact tsum_nonneg (by simp)
+  · refine Real.tsum_le_of_sum_range_le (by simp) fun n ↦ ?_
+    exact (sum_binary_fraction_mem_Ico n a).2.le
+
+
+lemma lt_apply_on_finite_binary_frac (b : ℝ) (hb : b ∈ Set.Ioo (2⁻¹) 1)
     {n : ℕ} (a : ℕ → Bool) (ha : ∃ i < n, a i) :
     ∑ i ∈ Finset.range n, (a i).toNat * (2 ^ (i + 1 : ℕ) : ℝ)⁻¹ <
       b * ∑ i ∈ Finset.range n, (a i).toNat * ∏ k ∈ Finset.range i, if a k then 1 - b else b := by
@@ -589,9 +618,8 @@ example (b : ℝ) (hb : b ∈ Set.Ioo (2⁻¹) 1)
         · linarith
         · exact IH
         · norm_num
-        · -- Note: Do have `a (i + 1) = true` to use here if needed.
-          -- TODO: lemma about binary expansions.
-          sorry
+        · -- Note: We do have `a (i + 1) = true` to make this strict if required.
+          exact (sum_binary_fraction_mem_Ico _ _).1
     | inl ha0 =>
       simp [ha0]
       -- Need to exclude the case where all other `a (i + 1) = false`.
@@ -618,8 +646,7 @@ example (b : ℝ) (hb : b ∈ Set.Ioo (2⁻¹) 1)
           refine mul_le_of_le_one_right ?_ ?_
           · linarith
           · rcases hx with rfl
-            -- TODO: Need lemma about binary expansions.
-            sorry
+            exact (sum_binary_fraction_mem_Ico _ _).2.le
         _ < _ := by
           suffices 0 < 1 - b by simpa [this] using IH
           linarith
