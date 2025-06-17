@@ -538,6 +538,93 @@ lemma sum_getMsbD_toNat_mul_two_pow {n : ℕ} (x : BitVec n) :
       simp [Nat.shiftLeft_eq]
 
 
+example (b : ℝ) (hb : b ∈ Set.Ioo (2⁻¹) 1)
+    {n : ℕ} (a : ℕ → Bool) (ha : ∃ i < n, a i) :
+    ∑ i ∈ Finset.range n, (a i).toNat * (2 ^ (i + 1 : ℕ) : ℝ)⁻¹ <
+      b * ∑ i ∈ Finset.range n, (a i).toNat * ∏ k ∈ Finset.range i, if a k then 1 - b else b := by
+  rw [Set.mem_Ioo] at hb
+  induction n generalizing a with
+  | zero =>
+    -- Contradiction: There is no `i < 0`.
+    simp at ha
+  | succ n IH =>
+    suffices 2⁻¹ * (a 0).toNat + 2⁻¹ * ∑ i ∈ .range n, (a (i + 1)).toNat * (2 ^ (i + 1) : ℝ)⁻¹ <
+        b * (a 0).toNat + (if a 0 then 1 - b else b) * (b * ∑ i ∈ .range n, (a (i + 1)).toNat *
+          ∏ k ∈ .range i, if a (k + 1) then 1 - b else b) by
+      convert this using 1
+      · calc _
+        _ = 2⁻¹ * (a 0).toNat + ∑ i ∈ .range n, (a (i + 1)).toNat * (2 ^ (i + 1 + 1) : ℝ)⁻¹ := by
+          rw [Finset.sum_range_succ']
+          ring
+        _ = _ := by
+          rw [Finset.mul_sum]
+          congr
+          funext i
+          ring
+      · calc _
+        _ = b * (a 0).toNat + b * ∑ k ∈ .range n, (a (k + 1)).toNat *
+            ∏ k ∈ .range (k + 1), if a k = true then 1 - b else b := by
+          rw [Finset.sum_range_succ']
+          ring
+        _ = _ := by
+          simp only [Finset.mul_sum]
+          congr 1
+          refine Finset.sum_congr rfl fun i hi ↦ ?_
+          rw [Finset.prod_range_succ']
+          ring
+
+    -- Now split on `a 0`.
+    cases (a 0).eq_false_or_eq_true with
+    | inr ha0 =>
+      -- When `a 0 = false`, we know there is some `i` such that `a (i + 1) = true`.
+      obtain ⟨i, hi, hai⟩  := ha
+      cases i with
+      | zero => simpa using ha0.symm.trans hai  -- Contradiction.
+      | succ i =>
+        specialize IH (fun i ↦ a (i + 1)) ⟨i, by simpa using hi, hai⟩
+        refine add_lt_add_of_le_of_lt ?_ ?_
+        · simp [ha0]
+        simp [ha0]
+        refine mul_lt_mul'' ?_ ?_ ?_ ?_
+        · linarith
+        · exact IH
+        · norm_num
+        · -- Note: Do have `a (i + 1) = true` to use here if needed.
+          -- TODO: lemma about binary expansions.
+          sorry
+    | inl ha0 =>
+      simp [ha0]
+      -- Need to exclude the case where all other `a (i + 1) = false`.
+      cases forall_or_exists_not (fun i : ℕ ↦ i < n → a (i + 1) = false) with
+      | inl ha =>
+        rw [Finset.sum_eq_zero (by simpa using ha)]
+        rw [Finset.sum_eq_zero fun i hi ↦ by simp [ha i (Finset.mem_range.mp hi)]]
+        suffices 2⁻¹ < b by simpa
+        linarith
+      | inr ha =>
+        simp only [_root_.not_imp, Bool.not_eq_false] at ha
+        specialize IH (fun i ↦ a (i + 1)) ha
+        calc _
+        _ ≤ b + (1 - b) * ∑ i ∈ .range n, (a (i + 1)).toNat * (2 ^ (i + 1) : ℝ)⁻¹ := by
+          generalize hx : ∑ i ∈ .range n, (a (i + 1)).toNat * (2 ^ (i + 1) : ℝ)⁻¹ = x
+          suffices 2⁻¹ * x - (1 - b) * x ≤ b - 2⁻¹ by
+            rw [sub_le_sub_iff] at this
+            convert this using 1
+            ring
+          suffices (b - 2⁻¹) * x ≤ b - 2⁻¹ by
+            convert this using 1
+            ring
+          -- Note: Could even prove strict inequality here.
+          refine mul_le_of_le_one_right ?_ ?_
+          · linarith
+          · rcases hx with rfl
+            -- TODO: Need lemma about binary expansions.
+            sorry
+        _ < _ := by
+          suffices 0 < 1 - b by simpa [this] using IH
+          linarith
+
+
 -- If `a` is the binary fraction of `x ≠ 0`, then some bit must be true.
 lemma exists_bit_true_of_ne_zero {x : ℝ} (a : ℕ → Bool)
     (ha : HasSum (fun i ↦ (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹) x) (h : x ≠ 0) :
