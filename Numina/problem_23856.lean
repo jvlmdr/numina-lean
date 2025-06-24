@@ -15,6 +15,35 @@ where $b=\frac{1+c}{2+c}, c>0$.
 Show that $0 < f(x) - x < c$ for every $x, 0 < x < 1$. -/
 
 
+lemma sum_binary_fraction_mem_Ico (n : ℕ) (a : ℕ → Bool) :
+    ∑ i ∈ Finset.range n, (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹ ∈ Set.Ico 0 1 := by
+  rw [Set.mem_Ico]
+  constructor
+  · exact Finset.sum_nonneg (by simp)
+  · calc _
+    _ ≤ ∑ i ∈ Finset.range n, (2⁻¹ : ℝ) ^ (i + 1) :=
+      Finset.sum_le_sum fun i _ ↦ by simp [Bool.toNat_le]
+    _ = 2⁻¹ * ∑ i ∈ Finset.range n, (2⁻¹ : ℝ) ^ i := by
+      rw [Finset.mul_sum]
+      congr
+      funext i
+      ring
+    _ = 1 - (2 ^ n : ℝ)⁻¹ := by
+      rw [geom_sum_eq (by norm_num)]
+      simp only [inv_pow]
+      ring
+    _ < _ := by simp
+
+
+lemma tsum_binary_fraction_mem_Icc (a : ℕ → Bool) :
+    ∑' i, (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹ ∈ Set.Icc 0 1 := by
+  rw [Set.mem_Icc]
+  constructor
+  · exact tsum_nonneg (by simp)
+  · refine Real.tsum_le_of_sum_range_le (by simp) fun n ↦ ?_
+    exact (sum_binary_fraction_mem_Ico n a).2.le
+
+
 -- From `f` continuous, show that non-negativity on `ℚ` implies non-negativity on `ℝ`.
 -- TODO: There probably exists a higher-level way to obtain this result? Avoiding contradiction?
 example {f : ℝ → ℝ} (h_cont : Continuous f)
@@ -319,8 +348,8 @@ lemma sum_mul_two_pow_div_two_pow {n : ℕ} (a : Fin n → Fin 2) :
 
 -- Note: We use `Fin 2` rather than `Bool` to avoid the need for `toNat` everywhere.
 lemma eq_on_finite_binary' {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
-    (hf1 : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
-    (hf2 : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
     (n : ℕ) (a : Fin n → Fin 2) :
     f (∑ j, a j * (2 ^ (j + 1 : ℕ))⁻¹) =
       b * ∑ j, (∏ k ∈ Finset.Iio j, if a k = 0 then b else 1 - b) * a j := by
@@ -328,7 +357,7 @@ lemma eq_on_finite_binary' {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
   | zero =>
     suffices f 0 = 0 by simpa
     -- For `x = 0`, we obtain `f 0 = b * f 0`, which implies either `f 0 = 0` or `b = 1`.
-    have h_zero : b * f 0 = f 0 := by simpa using hf1 0 (by norm_num)
+    have h_zero : b * f 0 = f 0 := by simpa using hf₁ 0 (by norm_num)
     rw [mul_left_eq_self₀] at h_zero
     exact h_zero.resolve_left hb
 
@@ -362,7 +391,7 @@ lemma eq_on_finite_binary' {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
     -- TODO: non-terminal simps
     split_ands
     · simp
-      rw [← hf1]
+      rw [← hf₁]
       swap
       · suffices ∑ x, a x * (2 ^ (x + 1 : ℕ) : ℝ)⁻¹ ∈ Set.Icc 0 1 by simpa
         -- Add as lemma? Relate to BitVec?
@@ -376,7 +405,7 @@ lemma eq_on_finite_binary' {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
       rw [← mul_assoc]
 
     · simp
-      rw [hf2]
+      rw [hf₂]
       swap
       · -- TODO: better to use (pre)image of `fun x ↦ 2⁻¹ * (1 + x)`?
         -- We have `Set.image_mul_left_Icc` etc.
@@ -395,8 +424,8 @@ lemma eq_on_finite_binary' {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
       exact Finset.sum_congr rfl fun i _ ↦ by ring
 
 lemma eq_on_finite_binary {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
-    (hf1 : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
-    (hf2 : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
     (n : ℕ) (a : Fin n → Bool) :
     f (∑ j, (a j).toNat * (2 ^ (j + 1 : ℕ))⁻¹) =
       ∑ i, (a i).toNat * (b * ∏ k ∈ Finset.Iio i, if a k then 1 - b else b) := by
@@ -415,8 +444,8 @@ lemma ite_elim {α : Type*} (p : α → Prop) {q : Prop} [Decidable q] {x y : α
 -- If `a` is the binary expansion of `x`, then we can express `f x` as a series of products.
 lemma hasSum_binary_apply_of_hasSum_binary {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
     {b : ℝ} (hb : b ∈ Set.Ioo (2⁻¹) 1)
-    (hf1 : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
-    (hf2 : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
     {x : ℝ} {a : ℕ → Bool} (ha : HasSum (fun n ↦ (a n).toNat * (2 ^ (n + 1) : ℝ)⁻¹) x) :
     HasSum (fun n ↦ (a n).toNat * (b * ∏ k ∈ Finset.range n, if a k then 1 - b else b)) (f x) := by
   rw [Set.mem_Ioo] at hb
@@ -444,7 +473,7 @@ lemma hasSum_binary_apply_of_hasSum_binary {f : ℝ → ℝ} (h_cont : Continuou
   specialize hN n hn
   convert h_cont (∑ i ∈ Finset.range n, (a i).toNat * (2 ^ (i + 1))⁻¹) ?_ hN
   · symm
-    convert eq_on_finite_binary hb.2.ne hf1 hf2 n (fun k ↦ a k.val) using 1
+    convert eq_on_finite_binary hb.2.ne hf₁ hf₂ n (fun k ↦ a k.val) using 1
     · rw [Finset.sum_range]
     · rw [Finset.sum_range]
       refine Finset.sum_congr rfl fun i hi ↦ ?_
@@ -462,8 +491,8 @@ lemma hasSum_binary_apply_of_hasSum_binary {f : ℝ → ℝ} (h_cont : Continuou
 
 
 -- lemma hasSum {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (2⁻¹) 1)
---     (hf1 : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
---     (hf2 : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
+--     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+--     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
 --     (x : ℝ) (a : ℕ → Bool)
 --     (ha : HasSum (fun i ↦ (a i).toNat * (2 ^ (i + 1 : ℕ) : ℝ)⁻¹) x) :
 --     HasSum (fun j ↦ b * (∏ k ∈ Finset.Iio j, if a k = false then b else 1 - b) * (a j).toNat)
@@ -537,34 +566,6 @@ lemma sum_getMsbD_toNat_mul_two_pow {n : ℕ} (x : BitVec n) :
       rw [BitVec.toNat_cons']
       simp [Nat.shiftLeft_eq]
 
-
-lemma sum_binary_fraction_mem_Ico (n : ℕ) (a : ℕ → Bool) :
-    ∑ i ∈ Finset.range n, (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹ ∈ Set.Ico 0 1 := by
-  rw [Set.mem_Ico]
-  constructor
-  · exact Finset.sum_nonneg (by simp)
-  · calc _
-    _ ≤ ∑ i ∈ Finset.range n, (2⁻¹ : ℝ) ^ (i + 1) :=
-      Finset.sum_le_sum fun i _ ↦ by simp [Bool.toNat_le]
-    _ = 2⁻¹ * ∑ i ∈ Finset.range n, (2⁻¹ : ℝ) ^ i := by
-      rw [Finset.mul_sum]
-      congr
-      funext i
-      ring
-    _ = 1 - (2 ^ n : ℝ)⁻¹ := by
-      rw [geom_sum_eq (by norm_num)]
-      simp only [inv_pow]
-      ring
-    _ < _ := by simp
-
-
-lemma tsum_binary_fraction_mem_Icc (a : ℕ → Bool) :
-    ∑' i, (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹ ∈ Set.Icc 0 1 := by
-  rw [Set.mem_Icc]
-  constructor
-  · exact tsum_nonneg (by simp)
-  · refine Real.tsum_le_of_sum_range_le (by simp) fun n ↦ ?_
-    exact (sum_binary_fraction_mem_Ico n a).2.le
 
 
 lemma lt_apply_on_finite_binary_frac (b : ℝ) (hb : b ∈ Set.Ioo (2⁻¹) 1)
@@ -652,6 +653,14 @@ lemma lt_apply_on_finite_binary_frac (b : ℝ) (hb : b ∈ Set.Ioo (2⁻¹) 1)
           linarith
 
 
+-- lemma lt_apply_on_infinite_binary_frac (b : ℝ) (hb : b ∈ Set.Ioo (2⁻¹) 1)
+--     (a : ℕ → Bool) (ha : ∃ i, a i) :
+--     ∑' i, (a i).toNat * (2 ^ (i + 1 : ℕ) : ℝ)⁻¹ <
+--       b * ∑' i, (a i).toNat * ∏ k ∈ Finset.range i, if a k then 1 - b else b := by
+
+--   sorry
+
+
 -- If `a` is the binary fraction of `x ≠ 0`, then some bit must be true.
 lemma exists_bit_true_of_ne_zero {x : ℝ} (a : ℕ → Bool)
     (ha : HasSum (fun i ↦ (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹) x) (h : x ≠ 0) :
@@ -660,10 +669,224 @@ lemma exists_bit_true_of_ne_zero {x : ℝ} (a : ℕ → Bool)
   simpa [h] using ha.tsum_eq.symm
 
 
+-- lemma greater {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
+--     {b : ℝ} (hb : b ∈ Set.Ioo (2⁻¹) 1)
+--     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+--     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
+--     (n : ℕ) (x : ℝ) (hx : ∃ m ≤ (2 : ℕ) ^ n, m / 2 ^ n = x) :
+--     (1 - x) * f 0 + x * f 1 ≤ f x := by
+--   induction n generalizing x with
+--   | zero =>
+--     rcases hx with ⟨m, hm, rfl⟩
+--     interval_cases m <;> simp
+--   | succ n IH =>
+--     rcases hx with ⟨m, hm, hx⟩
+--     cases hm.eq_or_lt with
+--     | inl hm =>
+--       -- TODO: can we not split this case out earlier? or exclude?
+--       have hx : x = 1 := by simpa [hm] using hx.symm
+--       simp [hx]
+--     | inr hm =>
+--       -- The number `m / 2 ^ (n + 1)` is the binary fraction 0.a₀a₁a₂⋯.
+--       -- Split it into `a₀ * (1/2) + 1/2 * y` with `0 ≤ y < 1`.
+--       -- That is, `y = 2 * x - a₀`.
+--       cases lt_or_le m (2 ^ n) with
+--       | inl hm =>
+--         let y : ℝ := m / 2 ^ n
+--         have hxy : 2 * x = y := by
+--           rw [← hx]
+--           ring
+--         specialize IH y ⟨m, hm.le, rfl⟩
+
+--         specialize hf₁ x sorry
+--         rw [← hf₁]
+--         rw [hxy]
+
+--         -- specialize hf₁ y sorry
+
+--         sorry
+--       | inr hm' =>
+--         specialize IH ((m - 2 ^ n) / 2 ^ n) (by
+--           refine ⟨m - 2 ^ n, ?_, ?_⟩
+--           · simpa [pow_succ, mul_two] using hm.le
+--           · simp [hm'])
+--         sorry
+
+
+lemma greater {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
+    {b : ℝ} (hb : b ∈ Set.Ioo (2⁻¹) 1)
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
+    (n : ℕ) (m : ℕ) (hm : m ≤ 2 ^ n) :
+    (1 - m / 2 ^ n) * f 0 + m / 2 ^ n * f 1 ≤ f (m / 2 ^ n) := by
+  induction n generalizing m with
+  | zero => interval_cases m <;> simp
+  | succ n IH =>
+    obtain ⟨k, hk⟩ := Nat.even_or_odd' m
+    cases hk with
+    | inl hk =>
+      -- When `m` is even, we can simply apply the inductive hypothesis.
+      rcases hk with rfl
+      simp only [Nat.cast_mul, Nat.cast_ofNat, pow_succ']
+      rw [mul_div_mul_left _ _ two_ne_zero]
+      exact IH k (by simpa [pow_succ'] using hm)
+    | inr hk =>
+      -- When `m` is odd, we use the two adjacent numbers.
+      rcases hk with rfl
+      --
+      rw [pow_succ'] at hm
+      have hk := Nat.lt_of_mul_lt_mul_left hm
+
+      have IH₁ := IH k hk.le
+      have IH₂ := IH (k + 1) hk
+
+      calc _
+      _ ≤ 2⁻¹ * (f (k / 2 ^ n) + f ((k + 1) / 2 ^ n)) := by
+        sorry
+      _ ≤ _ := by
+        sorry
+
+
+lemma consec_concave {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
+    {b : ℝ} (hb : b ∈ Set.Ioo (2⁻¹) 1)
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
+    (n : ℕ) (k : ℕ) (hk : k + 2 ≤ 2 ^ n) :
+    2⁻¹ * f (k / 2 ^ n) + 2⁻¹ * f ((k + 2) / 2 ^ n) ≤ f ((k + 1) / 2 ^ n) := by
+  induction n generalizing k with
+  | zero => simp at hk
+  | succ n IH =>
+    cases lt_or_le (k + 1) (2 ^ n) with
+    | inl hk' =>
+      -- All three points are ≤ 1/2.
+      sorry
+    | inr hk' =>
+      cases hk'.eq_or_lt with
+      | inl hk' =>
+        -- The midpoint is exactly 1/2.
+        sorry
+      | inr hk' =>
+        -- All three points are ≥ 1/2.
+        sorry
+
+
+lemma piecewise_le_func {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo 2⁻¹ 1)
+    (hf₁ : ∀ x ∈ Set.Icc 0 2⁻¹, b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc 2⁻¹ 1, f x = b + (1 - b) * f (2 * x - 1))
+    (n k : ℕ) (hkn : k ≤ 2 ^ (n + 1)) :
+    -- TODO: introduce this _internally_
+    k / 2 ^ (n + 1) ≤ f (k / 2 ^ (n + 1)) ∧
+    (k < 2 ^ n → k / 2 ^ n * b ≤ f (k / 2 ^ (n + 1))) ∧
+    (2 ^ n ≤ k →
+      (1 - ↑(k - 2 ^ n) / 2 ^ n) * b + ↑(k - 2 ^ n) / 2 ^ n ≤ f (k / 2 ^ (n + 1))) := by
+  rw [Set.mem_Ioo] at hb
+  rcases hb with ⟨hb_half, hb_one⟩
+
+  have hf_zero : f 0 = 0 := by
+    simpa [mul_left_eq_self₀, hb_one.ne] using hf₁ 0 (by simp)
+  have hf_one : f 1 = 1 := by
+    replace hf₂ : f 1 = f 1 + b - b * f 1 := by
+      calc _
+      _ = b + (1 - b) * f (2 * 1 - 1) := hf₂ 1 (by norm_num)
+      _ = b + (1 - b) * f 1 := by norm_num
+      _ = _ := by ring
+    rw [eq_sub_iff_add_eq, add_right_inj, mul_right_eq_self₀] at hf₂
+    refine hf₂.resolve_right ?_
+    linarith
+  have hf_half : f 2⁻¹ = b := by
+    specialize hf₁ 2⁻¹ (by simp)
+    simpa [hf_one] using hf₁.symm
+
+  induction n generalizing k with
+  | zero =>
+    interval_cases k
+    · simp [hf_zero]
+    · simpa [hf_half] using hb_half.le
+    · simp [hf_one]
+  | succ n IH =>
+    simp only [pow_succ _ (n + 1)] at hkn ⊢
+    cases lt_or_le k (2 ^ (n + 1)) with
+    | inl hk =>
+      -- The first inequality follows from the second, and the third is not active here.
+      suffices k / 2 ^ (n + 1) * b ≤ f (k / (2 ^ (n + 1) * 2)) by
+        refine ⟨?_, fun _ ↦ this, by simp [hk.not_le]⟩
+        refine le_trans ?_ this
+        calc _
+        _ = (k : ℝ) / 2 ^ (n + 1) * 2⁻¹ := by ring
+        _ ≤ _ := by gcongr
+      rw [← hf₁]
+      swap
+      · rw [Set.mem_Icc]
+        split_ands
+        · simp [div_nonneg]
+        · suffices k / (2 ^ (n + 1) * 2) ≤ (1 / 2 : ℝ) by simpa
+          rw [div_le_div_iff₀ (by simp) two_pos]
+          simpa [← @Nat.cast_le ℝ] using hk.le
+      calc _
+      _ = b * (k / (2 ^ (n + 1))) := by ring
+      _ ≤ b * f (k / (2 ^ (n + 1))) := by
+        gcongr
+        exact (IH k hk.le).1
+      _ = _ := by
+        congr
+        ring
+
+    | inr hk =>
+      -- Replace `k - 2 ^ (n + 1)` with `j`.
+      obtain ⟨j, rfl⟩ := Nat.exists_eq_add_of_le hk
+      have hjn : j ≤ 2 ^ (n + 1) := by simpa [mul_two] using hkn
+      -- The first inequality follows from the third, and the second is not active here.
+      -- TODO: Should we use `hj_frac` already here?
+      suffices (1 - j / 2 ^ (n + 1)) * b + j / 2 ^ (n + 1) ≤
+          f ((2 ^ (n + 1) + j) / (2 ^ (n + 1) * 2)) by
+        refine ⟨?_, by simp, fun _ ↦ by simpa using this⟩
+        simp only [Nat.cast_add, Nat.cast_pow, Nat.cast_ofNat]
+        refine le_trans ?_ this
+        calc _
+        _ = 2 ^ (n + 1) / (2 ^ (n + 1) * 2) + j / (2 ^ (n + 1)) * (2⁻¹ : ℝ) := by ring
+        -- Cancel the common terms.
+        _ = 2⁻¹ + j / 2 ^ (n + 1) * (2⁻¹ : ℝ) := by simp [div_mul_cancel_left₀]
+        -- Rewrite as convex combination of 1/2 and 1.
+        _ = (1 - j / 2 ^ (n + 1)) * 2⁻¹ + j / 2 ^ (n + 1) := by ring
+        _ ≤ (1 - j / 2 ^ (n + 1)) * b + j / 2 ^ (n + 1) := by
+          gcongr
+          rw [sub_nonneg, div_le_one₀ (by simp)]
+          simpa [← @Nat.cast_le ℝ] using hjn
+
+      -- Replace fractions with `2⁻¹ + j / 2 ^ (n + 1) * 2⁻¹`.
+      have hj_frac : (2 ^ (n + 1) + j) / (2 ^ (n + 1) * 2 : ℝ) = 2⁻¹ + j / 2 ^ (n + 1) * 2⁻¹ := by
+        rw [add_div]
+        congr 1
+        · simp [div_mul_cancel_left₀]
+        · ring
+      rw [hj_frac]
+
+      rw [hf₂]
+      swap
+      · rw [Set.mem_Icc]
+        split_ands
+        · simp [div_nonneg]
+        · suffices (1 + j / 2 ^ (n + 1) : ℝ) * 2⁻¹ ≤ 1 by simpa [add_mul]
+          rw [mul_inv_le_iff₀ two_pos, mul_two]
+          gcongr
+          rw [div_le_one₀ (by simp)]
+          simpa [← @Nat.cast_le ℝ] using hjn
+
+      calc _
+      _ = b + (1 - b) * (j / 2 ^ (n + 1)) := by ring
+      _ ≤ b + (1 - b) * f (j / 2 ^ (n + 1)) := by
+        gcongr
+        · linarith
+        · exact (IH j hjn).1
+      _ = _ := by
+        congr
+        ring
+
+
 theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     {b c : ℝ} (hb : b = (1 + c) / (2 + c)) (hc : 0 < c)
-    (hf1 : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
-    (hf2 : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1)) :
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1)) :
     ∀ x ∈ Set.Ioo 0 1, 0 < f x - x ∧ f x - x < c := by
 
   have hb_lt : b < 1 := by
@@ -680,31 +903,107 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
   have hb_two : 1 < 2 * b := (div_lt_iff₀' two_pos).mp hb_gt
 
   intro x hx_mem
+
+  -- Obtain the terms on the left side as infinite sums.
+  -- Replace `x` with an infinite binary fraction.
+  obtain ⟨a, hx_sum⟩ := exists_binary_fraction (Set.mem_Ico_of_Ioo hx_mem)
+  -- Then use the result from induction on the bits to obtain a sum for `f x`.
+  -- TODO: get on one line? use 2⁻¹ everywhere?
+  have hfx_sum :=
+    hasSum_binary_apply_of_hasSum_binary hf ⟨by simpa using hb_gt, hb_lt⟩ hf₁ hf₂ hx_sum
+
   split_ands
   · rw [sub_pos]
-    rw [Set.mem_Ioo] at hx_mem
-    cases lt_or_le x (1 / 2) with
-    | inl hx' =>
-      suffices 2 * b * x ≤ f x by
-        refine lt_of_lt_of_le ?_ this
-        refine lt_mul_left hx.1 hb_two
-      -- `2 * b * x ≤ f x`
+    rw [← hfx_sum.tsum_eq]
+    rw [← hx_sum.tsum_eq]
 
+    have hx_tendsto := hx_sum.tendsto_sum_nat
+    have hfx_tendsto := hfx_sum.tendsto_sum_nat
+
+    have := le_of_tendsto_of_tendsto hx_tendsto hfx_tendsto
+    simp at this
+
+    rw [tsum_eq_zero_add hx_sum.summable, tsum_eq_zero_add hfx_sum.summable]
+    simp  -- TODO
+
+    -- Split into intervals `[0, 1/2)` and `[1/2, 1)` based on `a 0`.
+    suffices 2⁻¹ * (a 0).toNat + 2⁻¹ * ∑' i, (a (i + 1)).toNat * (2 ^ (i + 1) : ℝ)⁻¹ <
+        b * (a 0).toNat + b * (if a 0 then 1 - b else b) *
+          ∑' i, (a (i + 1)).toNat * ∏ k ∈ Finset.range i, if a (k + 1) then 1 - b else b by
+      convert this using 1
+      · simp only [← tsum_mul_left]
+        ring_nf  -- TODO
+        congr
+        funext i
+        ring
+      · simp only [← tsum_mul_left]
+        ring_nf
+        congr
+        funext i
+        rw [Finset.prod_range_succ']
+        ring
+
+    cases a 0 with
+    | false =>
+      simp
+      sorry
+    | true =>
+      simp
       sorry
 
-    | inr hx' =>
-      -- Suffices to show that `f x` is above the line joining
-      -- `(1/2, b)` and `(1, 1)`.
-      suffices b + (1 - b) * (2 * x - 1) ≤ f x by
-        refine lt_of_lt_of_le ?_ this
-        refine lt_add_of_sub_right_lt ?_
-        suffices (2 * b - 1) * x - (b - 1) < b from lt_of_eq_of_lt (by ring) this
-        refine sub_right_lt_of_lt_add ?_
-        suffices (2 * b - 1) * x < 2 * b - 1 from lt_of_lt_of_eq this (by ring)
-        refine mul_lt_of_lt_one_right ?_ hx.2
-        simpa using hb_two
-      -- `b + (1 - b) * (2 * x - 1)`
-      sorry
+    -- cases a 0 with
+    -- | true =>
+    --   simp
+    --   sorry
+    -- | false => sorry
+
+    -- conv => rhs; rw [tsum_eq_zero_add hfx_sum.summable]
+    -- simp
+
+
+    -- have : ∃ i, a i = true ∧ ∀ j < i, a j = false := by sorry
+    -- rcases this with ⟨i, hai, hij⟩
+    -- refine tsum_lt_tsum_of_nonneg (by simp) ?_ ?_ hfx_sum.summable (i := i)
+    -- · -- Inequality does not hold elementwise?
+    --   sorry
+    -- · suffices (2⁻¹ : ℝ) ^ (i + 1) < b * ∏ k ∈ .range i, if a k then 1 - b else b by simpa [hai]
+    --   calc _
+    --   _ < b ^ (i + 1) := by
+    --     refine pow_lt_pow_left₀ ?_ (by simp) (by simp)
+    --     linarith  -- TODO: review all `linarith`?
+    --   _ = b * (∏ _ ∈ .range i, b) := by simp [pow_succ']
+    --   _ = _ := by
+    --     congr 1
+    --     refine Finset.prod_congr rfl fun j hj ↦ ?_
+    --     rw [Finset.mem_range] at hj
+    --     simp [hij j hj]
+
+
+
+    -- rw [sub_pos]
+    -- rw [Set.mem_Ioo] at hx_mem
+    -- cases lt_or_le x (1 / 2) with
+    -- | inl hx' =>
+    --   suffices 2 * b * x ≤ f x by
+    --     refine lt_of_lt_of_le ?_ this
+    --     refine lt_mul_left hx_mem.1 hb_two
+    --   -- `2 * b * x ≤ f x`
+
+    --   sorry
+
+    -- | inr hx' =>
+    --   -- Suffices to show that `f x` is above the line joining
+    --   -- `(1/2, b)` and `(1, 1)`.
+    --   suffices b + (1 - b) * (2 * x - 1) ≤ f x by
+    --     refine lt_of_lt_of_le ?_ this
+    --     refine lt_add_of_sub_right_lt ?_
+    --     suffices (2 * b - 1) * x - (b - 1) < b from lt_of_eq_of_lt (by ring) this
+    --     refine sub_right_lt_of_lt_add ?_
+    --     suffices (2 * b - 1) * x < 2 * b - 1 from lt_of_lt_of_eq this (by ring)
+    --     refine mul_lt_of_lt_one_right ?_ hx_mem.2
+    --     simpa using hb_two
+    --   -- `b + (1 - b) * (2 * x - 1)`
+    --   sorry
 
   · -- Need to write as a `≤` condition to use density of binary fractions.
     -- However, the strictness comes from the fact that one of the `a j` is not zero since `x ≠ 0`?
@@ -723,14 +1022,6 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
       -- suffices HasSum (fun n ↦ (2⁻¹ : ℝ) ^ (n + 1)) 1 by simpa
       rw [hasSum_nat_add_iff (f := fun n ↦ 2⁻¹ ^ n)]
       simpa [one_add_one_eq_two] using hasSum_geometric_two
-
-    -- Obtain the terms on the left side as infinite sums.
-    -- Replace `x` with an infinite binary fraction.
-    obtain ⟨a, hx_sum⟩ := exists_binary_fraction (Set.mem_Ico_of_Ioo hx_mem)
-    -- Then use the result from induction on the bits to obtain a sum for `f x`.
-    -- TODO: get on one line? use 2⁻¹ everywhere?
-    have hfx_sum :=
-      hasSum_binary_apply_of_hasSum_binary hf ⟨by simpa using hb_gt, hb_lt⟩ hf1 hf2 hx_sum
 
     -- Replace both sides with an infinite sum.
     rw [← (hfx_sum.sub hx_sum).tsum_eq]
