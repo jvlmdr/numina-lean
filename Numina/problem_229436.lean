@@ -10,30 +10,30 @@ $$
 $$
 -/
 
+-- Useful lemma for rewriting `x ^ (3 / 2)`.
 lemma rpow_three_div_two {x : ℝ} (hx : 0 < x) : x ^ (3 / 2 : ℝ) = x * √x :=
   calc _
   _ = x ^ (1 + 1 / 2 : ℝ) := by norm_num
   _ = _ := by simp [rpow_add hx, sqrt_eq_rpow]
 
-lemma rpow_three_div_two' {x : ℝ} (hx : 0 < x) : x ^ (3 / 2 : ℝ) = √x * x :=
-  calc _
-  _ = x ^ (1 / 2 + 1 : ℝ) := by norm_num
-  _ = _ := by simp [rpow_add hx, sqrt_eq_rpow]
-
 theorem inequalities_229436 {x : ℝ} (hx_gt : x > -1) (hx_ne : x ≠ 0) :
     2 * |x| / (2 + x) < |log (1 + x)| ∧ |log (1 + x)| < |x| / √(1 + x) := by
+  -- The sign of `log (1 + x)` matches the sign of `x`.
+  have h_log_pos : 0 < log (1 + x) ↔ 0 < x := by simpa using log_pos_iff (by linarith : 0 < 1 + x)
+  have h_log_neg : log (1 + x) < 0 ↔ x < 0 := by simpa using log_neg_iff (by linarith : 0 < 1 + x)
+  -- Let `f` and `g` be the gaps in the inequalities for `x` positive.
+  let f := fun x : ℝ ↦ log (1 + x) - 2 * x / (2 + x)
+  let g := fun x : ℝ ↦ x / √(1 + x) - log (1 + x)
 
-  have hx_one_add : 0 < 1 + x := by linarith
-
-  have h₂ (x : ℝ) (hx : -1 < x) : HasDerivAt (fun x ↦ log (1 + x)) (1 / (1 + x)) x := by
-    refine .log ?_ (by linarith)
-    exact .const_add 1 (hasDerivAt_id' x)
-  have h₁ (x : ℝ) (hx : -1 < x) :
-      HasDerivAt (fun x ↦ 2 * x / (2 + x)) (4 / (2 + x) ^ 2) x := by
+  -- Obtain the derivatives of the components.
+  have h₁ (x : ℝ) (hx : -1 < x) : HasDerivAt (fun x ↦ 2 * x / (2 + x)) (4 / (2 + x) ^ 2) x := by
     convert HasDerivAt.div (.const_mul 2 (hasDerivAt_id' x)) (.const_add 2 (hasDerivAt_id' x)) ?_
       using 1
     · ring
     · linarith
+  have h₂ (x : ℝ) (hx : -1 < x) : HasDerivAt (fun x ↦ log (1 + x)) (1 / (1 + x)) x := by
+    refine .log ?_ (by linarith)
+    exact .const_add 1 (hasDerivAt_id' x)
   have h₃ (x : ℝ) (hx : -1 < x) :
       HasDerivAt (fun x ↦ x / √(1 + x)) ((2 + x) / (2 * (1 + x) ^ (3 / 2 : ℝ))) x := by
     convert HasDerivAt.div (hasDerivAt_id' x) (.sqrt (.const_add 1 (hasDerivAt_id' x)) ?_) ?_
@@ -47,25 +47,19 @@ theorem inequalities_229436 {x : ℝ} (hx_gt : x > -1) (hx_ne : x ≠ 0) :
       · linarith
       rw [rpow_three_div_two (by linarith)]
       calc _
-      _ = (2 * (1 + x) - x * 1) * (1 + x) := by ring
+      _ = (2 * (1 + x) - x) * (1 + x) := by ring
       _ = (2 * √(1 + x) ^ 2 - x * (√(1 + x) / √(1 + x))) * (1 + x) := by
         congr
         · rw [sq_sqrt (by linarith)]
-        · rw [div_self]
+        · suffices √(1 + x) ≠ 0 by simp [this]
           rw [sqrt_ne_zero']
           linarith
       _ = _ := by ring
     · linarith
-    · rw [sqrt_ne_zero']  -- TODO: replace all the linariths?
+    · rw [sqrt_ne_zero']
       linarith
 
-  let f := fun x : ℝ ↦ log (1 + x) - 2 * x / (2 + x)
-  let g := fun x : ℝ ↦ x / √(1 + x) - log (1 + x)
-
-  -- The sign of `log (1 + x)` matches the sign of `x`.
-  have h_log_pos : 0 < log (1 + x) ↔ 0 < x := by simpa using log_pos_iff hx_one_add
-  have h_log_neg : log (1 + x) < 0 ↔ x < 0 := by simpa using log_neg_iff hx_one_add
-
+  -- Obtain the derivatives of `f` and `g`.
   have hf_deriv (x : ℝ) (hx : -1 < x) : HasDerivAt f (x ^ 2 / ((1 + x) * (2 + x) ^ 2)) x := by
     convert ((h₂ x hx).sub (h₁ x hx)) using 1
     rw [div_sub_div]
@@ -74,7 +68,6 @@ theorem inequalities_229436 {x : ℝ} (hx_gt : x > -1) (hx_ne : x ≠ 0) :
     · refine pow_ne_zero 2 ?_
       linarith
     ring
-
   have hg_deriv (x : ℝ) (hx : -1 < x) :
       HasDerivAt g ((1 - √(1 + x)) ^ 2 / (2 * (1 + x) ^ (3 / 2 : ℝ))) x := by
     convert ((h₃ x hx).sub (h₂ x hx)) using 1
@@ -93,14 +86,21 @@ theorem inequalities_229436 {x : ℝ} (hx_gt : x > -1) (hx_ne : x ≠ 0) :
         ring
       _ = (1 + x)⁻¹ := by
         refine div_mul_cancel_left₀ ?_ (1 + x)
-        simpa using sqrt_ne_zero'.mpr (by linarith)  -- TODO: surprising that this works?
+        suffices √(1 + x) ≠ 0 by simpa using this
+        rw [sqrt_ne_zero']
+        linarith
       _ = _ := by simp
 
+  -- From the existence of the derivative, it follows that the functions are continuous.
   have hf_cont : ContinuousOn f (Set.Ioi (-1)) :=
     HasDerivAt.continuousOn fun x hx ↦ hf_deriv x (Set.mem_Ioi.mp hx)
   have hg_cont : ContinuousOn g (Set.Ioi (-1)) :=
     HasDerivAt.continuousOn fun x hx ↦ hg_deriv x (Set.mem_Ioi.mp hx)
 
+  -- Observe that `f 0 = g 0 = 0`.
+  -- Further, the derivatives of `f` and `g` are non-negative, and positive for `x ≠ 0`.
+  -- Therefore, it will suffice to show that `x > 0 → f 0 < f x` and `x < 0 → f x < f 0`,
+  -- and likewise for `g`.
   cases lt_or_gt_of_ne hx_ne with
   | inr hx =>
     suffices f 0 < f x ∧ g 0 < g x by simpa [f, g, abs_of_pos, hx, h_log_pos.mpr hx]
