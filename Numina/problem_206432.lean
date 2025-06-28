@@ -5,11 +5,8 @@ import Mathlib
 /- Reduce each of the first billion natural numbers (billion $=10^{9}$) to a single digit by
 taking its digit sum repeatedly. Do we get more 1s than 2s ? -/
 
-lemma digits_base {b : ℕ} (hb : 1 < b) : Nat.digits b b = [0, 1] := by
-  suffices b.digits (0 + b * 1) = [0, 1] by simpa
-  rw [Nat.digits_add b hb 0 1 (Nat.zero_lt_of_lt hb) (.inr one_ne_zero)]
-  rw [Nat.digits_of_lt b 1 one_ne_zero hb]
-
+-- For `n ≥ b` the sum of the digits in base `b` is strictly less than `n`.
+-- This will be required to prove that the repeated digit sum is well-defined.
 lemma sum_digits_lt {b n : ℕ} (hb : 1 < b) (hn : b ≤ n) : (Nat.digits b n).sum < n := by
   induction n using Nat.strongRecOn with
   | ind n IH =>
@@ -35,11 +32,13 @@ lemma sum_digits_lt {b n : ℕ} (hb : 1 < b) (hn : b ≤ n) : (Nat.digits b n).s
       _ < n / b := IH (n / b) (Nat.div_lt_self (by linarith) hb) hm
       _ ≤ _ := Nat.le_mul_of_pos_left (n / b) (by linarith)
 
+-- Take the sum of the digits until there is one digit left.
 def repeatedDigitSum (b : ℕ) (hb : 1 < b) (n : ℕ) : ℕ :=
   if h : n < b then n else repeatedDigitSum b hb (Nat.digits b n).sum
   termination_by n
   decreasing_by exact sum_digits_lt hb (le_of_not_lt h)
 
+-- Apply `Nat.modEq_digits_sum` to the repeated digit sum.
 lemma modEq_repeatedDigitSum (b b' : ℕ) (hb' : 1 < b') (h : b' % b = 1) (n : ℕ) :
     n ≡ repeatedDigitSum b' hb' n [MOD b] := by
   induction n using Nat.strongRecOn with
@@ -51,9 +50,9 @@ lemma modEq_repeatedDigitSum (b b' : ℕ) (hb' : 1 < b') (h : b' % b = 1) (n : �
       refine .trans (Nat.modEq_digits_sum b b' h n) ?_
       simpa [hn.not_lt] using IH _ (sum_digits_lt hb' hn)
 
+-- The result of the repeated digit sum is a single digit.
 lemma repeatedDigitSum_lt (b : ℕ) (hb : 1 < b) (n : ℕ) :
     repeatedDigitSum b hb n < b := by
-  -- TODO: can we do this without induction?
   induction n using Nat.strongRecOn with
   | ind n IH =>
     unfold repeatedDigitSum
@@ -64,31 +63,34 @@ lemma repeatedDigitSum_lt (b : ℕ) (hb : 1 < b) (n : ℕ) :
 theorem number_theory_206432 :
     Nat.count (repeatedDigitSum 10 (Nat.one_lt_succ_succ _) · = 1) (10 ^ 9 + 1) >
       Nat.count (repeatedDigitSum 10 (Nat.one_lt_succ_succ _) · = 2) (10 ^ 9 + 1) := by
-  -- TODO: rewrite as suffices
-  have (b : ℕ) (hb : 0 < b) (n r : ℕ) (hr : r ≠ 0) (hrb : r < b) :
-      repeatedDigitSum (b + 1) (lt_add_of_pos_left 1 hb) n = r ↔ n ≡ r [MOD b] := by
-    have hb' := lt_add_of_pos_left 1 hb  -- TODO
-    calc _
-    _ ↔ repeatedDigitSum (b + 1) hb' n ≡ r [MOD b] := by
-      unfold Nat.ModEq
-      constructor
-      · exact congrArg (· % b)
-      · intro h
-        rw [Nat.mod_eq_of_lt hrb] at h
-        rcases h with rfl
-        suffices repeatedDigitSum (b + 1) hb' n < b by simp [Nat.mod_eq_of_lt this]
-        suffices repeatedDigitSum (b + 1) hb' n ≠ b from
-          Nat.lt_of_le_of_ne (Nat.le_of_lt_succ (repeatedDigitSum_lt (b + 1) hb' n)) this
-        contrapose! hr
-        simp [hr]
-    _ ↔ _ := by
-      -- Eliminate case where `b = 1` (everything is equal modulo 1).
-      replace hb : 1 ≤ b := hb
-      cases eq_or_gt_of_le hb with
-      | inl hb => simp [hb, Nat.modEq_one]
-      | inr hb =>
-        suffices n ≡ repeatedDigitSum (b + 1) hb' n [MOD b] from Eq.congr_left this.symm
-        refine modEq_repeatedDigitSum b (b + 1) hb' ?_ n
-        simp [Nat.mod_eq_of_lt hb]
-
-  simp [this, Nat.count_modEq_card]
+  -- Replace `repeatedDigitSum 10 ⋯ n = r` with `n ≡ r [MOD 10]`.
+  suffices ∀ (b : ℕ) (hb : 0 < b) (n r : ℕ), r ≠ 0 → r < b →
+      (repeatedDigitSum (b + 1) (lt_add_of_pos_left 1 hb) n = r ↔ n ≡ r [MOD b]) by
+    simp [this, Nat.count_modEq_card]
+  intro b hb n r hr hrb
+  have hb' := lt_add_of_pos_left 1 hb
+  calc _
+  -- We can take `· % b` of both sides without effect.
+  -- This is because `x < b + 1` implies `x < b` given that `x % b ≠ 0`.
+  _ ↔ repeatedDigitSum (b + 1) hb' n ≡ r [MOD b] := by
+    unfold Nat.ModEq
+    constructor
+    · exact congrArg (· % b)
+    · intro h
+      rw [Nat.mod_eq_of_lt hrb] at h
+      rcases h with rfl
+      suffices repeatedDigitSum (b + 1) hb' n < b by simp [Nat.mod_eq_of_lt this]
+      suffices repeatedDigitSum (b + 1) hb' n ≠ b from
+        Nat.lt_of_le_of_ne (Nat.le_of_lt_succ (repeatedDigitSum_lt (b + 1) hb' n)) this
+      contrapose! hr
+      simp [hr]
+  _ ↔ _ := by
+    -- Use the property that the digit sum of `n` using base `b + 1` is congruent to `n` modulo `b`.
+    -- First, eliminate the case where `b = 1` (everything is equal modulo 1).
+    change 1 ≤ b at hb
+    cases eq_or_gt_of_le hb with
+    | inl hb => simp [hb, Nat.modEq_one]
+    | inr hb =>
+      suffices n ≡ repeatedDigitSum (b + 1) hb' n [MOD b] from Eq.congr_left this.symm
+      refine modEq_repeatedDigitSum b (b + 1) hb' ?_ n
+      simp [Nat.mod_eq_of_lt hb]
