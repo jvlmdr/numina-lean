@@ -11,20 +11,87 @@ $$
 $$
 -/
 
-lemma exists_subset_asdf  -- TODO
-    (a : Finset ℕ) (ha_pos : ∀ x ∈ a, 0 < x) (ha_card : #a = 3) :
-    ∃ x y, x ≠ y ∧ {x, y} ⊆ a ∧
-      (5 ∣ x ∨ x ≡ y [MOD 5] ∨ 5 ∣ y + x) := by
-  cases Decidable.em (∃ x ∈ a, 5 ∣ x) with
-  | inl h_zero =>
-    rcases h_zero with ⟨x, hx⟩
-    -- How to get a second element?
-    sorry
-  | inr h_zero =>
-    simp only [not_exists, not_and] at h_zero
-    replace h_zero (x) (hx : x ∈ a) : x % 5 ≠ 0 := (mt Nat.dvd_of_mod_eq_zero) (h_zero x hx)
-    sorry
+-- TODO: description
+lemma exists_subset_card_two_sum_five (s : Finset ℕ) (hs_card : #s = 3) (hs : s ⊆ {1, 2, 3, 4}) :
+    ∃ a ⊆ s, #a = 2 ∧ ∑ i ∈ a, i = 5 := by
+  -- Since we only exclude one element from `{1, 2, 3, 4}` to obtain `s`,
+  -- it must contain either `{1, 4}` or `{2, 3}`.
+  suffices {2, 3} ⊆ s ∨ {1, 4} ⊆ s by
+    refine this.elim ?_ ?_
+    · exact fun h ↦ ⟨_, h, rfl, rfl⟩
+    · exact fun h ↦ ⟨_, h, rfl, rfl⟩
+  -- Partition {1, 2, 3, 4} into {1, 4} and {2, 3}.
+  have h_part : ({1, 2, 3, 4} : Finset ℕ) = {2, 3} ∪ {1, 4} := by ext; simp
+  -- Observe that the difference contains exactly one element.
+  have h_diff : #({1, 2, 3, 4} \ s) = 1 := by simp [Finset.card_sdiff hs, hs_card]
+  -- Distribute the difference over the (disjoint) union.
+  rw [h_part, Finset.union_sdiff_distrib] at h_diff
+  rw [Finset.card_union_of_disjoint] at h_diff
+  swap
+  · refine .disjoint_sdiff_left ?_
+    refine .disjoint_sdiff_right ?_
+    simp
+  -- Since the two cards add to one, one will be zero.
+  rw [Nat.add_eq_one_iff] at h_diff
+  refine h_diff.imp ?_ ?_
+  · exact fun ⟨h, _⟩ ↦ by simpa using h
+  · exact fun ⟨_, h⟩ ↦ by simpa using h
 
+-- TODO: description
+lemma exists_pair_five_dvd_or_modEq_five_or_five_dvd_add
+    (a : Finset ℕ) (ha_pos : ∀ x ∈ a, 0 < x) (ha_card : #a = 3) :
+    -- TODO: decide form
+    ∃ x ∈ a, ∃ y ∈ a, x ≠ y ∧ (x ≡ 0 [MOD 5] ∨ x ≡ y [MOD 5] ∨ x + y ≡ 0 [MOD 5]) := by
+
+  cases exists_or_forall_not (fun x ↦ x ∈ a ∧ x % 5 = 0) with
+  | inl h_zero =>
+    obtain ⟨x, hxa, hx⟩ := h_zero
+    -- Obtain an arbitrary second element.
+    obtain ⟨y, hya, hyx⟩ := a.exists_mem_ne (by simp [ha_card]) x
+    exact ⟨x, hxa, y, hya, hyx.symm, .inl hx⟩
+  | inr h_zero =>
+    simp only [not_and] at h_zero
+    -- If there exist two elements with the same residue, take these.
+    -- Otherwise, we have three distinct residues in {1, 2, 3, 4}.
+    -- These three elements must contain either (1, 4) or (2, 3) as a pair.
+
+    -- have := a.val.map (fun x ↦ x % 5)
+    cases em (Multiset.Nodup (a.val.map (fun x ↦ x % 5))) with
+    | inr h_nodup =>
+      simp [Multiset.nodup_iff_pairwise] at h_nodup
+      -- Not pairwise not-equal...
+      -- Break out as lemma?
+      sorry
+    | inl h_nodup =>
+      -- How to get the elements that map to...
+      have h_inj : Set.InjOn (fun x ↦ x % 5) a := by
+        -- TODO: depends on how nodup is formulated
+        sorry
+      have := exists_subset_card_two_sum_five (a.image (· % 5))
+        (by simpa [Finset.card_image_of_injOn h_inj])
+        (by
+          intro u hu
+          suffices u ≠ 0 ∧ u < 5 by
+            rcases this with ⟨h_zero, h_five⟩
+            rw [Nat.ne_zero_iff_zero_lt] at h_zero
+            interval_cases u <;> simp
+          rw [Finset.mem_image] at hu
+          rcases hu with ⟨x, hx, rfl⟩
+          -- Use the fact that there is no `x ≡ 0 [MOD 5]` in `a`.
+          exact ⟨h_zero x hx, Nat.mod_lt x (by norm_num)⟩)
+      rcases this with ⟨t, ht_elem, ht_card, ht_sum⟩
+      rw [Finset.subset_image_iff] at ht_elem
+      rcases ht_elem with ⟨s, hsa, rfl⟩
+      rw [Finset.card_image_of_injOn (h_inj.mono hsa)] at ht_card
+      rw [Finset.sum_image (h_inj.mono hsa)] at ht_sum
+      rw [Finset.card_eq_two] at ht_card
+      rcases ht_card with ⟨x, y, hxy, rfl⟩
+      have ⟨hxa, hya⟩ : x ∈ a ∧ y ∈ a := by simpa [Finset.subset_iff] using hsa
+      refine ⟨x, hxa, y, hya, hxy, .inr (.inr ?_)⟩
+      rw [Finset.sum_pair hxy] at ht_sum
+      simpa using congrArg (fun n : ℕ ↦ n % 5) ht_sum
+
+-- TODO: description
 lemma sub_mul_sum_range_eq_pow_sub_pow (x y : ℤ) (k : ℕ) :
     (y - x) * ∑ i in Finset.range k, x ^ i * y ^ (k - (i + 1)) = y ^ k - x ^ k := by
   rw [Finset.mul_sum]
@@ -47,7 +114,7 @@ lemma sub_mul_sum_range_eq_pow_sub_pow (x y : ℤ) (k : ℕ) :
 theorem number_theory_244639
     (a : Finset ℕ) (ha_pos : ∀ x ∈ a, 0 < x) (ha_card : #a = 3) :
     ∃ x y, x ≠ y ∧ {x, y} ⊆ a ∧ ∀ m n, Odd m → Odd n → (10 : ℤ) ∣ x^m * y^n - x^n * y^m := by
-  obtain ⟨x, y, h_ne, h_subset, hxy⟩ := exists_subset_asdf a ha_pos ha_card
+  obtain ⟨x, y, h_ne, h_subset, hxy⟩ := exists_pair_five_dvd_or_modEq_five_or_five_dvd_add a ha_pos ha_card
   refine ⟨x, y, h_ne, h_subset, ?_⟩
   intro m n hm hn
 
