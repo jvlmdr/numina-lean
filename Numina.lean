@@ -22,6 +22,7 @@ import Numina.AMC_97963
 import Numina.IMO_23602
 import Numina.IMO_25148
 import Numina.problem_100122
+import Numina.problem_102449
 import Numina.problem_105222
 import Numina.problem_107999
 import Numina.problem_110877
