@@ -38,11 +38,9 @@ lemma exists_subset_card_two_sum_five (s : Finset ℕ) (hs_card : #s = 3) (hs : 
   · exact fun ⟨_, h⟩ ↦ by simpa using h
 
 -- TODO: description
-lemma exists_pair_five_dvd_or_modEq_five_or_five_dvd_add
+lemma exists_pair_modEq_zero_or_modEq_or_add_modEq_zero
     (a : Finset ℕ) (ha_pos : ∀ x ∈ a, 0 < x) (ha_card : #a = 3) :
-    -- TODO: decide form
     ∃ x ∈ a, ∃ y ∈ a, x ≠ y ∧ (x ≡ 0 [MOD 5] ∨ x ≡ y [MOD 5] ∨ x + y ≡ 0 [MOD 5]) := by
-
   cases exists_or_forall_not (fun x ↦ x ∈ a ∧ x % 5 = 0) with
   | inl h_zero =>
     obtain ⟨x, hxa, hx⟩ := h_zero
@@ -54,19 +52,8 @@ lemma exists_pair_five_dvd_or_modEq_five_or_five_dvd_add
     -- If there exist two elements with the same residue, take these.
     -- Otherwise, we have three distinct residues in {1, 2, 3, 4}.
     -- These three elements must contain either (1, 4) or (2, 3) as a pair.
-
-    -- have := a.val.map (fun x ↦ x % 5)
-    cases em (Multiset.Nodup (a.val.map (fun x ↦ x % 5))) with
-    | inr h_nodup =>
-      simp [Multiset.nodup_iff_pairwise] at h_nodup
-      -- Not pairwise not-equal...
-      -- Break out as lemma?
-      sorry
-    | inl h_nodup =>
-      -- How to get the elements that map to...
-      have h_inj : Set.InjOn (fun x ↦ x % 5) a := by
-        -- TODO: depends on how nodup is formulated
-        sorry
+    by_cases h_nodup : (a.val.map (· % 5)).Nodup
+    · have h_inj : Set.InjOn (· % 5) a := by simpa using Multiset.inj_on_of_nodup_map h_nodup
       have := exists_subset_card_two_sum_five (a.image (· % 5))
         (by simpa [Finset.card_image_of_injOn h_inj])
         (by
@@ -90,6 +77,11 @@ lemma exists_pair_five_dvd_or_modEq_five_or_five_dvd_add
       refine ⟨x, hxa, y, hya, hxy, .inr (.inr ?_)⟩
       rw [Finset.sum_pair hxy] at ht_sum
       simpa using congrArg (fun n : ℕ ↦ n % 5) ht_sum
+    · -- If there are duplicate residues, select them.
+      rw [Multiset.nodup_map_iff_inj_on a.nodup] at h_nodup
+      simp only [Finset.mem_val, not_forall, exists_prop] at h_nodup
+      rcases h_nodup with ⟨x, hx, y, hy, hxy_mod, hxy⟩
+      exact ⟨x, hx, y, hy, hxy, .inr (.inl hxy_mod)⟩
 
 -- TODO: description
 lemma sub_mul_sum_range_eq_pow_sub_pow (x y : ℤ) (k : ℕ) :
@@ -114,10 +106,10 @@ lemma sub_mul_sum_range_eq_pow_sub_pow (x y : ℤ) (k : ℕ) :
 theorem number_theory_244639
     (a : Finset ℕ) (ha_pos : ∀ x ∈ a, 0 < x) (ha_card : #a = 3) :
     ∃ x y, x ≠ y ∧ {x, y} ⊆ a ∧ ∀ m n, Odd m → Odd n → (10 : ℤ) ∣ x^m * y^n - x^n * y^m := by
-  obtain ⟨x, y, h_ne, h_subset, hxy⟩ := exists_pair_five_dvd_or_modEq_five_or_five_dvd_add a ha_pos ha_card
-  refine ⟨x, y, h_ne, h_subset, ?_⟩
+  obtain ⟨x, hx, y, hy, hxy, h_mod⟩ :=
+    exists_pair_modEq_zero_or_modEq_or_add_modEq_zero a ha_pos ha_card
+  refine ⟨x, y, hxy, Finset.insert_subset hx (by simpa using hy), ?_⟩
   intro m n hm hn
-
   wlog hmn : m < n generalizing m n
   · simp only [not_lt] at hmn
     cases Nat.eq_or_lt_of_le hmn with
@@ -166,24 +158,24 @@ theorem number_theory_244639
         -- If both are odd, then `x + y` is even.
         refine dvd_mul_of_dvd_right ?_ _
         exact even_iff_two_dvd.mp (hy.add_odd hx)
-  · cases hxy with
-    | inl hxy =>
+  · cases h_mod with
+    | inl h_mod =>
       -- TODO: avoid this ridiculous situation
       refine dvd_mul_of_dvd_left ?_ _
       refine dvd_mul_of_dvd_left ?_ _
       refine Int.ofNat_dvd.mpr ?_
       refine dvd_mul_of_dvd_left ?_ _
       refine dvd_mul_of_dvd_left ?_ _
-      exact dvd_pow hxy (Nat.ne_of_odd_add hm)
-    | inr hxy =>
-      cases hxy with
-      | inl hxy =>
-        replace hxy : 5 ∣ (y - x : ℤ) := by simpa [Nat.modEq_iff_dvd] using hxy
-        simp [dvd_mul_of_dvd_left, dvd_mul_of_dvd_right, hxy]
-      | inr hxy =>
-        -- have hxy : (5 : ℤ) ∣ y + x := by simpa using Int.ofNat_dvd_right.mpr hxy
-        -- simp [dvd_mul_of_dvd_left, dvd_mul_of_dvd_right, hxy]
+      refine dvd_pow (Nat.dvd_of_mod_eq_zero h_mod) (Nat.ne_of_odd_add hm)
+    | inr h_mod =>
+      cases h_mod with
+      | inl h_mod =>
+        have h_mod : 5 ∣ (y - x : ℤ) := by simpa [Nat.modEq_iff_dvd] using h_mod
+        refine dvd_mul_of_dvd_left ?_ _
+        exact dvd_mul_of_dvd_right h_mod _
+      | inr h_mod =>
         refine dvd_mul_of_dvd_left ?_ _
         refine dvd_mul_of_dvd_left ?_ _
         refine Int.ofNat_dvd.mpr ?_
-        exact dvd_mul_of_dvd_right hxy _
+        refine dvd_mul_of_dvd_right ?_ _
+        simpa [add_comm] using Nat.dvd_of_mod_eq_zero h_mod
