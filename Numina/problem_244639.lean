@@ -109,8 +109,7 @@ lemma pow_sub_pow_eq_sub_mul_sum_range (x y : ℤ) (k : ℕ) :
     rw [Finset.sum_range_sub']
     simp
 
-theorem number_theory_244639
-    (a : Finset ℕ) (ha_pos : ∀ x ∈ a, 0 < x) (ha_card : #a = 3) :
+theorem number_theory_244639 (a : Finset ℕ) (ha_pos : ∀ x ∈ a, 0 < x) (ha_card : #a = 3) :
     ∃ x y, x ≠ y ∧ {x, y} ⊆ a ∧ ∀ m n, Odd m → Odd n → (10 : ℤ) ∣ x^m * y^n - x^n * y^m := by
   -- Obtain and use a pair `{x, y} ⊆ a` that satisfies one of the three conditions.
   obtain ⟨x, hx, y, hy, hxy, h_mod⟩ :=
