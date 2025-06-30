@@ -76,33 +76,34 @@ theorem algebra_214659 (a : ℝ) :
 
   · intro ha
     -- Move along the line joining `-√2` and `-i √2`; that is, in the direction `1 - i`.
-    let x : ℂ := √((a - 1) * (a - 2)) * ((1 - I) / ‖1 - I‖)
+    let x : ℂ := √((a - 1) * (a - 2)) * ((1 - I) / abs (1 - I))
+    have h_norm : abs (1 - I) = √2 := by
+      convert Complex.abs_add_mul_I 1 (-1) using 2
+      · simp only [ofReal_one, ofReal_neg]
+        ring
+      · norm_num
+
     refine ⟨?_, x - √2, ?_, ?_⟩
     · refine mul_nonneg ?_ ?_ <;> linarith
     · suffices abs (1 - I) ≠ 0 by simp [x, _root_.abs_of_nonneg, div_self this]
       simp [Complex.ext_iff]
     · calc _
-      _ = abs (x - 2 * (1 - I) / ‖1 - I‖) := by
-        congr
-
-        sorry
-      _ = abs ((√((a - 1) * (a - 2)) - 2) * ((1 - I) / ‖1 - I‖)) := by
-        unfold x
+      _ = abs (x - 2 * (1 - I) / abs (1 - I)) := by
+        congr 1
+        rw [h_norm]
+        suffices x - √2 * (1 - I) = x - ↑(2 / √2) * (1 - I) by
+          simp only [ofReal_div, ofReal_ofNat] at this
+          convert this using 1 <;> ring
+        rw [Real.div_sqrt]
+      _ = abs ((√((a - 1) * (a - 2)) - 2) * ((1 - I) / abs (1 - I))) := by
         congr 1
         ring
       _ = abs (↑(√((a - 1) * (a - 2)) - 2) : ℂ) := by
+        -- TODO: better to use `√2` in denominator?
         suffices Complex.abs (1 - I) ≠ 0 by simp [AbsoluteValue.map_mul, div_self this]
         simp [Complex.ext_iff]
+      _ = |√((a - 1) * (a - 2)) - 2| := abs_ofReal _
       _ < a := by
-
-        sorry
-
-      -- _ = √((a - 1) * (a - 2)) - 2 := by
-      --   rw [Complex.abs_of_nonneg]
-      --   simp
-      --   -- `1 ≤ (a - 1) * (a - 2)`
-
-      --   sorry
-      -- _ < a := by
-      --   rw [sub_lt_iff_lt_add, Real.sqrt_lt' (by linarith)]
-      --   linarith
+        refine abs_sub_lt_of_nonneg_of_lt (by simp) ?_ two_pos.le ha
+        rw [Real.sqrt_lt' (by linarith)]
+        linarith
