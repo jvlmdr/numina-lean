@@ -73,40 +73,37 @@ theorem inequalities_141351 {n : ℕ} (x : Fin n → ℝ) (hx : ∀ i, 0 < x i)
       simp only [Set.mem_Ioo] at hx
       refine (log_div ?_ ?_).symm <;> linarith
 
-    -- TODO: split into two separate results?
+    -- Obtain the first derivative.
     have h_deriv (x : ℝ) (hx : x ∈ Set.Ioo 0 a) :
         HasDerivAt (fun x ↦ log (a + x) - log (a - x)) ((a + x)⁻¹ + (a - x)⁻¹) x := by
       suffices HasDerivAt (fun x ↦ log (a + x) - log (a - x)) (1 / (a + x) - -1 / (a - x)) x by
         simpa [neg_div]
+      simp only [Set.mem_Ioo] at hx
       refine .sub ?_ ?_
-      · refine .log ?_ ?_
-        · exact (hasDerivAt_id x).const_add a
-        · simp only [Set.mem_Ioo] at hx
-          linarith
-      · refine .log ?_ ?_
-        · exact (hasDerivAt_id x).const_sub a
-        · simp only [Set.mem_Ioo] at hx
-          linarith
+      · refine .log ?_ (by linarith)
+        exact (hasDerivAt_id x).const_add a
+      · refine .log ?_ (by linarith)
+        exact (hasDerivAt_id x).const_sub a
 
+    -- Prove convexity using the second derivative test.
     refine convexOn_of_hasDerivWithinAt2_nonneg (convex_Ioo 0 a) ?_ ?_ ?_ ?_
       (f' := fun x ↦ (a + x)⁻¹ + (a - x)⁻¹) (f'' := fun x ↦ -1 / (a + x) ^ 2 + -(-1) / (a - x) ^ 2)
     · exact HasDerivAt.continuousOn h_deriv
-    · simp only [interior_Ioo]
-      intro x hx
+    · intro x hx
       refine HasDerivAt.hasDerivWithinAt ?_
-      exact h_deriv x hx
-    · simp only [interior_Ioo]
+      exact h_deriv x (by simpa using hx)
+    · -- Prove the form of the second derivative.
+      simp only [interior_Ioo, Set.mem_Ioo]
       intro x hx
-      simp only [Set.mem_Ioo] at hx
       refine HasDerivAt.hasDerivWithinAt ?_
       refine .add ?_ ?_
-      · refine HasDerivAt.inv ?_ (by linarith)
+      · refine .inv ?_ (by linarith)
         exact (hasDerivAt_id x).const_add a
-      · refine HasDerivAt.inv ?_ (by linarith)
-        change HasDerivAt (fun x ↦ a - x) (-1) x
+      · refine .inv ?_ (by linarith)
         exact (hasDerivAt_id x).const_sub a
-    · intro x hx
-      simp only [interior_Ioo, Set.mem_Ioo] at hx
+    · -- Show that the second derivative is non-negative on `0 < x < a`.
+      simp only [interior_Ioo, Set.mem_Ioo]
+      intro x hx
       suffices ((a + x) ^ 2)⁻¹ ≤ ((a - x) ^ 2)⁻¹ by simpa [neg_div]
       refine inv_anti₀ ?_ ?_
       · rw [sq_pos_iff]
