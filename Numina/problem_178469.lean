@@ -11,59 +11,107 @@ Determine all such $n$. -/
 theorem number_theory_175773 (n : ℕ) :
     (∃ a b, a^2 + b^2 = n ∧ Nat.Coprime a b ∧ ∀ p : ℕ, p.Prime → p ≤ √n → p ∣ a * b) ↔
     n = 1 ∨ n = 2 ∨ n = 5 ∨ n = 13 := by
-  -- constructor
-  -- swap
-  -- · revert n
-  --   simp only [forall_eq_or_imp, forall_eq]
-  --   split_ands
-  --   · use 1, 1
-  --     simp
-  --     sorry
-  --   · sorry
-  --   · sorry
 
-
-  -- have (p : ℕ) : p ≤ √n ↔ p ^ 2 ≤ 1 := by
-  --   sorry
-
-  -- TODO: split the 1 case from the 2, 5, 13 (prime) cases?
+  -- Replace the real square root with `p ^ 2 ≤ n`.
+  suffices (∃ a b, a^2 + b^2 = n ∧ Nat.Coprime a b ∧ ∀ p : ℕ, p.Prime → p ^ 2 ≤ n → p ∣ a * b) ↔
+      n = 1 ∨ n = 2 ∨ n = 5 ∨ n = 13 by
+    convert this with a b p hp
+    calc _
+    _ ↔ ↑(p ^ 2) ≤ (n : ℝ) := by simp [le_sqrt]
+    _ ↔ _ := Nat.cast_le
 
   by_cases hn_prime : n.Prime
-  · sorry
+  · -- Exclude the non-prime solution `n = 1`.
+    refine Iff.trans ?_ (or_iff_right hn_prime.ne_one).symm
 
-  · -- TODO: Since `n` is composite...
-    -- TODO: First eliminate the cases `n = 0` and `n = 1` (not prime or composite).
+    rw [exists_comm]
+    calc _
+    _ ↔ ∃ b, ∃ a, b ≤ a ∧ a ^ 2 + b ^ 2 = n ∧ a.Coprime b ∧
+        ∀ (p : ℕ), p.Prime → p ^ 2 ≤ n → p ∣ a * b := by
+      sorry
+
+    _ ↔ ∃ b d, (b + d) ^ 2 + b ^ 2 = n ∧ (b + d).Coprime b ∧
+        ∀ (p : ℕ), p.Prime → p ^ 2 ≤ n → p ∣ (b + d) * b := by
+      refine exists_congr fun b ↦ ?_
+      simp only [le_iff_exists_add, ← exists_and_right]
+      rw [exists_comm]
+      simp
+
+    _ ↔ ∃ d b, (b + d) ^ 2 + b ^ 2 = n ∧ (b + d).Coprime b ∧
+        ∀ (p : ℕ), p.Prime → p ^ 2 ≤ n → p ∣ (b + d) * b :=
+      exists_comm
+
+    _ ↔ (∃ b, b ^ 2 + b ^ 2 = n ∧ b = 1 ∧ ∀ (p : ℕ), p.Prime → p ^ 2 ≤ n → p ∣ b * b) ∨
+        ∃ d b, (b + d + 1) ^ 2 + b ^ 2 = n ∧
+          (d + 1).Coprime b ∧ ∀ (p : ℕ), p.Prime → p ^ 2 ≤ n → p ∣ (b + d + 1) * b := by
+      rw [← Nat.or_exists_add_one]
+      simp [add_assoc]
+
+    _ ↔ (n = 2 ∧ ∀ (p : ℕ), p.Prime → p ^ 2 ≤ n → p = 1) ∨
+        ∃ d b, (b + d + 1) ^ 2 + b ^ 2 = n ∧
+          (d + 1).Coprime b ∧ ∀ (p : ℕ), p.Prime → p ^ 2 ≤ n → p ∣ (b + d + 1) * b := by
+      -- TODO: re-order?
+      simp [and_left_comm (b := _ = 1), eq_comm (b := n)]
+
+    _ ↔ _ := by
+      refine or_congr ?_ ?_
+      · refine and_iff_left_of_imp fun hn p hp_prime hp ↦ ?_
+        rcases hn with rfl
+        exfalso
+        refine hp_prime.two_le.not_lt ?_
+        suffices p ^ 2 < 2 ^ 2 from lt_of_pow_lt_pow_left' 2 this
+        linarith
+      · calc _
+        _ ↔ (∃ b, (b + 1) ^ 2 + b ^ 2 = n ∧ ∀ (p : ℕ), p.Prime → p ^ 2 ≤ n → p ∣ (b + 1) * b) ∨
+            ∃ d b, (b + d + 2) ^ 2 + b ^ 2 = n ∧ (d + 2).Coprime b ∧
+              ∀ (p : ℕ), p.Prime → p ^ 2 ≤ n → p ∣ (b + d + 2) * b := by
+          rw [← Nat.or_exists_add_one]
+          simp [add_assoc]
+        -- TODO: is there not a way to avoid doing this?
+        _ ↔ (n = 5 ∨ n = 13) ∨ False := by
+          -- TODO: write as `n = a ^ 2 + b ^ 2` instead?
+          refine or_congr ?_ ?_
+          · rw [← Nat.or_exists_add_one]
+            rw [← Nat.or_exists_add_one]
+            rw [← Nat.or_exists_add_one]
+            simp [add_assoc, eq_comm (b := n)]
+            sorry
+          · simp only [iff_false, not_exists, not_and]
+            intro d b hn h_coprime h_dvd
+            sorry
+
+        _ ↔ _ := by simp
+
+        -- rw [← Nat.or_exists_add_one]
+        -- simp [add_assoc]
+        -- sorry
+
+  · -- Exclude the prime solutions.
+    refine Iff.trans ?_ ((or_iff_left ?_).symm)
+    swap
+    · suffices ∀ n : ℕ, n = 2 ∨ n = 5 ∨ n = 13 → n.Prime from mt (this n) hn_prime
+      norm_num
+
+    -- TODO: Since `n` is composite...
+    -- First eliminate the cases `n = 0` and `n = 1` (not prime or composite).
     cases le_or_lt n 1 with
     | inl hn =>
       interval_cases n
       · simp
-      · suffices ∃ a b, a ^ 2 + b ^ 2 = 1 ∧ a.Coprime b ∧
-            ∀ (p : ℕ), p.Prime → p ≤ 1 → p ∣ a * b by simpa
+      · refine (iff_true_right rfl).mpr ?_
         use 0, 1
         simp
+
     | inr hn =>
-      suffices ¬∃ a b, a ^ 2 + b ^ 2 = n ∧ a.Coprime b ∧
-          ∀ (p : ℕ), Nat.Prime p → p ≤ √n → p ∣ a * b by
-        simp only [this, false_iff]
-        rw [not_or]
-        split_ands
-        · linarith
-        · suffices ∀ n, n = 2 ∨ n = 5 ∨ n = 13 → n.Prime from mt (this n) hn_prime
-          norm_num
-
-      suffices ∀ a b, a ^ 2 + b ^ 2 = n → a.Coprime b →
-          ¬∀ (p : ℕ), p.Prime → p ≤ √n → p ∣ a * b by simpa
-
+      refine (iff_false_right ?_).mpr ?_
+      · linarith
+      simp only [not_exists, not_and]
       intro a b hab h_coprime
       contrapose! h_coprime with h_dvd
+
       let p := n.minFac
       have hp_prime : p.Prime := Nat.minFac_prime (by linarith)
-      -- have hp_sq_le := Nat.minFac_sq_le_self (by linarith) hn_prime
-      specialize h_dvd p hp_prime (by
-        refine le_sqrt_of_sq_le ?_
-        suffices ↑(n.minFac ^ 2) ≤ (n : ℝ) by simpa
-        rw [Nat.cast_le]
-        exact Nat.minFac_sq_le_self (by linarith) hn_prime)
+      specialize h_dvd p hp_prime (Nat.minFac_sq_le_self (by linarith) hn_prime)
 
       suffices p ∣ a ∧ p ∣ b from Nat.not_coprime_of_dvd_of_dvd hp_prime.one_lt this.1 this.2
       rw [hp_prime.dvd_mul] at h_dvd
@@ -83,14 +131,3 @@ theorem number_theory_175773 (n : ℕ) :
           exact dvd_pow hb two_ne_zero
         rw [hab]
         exact Nat.minFac_dvd n
-
-
-  -- constructor
-  -- · intro ⟨a, b, hn, h_coprime, h_dvd⟩
-  --   -- By symmetry, we can assume `a ≤ b`.
-  --   wlog hba : b ≤ a generalizing a b
-  --   · refine this b a ?_ h_coprime.symm ?_ (le_of_not_ge hba)
-  --     · simpa [add_comm (b ^ 2)]
-  --     · simpa [mul_comm b]
-  --   sorry
-  -- sorry
