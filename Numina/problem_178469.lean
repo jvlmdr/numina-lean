@@ -8,6 +8,7 @@ open Real
 and such that if $p$ is a prime, $p \leq \sqrt{n}$, then $p$ divides $a b$.
 Determine all such $n$. -/
 
+-- For a consecutive pair `a, a + 1`, we cannot have `3 ≤ a`.
 lemma lemma_1 (n a : ℕ) (h_add : n = a ^ 2 + (a + 1) ^ 2)
     (h_dvd : ∀ p, p ^ 2 ≤ n → p.Prime → p ∣ a * (a + 1)) (ha : 3 ≤ a) :
     False := by
@@ -83,6 +84,7 @@ lemma lemma_1 (n a : ℕ) (h_add : n = a ^ 2 + (a + 1) ^ 2)
       linarith
     _ ≤ a := Nat.sub_le a 1
 
+-- For a pair `a, b` with `a + 1 < b`, `n` cannot be prime.
 lemma lemma_2 (n : ℕ) (a d : ℕ) (h_add : n = a ^ 2 + (a + d) ^ 2)
     (h_dvd : ∀ p, p ^ 2 ≤ n → p.Prime → p ∣ a * (a + d)) (hd : 1 < d) :
     ¬n.Prime := by
@@ -109,14 +111,15 @@ lemma lemma_2 (n : ℕ) (a d : ℕ) (h_add : n = a ^ 2 + (a + d) ^ 2)
   · refine lt_of_lt_of_le ?_ hp_le
     exact lt_self_pow₀ hp_prime.one_lt one_lt_two
 
-lemma lemma_3 (n : ℕ) (a b : ℕ) (h_add : n = a ^ 2 + b ^ 2)
-    (h_dvd : ∀ p, p ^ 2 ≤ n → p.Prime → p ∣ a * b) (hn_prime : ¬n.Prime) (hn : 1 < n) :
+-- For `n` composite, the existence of such `a, b` coprime leads to a contradiction.
+lemma lemma_3 (n : ℕ) (hn : 1 < n) (hn_prime : ¬n.Prime) (a b : ℕ) (h_add : n = a ^ 2 + b ^ 2)
+    (h_dvd : ∀ p, p ^ 2 ≤ n → p.Prime → p ∣ a * b) :
     ¬a.Coprime b := by
   let p := n.minFac
   have hp_prime : p.Prime := Nat.minFac_prime (by linarith)
   specialize h_dvd p (Nat.minFac_sq_le_self (by linarith) hn_prime) hp_prime
-  suffices p ∣ a ∧ p ∣ b from Nat.not_coprime_of_dvd_of_dvd hp_prime.one_lt this.1 this.2
   rw [hp_prime.dvd_mul] at h_dvd
+  suffices p ∣ a ∧ p ∣ b from Nat.not_coprime_of_dvd_of_dvd hp_prime.one_lt this.1 this.2
   -- wlog hab : a ≤ b generalizing a b
   -- · rw [and_comm]
   --   refine this b a h_coprime.symm ?_ ?_ (le_of_not_ge hab)
@@ -204,7 +207,7 @@ theorem number_theory_175773 (n : ℕ) :
         · rfl
       | inr hn =>
         exfalso
-        exact lemma_3 n a b h_add h_dvd hn_prime hn h_coprime
+        exact lemma_3 n hn hn_prime a b h_add h_dvd h_coprime
 
   · -- Substitute the different solutions `n` and provide `a, b` for each.
     revert n
