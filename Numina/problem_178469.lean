@@ -8,6 +8,15 @@ open Real
 and such that if $p$ is a prime, $p \leq \sqrt{n}$, then $p$ divides $a b$.
 Determine all such $n$. -/
 
+example (p a b : ℕ) (h : a.Coprime b) (ha : p ∣ a) (hb : p ∣ b) (hp : 1 < p) : False := by
+  have h' : a.gcd b = 1 := h
+  have : p ∣ a.gcd b := Nat.dvd_gcd ha hb
+
+  rw [h'] at this
+  simp at this
+  linarith
+
+
 theorem number_theory_175773 (n : ℕ) :
     (∃ a b, a.Coprime b ∧ n = a^2 + b^2 ∧ ∀ p : ℕ, p ≤ √n → p.Prime → p ∣ a * b) ↔
     n = 1 ∨ n = 2 ∨ n = 5 ∨ n = 13 := by
@@ -37,8 +46,94 @@ theorem number_theory_175773 (n : ℕ) :
         · have ha : a = 1 := by simpa using h_coprime
           have hn : n = 2 := by simpa [ha] using h_add
           exact .inl hn
-        · -- TODO: the hard part
-          sorry
+        · refine .inr ?_
+          cases lt_or_le a 3 with
+          | inl ha =>
+            interval_cases a
+            · suffices n = 1 from False.elim (Nat.not_prime_one (this ▸ hn_prime))
+              simpa
+            · exact .inl (by simpa)
+            · exact .inr (by simpa)
+          | inr ha =>
+            -- TODO: the hard part
+            exfalso
+
+            -- First establish that `(a + 2) ^ 2 ≤ n`.
+            have h_add_two : a ^ 2 + (a + 1) ^ 2 = (a - 3) * (a + 1) + (a + 2) ^ 2 := by
+              suffices (a ^ 2 + (a + 1) ^ 2 : ℤ) = (a - 3) * (a + 1) + (a + 2) ^ 2 by
+                rw [← Int.ofNat_inj]
+                simpa [Nat.cast_sub ha]
+              ring
+
+            let p := (a + 2).minFac
+            have hp_prime : p.Prime := Nat.minFac_prime (by simp)
+
+            have h_dvd' := h_dvd p
+              (by
+                calc _
+                _ ≤ (a + 2) ^ 2 := by
+                  refine Nat.pow_le_pow_left ?_ 2
+                  exact Nat.minFac_le (by simp)
+                _ ≤ _ := by simp [h_add, h_add_two])
+              hp_prime
+
+            rw [Nat.Coprime.dvd_mul_right] at h_dvd'
+            swap
+            · refine Nat.Coprime.coprime_dvd_left (Nat.minFac_dvd (a + 2)) ?_
+              change (a + 1 + 1).Coprime (a + 1)
+              simp
+
+            suffices h_gcd : (a + 2).Coprime a by
+              change (a + 2).gcd a = 1 at h_gcd
+              refine hp_prime.two_le.not_lt ?_
+              suffices p = 1 by simp [this]
+              suffices p ∣ (a + 2).gcd a by simpa [h_gcd]
+              refine Nat.dvd_gcd ?_ ?_
+              · exact Nat.minFac_dvd (a + 2)
+              · exact h_dvd'  -- TDOO: expand here?
+
+            suffices Odd a by simpa
+            suffices Even (a - 1) by
+              convert this.add_one
+              suffices 1 ≤ a by simp [this]
+              linarith
+
+            suffices ∀ p, p.Prime → p ∣ a - 1 → p = 2 by
+              -- Easy way to get this?
+              have : ∃ k, 0 < k ∧ 2 ^ k = a - 1 := by
+                sorry
+
+              sorry
+
+            intro p hp_prime hp_dvd
+            specialize h_dvd p ?_ hp_prime
+            · rw [h_add]
+              suffices p ≤ a from le_trans (Nat.pow_le_pow_left this 2) (by simp)
+              calc _
+              _ ≤ a - 1 := by
+                refine Nat.le_of_dvd ?_ hp_dvd
+                rw [tsub_pos_iff_lt]
+                linarith
+              _ ≤ a := Nat.sub_le a 1
+
+            -- Since `a - 1` and `a` are coprime, `p` must divide `a + 1`.
+            -- Therefore `p = 2`, since it must divide `(a + 1) - (a - 1)`.
+
+            suffices p ∣ 2 from (Nat.prime_dvd_prime_iff_eq hp_prime Nat.prime_two).mp this
+            suffices p ∣ (a + 1) - (a - 1) by
+              convert this using 1
+              rw [Nat.add_sub_sub_cancel (by linarith)]
+            refine Nat.dvd_sub' ?_ ?_
+            · -- Use the fact that `a - 1` is coprime to `a`.
+              refine Nat.Coprime.dvd_of_dvd_mul_left ?_ h_dvd
+              refine Nat.Coprime.coprime_dvd_left hp_dvd ?_
+              suffices (a - 1).Coprime (a - 1 + 1) by
+                convert this using 1
+                rw [Nat.sub_add_cancel (by linarith)]
+              simp
+            · exact hp_dvd  -- TODO: expand here?
+
+
       | inr hd =>
         -- TODO: comment
         let p := d.minFac
@@ -116,115 +211,3 @@ theorem number_theory_175773 (n : ℕ) :
       interval_cases p <;> norm_num
     · refine ⟨2, 3, rfl, rfl, fun p hp ↦ ?_⟩
       interval_cases p <;> norm_num
-
-
-  -- by_cases hn_prime : n.Prime
-  -- · -- Exclude the non-prime solution `n = 1`.
-  --   refine Iff.trans ?_ (or_iff_right hn_prime.ne_one).symm
-  --   rw [exists_comm]
-  --   calc _
-  --   _ ↔ ∃ b, ∃ a, b ≤ a ∧ a ^ 2 + b ^ 2 = n ∧ a.Coprime b ∧
-  --       ∀ p : ℕ, p.Prime → p ^ 2 ≤ n → p ∣ a * b := by
-  --     sorry
-
-  --   _ ↔ ∃ b d, (b + d) ^ 2 + b ^ 2 = n ∧ (b + d).Coprime b ∧
-  --       ∀ p : ℕ, p.Prime → p ^ 2 ≤ n → p ∣ (b + d) * b := by
-  --     refine exists_congr fun b ↦ ?_
-  --     simp only [le_iff_exists_add, ← exists_and_right]
-  --     rw [exists_comm]
-  --     simp
-
-  --   _ ↔ ∃ d b, (b + d) ^ 2 + b ^ 2 = n ∧ (b + d).Coprime b ∧
-  --       ∀ p : ℕ, p.Prime → p ^ 2 ≤ n → p ∣ (b + d) * b :=
-  --     exists_comm
-
-  --   _ ↔ (∃ b, b ^ 2 + b ^ 2 = n ∧ b = 1 ∧ ∀ p : ℕ, p.Prime → p ^ 2 ≤ n → p ∣ b * b) ∨
-  --       ∃ d b, (b + d + 1) ^ 2 + b ^ 2 = n ∧
-  --         (d + 1).Coprime b ∧ ∀ p : ℕ, p.Prime → p ^ 2 ≤ n → p ∣ (b + d + 1) * b := by
-  --     rw [← Nat.or_exists_add_one]
-  --     simp [add_assoc]
-
-  --   _ ↔ (n = 2 ∧ ∀ p : ℕ, p.Prime → p ^ 2 ≤ n → p = 1) ∨
-  --       ∃ d b, (b + d + 1) ^ 2 + b ^ 2 = n ∧
-  --         (d + 1).Coprime b ∧ ∀ p : ℕ, p.Prime → p ^ 2 ≤ n → p ∣ (b + d + 1) * b := by
-  --     -- TODO: re-order?
-  --     simp [and_left_comm (b := _ = 1), eq_comm (b := n)]
-
-  --   _ ↔ _ := by
-  --     refine or_congr ?_ ?_
-  --     · refine and_iff_left_of_imp fun hn p hp_prime hp ↦ ?_
-  --       rcases hn with rfl
-  --       exfalso
-  --       refine hp_prime.two_le.not_lt ?_
-  --       suffices p ^ 2 < 2 ^ 2 from lt_of_pow_lt_pow_left' 2 this
-  --       linarith
-  --     · calc _
-  --       _ ↔ (∃ b, (b + 1) ^ 2 + b ^ 2 = n ∧ ∀ p : ℕ, p.Prime → p ^ 2 ≤ n → p ∣ (b + 1) * b) ∨
-  --           ∃ d b, (b + d + 2) ^ 2 + b ^ 2 = n ∧ (d + 2).Coprime b ∧
-  --             ∀ p : ℕ, p.Prime → p ^ 2 ≤ n → p ∣ (b + d + 2) * b := by
-  --         rw [← Nat.or_exists_add_one]
-  --         simp [add_assoc]
-  --       -- TODO: is there not a way to avoid doing this?
-  --       _ ↔ (n = 5 ∨ n = 13) ∨ False := by
-  --         -- TODO: write as `n = a ^ 2 + b ^ 2` instead?
-  --         refine or_congr ?_ ?_
-  --         · rw [← Nat.or_exists_add_one]
-  --           rw [← Nat.or_exists_add_one]
-  --           rw [← Nat.or_exists_add_one]
-  --           simp [add_assoc, eq_comm (b := n)]
-  --           sorry
-  --         · simp only [iff_false, not_exists, not_and]
-  --           intro d b hn h_coprime h_dvd
-  --           sorry
-
-  --       _ ↔ _ := by simp
-
-  --       -- rw [← Nat.or_exists_add_one]
-  --       -- simp [add_assoc]
-  --       -- sorry
-
-  -- · -- Exclude the prime solutions.
-  --   refine Iff.trans ?_ ((or_iff_left ?_).symm)
-  --   swap
-  --   · suffices ∀ n : ℕ, n = 2 ∨ n = 5 ∨ n = 13 → n.Prime from mt (this n) hn_prime
-  --     norm_num
-
-  --   -- TODO: Since `n` is composite...
-  --   -- First eliminate the cases `n = 0` and `n = 1` (not prime or composite).
-  --   cases le_or_lt n 1 with
-  --   | inl hn =>
-  --     interval_cases n
-  --     · simp
-  --     · refine (iff_true_right rfl).mpr ?_
-  --       use 0, 1
-  --       simp
-
-  --   | inr hn =>
-  --     refine (iff_false_right ?_).mpr ?_
-  --     · linarith
-  --     simp only [not_exists, not_and]
-  --     intro a b hab h_coprime
-  --     contrapose! h_coprime with h_dvd
-
-  --     let p := n.minFac
-  --     have hp_prime : p.Prime := Nat.minFac_prime (by linarith)
-  --     specialize h_dvd p hp_prime (Nat.minFac_sq_le_self (by linarith) hn_prime)
-
-  --     suffices p ∣ a ∧ p ∣ b from Nat.not_coprime_of_dvd_of_dvd hp_prime.one_lt this.1 this.2
-  --     rw [hp_prime.dvd_mul] at h_dvd
-  --     -- TODO: Can we use symmetry to avoid replication here?
-  --     refine h_dvd.elim ?_ ?_
-  --     · refine fun ha ↦ ⟨ha, ?_⟩
-  --       suffices p ∣ b ^ 2 from hp_prime.dvd_of_dvd_pow this
-  --       suffices p ∣ a ^ 2 + b ^ 2 by
-  --         refine (Nat.dvd_add_iff_right ?_).mpr this
-  --         exact dvd_pow ha two_ne_zero
-  --       rw [hab]
-  --       exact Nat.minFac_dvd n
-  --     · refine fun hb ↦ ⟨?_, hb⟩
-  --       suffices p ∣ a ^ 2 from hp_prime.dvd_of_dvd_pow this
-  --       suffices p ∣ a ^ 2 + b ^ 2 by
-  --         refine (Nat.dvd_add_iff_left ?_).mpr this
-  --         exact dvd_pow hb two_ne_zero
-  --       rw [hab]
-  --       exact Nat.minFac_dvd n
