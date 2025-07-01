@@ -8,15 +8,6 @@ open Real
 and such that if $p$ is a prime, $p \leq \sqrt{n}$, then $p$ divides $a b$.
 Determine all such $n$. -/
 
-example (p a b : ℕ) (h : a.Coprime b) (ha : p ∣ a) (hb : p ∣ b) (hp : 1 < p) : False := by
-  have h' : a.gcd b = 1 := h
-  have : p ∣ a.gcd b := Nat.dvd_gcd ha hb
-
-  rw [h'] at this
-  simp at this
-  linarith
-
-
 theorem number_theory_175773 (n : ℕ) :
     (∃ a b, a.Coprime b ∧ n = a^2 + b^2 ∧ ∀ p : ℕ, p ≤ √n → p.Prime → p ∣ a * b) ↔
     n = 1 ∨ n = 2 ∨ n = 5 ∨ n = 13 := by
@@ -98,12 +89,18 @@ theorem number_theory_175773 (n : ℕ) :
               suffices 1 ≤ a by simp [this]
               linarith
 
-            suffices ∀ p, p.Prime → p ∣ a - 1 → p = 2 by
-              -- Easy way to get this?
-              have : ∃ k, 0 < k ∧ 2 ^ k = a - 1 := by
-                sorry
-
-              sorry
+            -- It suffices to show that any prime factors must be 2.
+            suffices ∀ p : ℕ, p.Prime → p ∣ a - 1 → p = 2 by
+              suffices 2 ∈ (a - 1).primeFactors by
+                rw [even_iff_two_dvd]
+                exact Nat.dvd_of_mem_primeFactors this
+              suffices (a - 1).primeFactors = {2} by simp [this]
+              rw [Finset.eq_singleton_iff_nonempty_unique_mem]
+              split_ands
+              · rw [Nat.nonempty_primeFactors, Nat.lt_sub_iff_add_lt]
+                linarith
+              · intro p hp
+                exact this p (Nat.prime_of_mem_primeFactors hp) (Nat.dvd_of_mem_primeFactors hp)
 
             intro p hp_prime hp_dvd
             specialize h_dvd p ?_ hp_prime
@@ -132,7 +129,6 @@ theorem number_theory_175773 (n : ℕ) :
                 rw [Nat.sub_add_cancel (by linarith)]
               simp
             · exact hp_dvd  -- TODO: expand here?
-
 
       | inr hd =>
         -- TODO: comment
