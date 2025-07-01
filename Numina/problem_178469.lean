@@ -24,7 +24,7 @@ lemma sq_add_sq_succ_of_three_le (a : ℕ) (ha : 3 ≤ a) :
   ring
 
 -- For a consecutive pair `a, a + 1` with `3 ≤ a`, we can show that `a - 1` is even.
-theorem lemma_1 (n a : ℕ) (h_add : n = a ^ 2 + (a + 1) ^ 2)
+lemma lemma_1 (n a : ℕ) (h_add : n = a ^ 2 + (a + 1) ^ 2)
     (h_dvd : ∀ (p : ℕ), p ^ 2 ≤ n → Nat.Prime p → p ∣ a * (a + 1)) (ha : 3 ≤ a) :
     Even (a - 1) := by
   -- It suffices to show that all prime factors are 2 (and `a - 1` is at least 2).
