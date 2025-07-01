@@ -20,7 +20,7 @@ abbrev mathlibOnlyLinters : Array LeanOption := #[
   ⟨`linter.style.missingEnd, true⟩,
   ⟨`linter.style.multiGoal, true⟩,
   ⟨`linter.style.setOption, true⟩,
-  ⟨`linter.unusedVariables, false⟩
+  ⟨`linter.unusedVariables, true⟩
 ]
 
 /-- These options are passed as `leanOptions` to building mathlib, as well as the
