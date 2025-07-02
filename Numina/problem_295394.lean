@@ -4,25 +4,25 @@ import Mathlib
 
 /- Find all positive integers $N$, such that it equals the sum of the digits of $N^{3}$. -/
 
-lemma log_pow_lt_mul_log_add_one (b n k : ℕ) (hk : k ≠ 0) :
+lemma log_pow_lt_mul_log_add_one (b n k : ℕ) (hb : 1 < b) (hk : k ≠ 0) :
     Nat.log b (n ^ k) < k * (Nat.log b n + 1) := by
-  -- TODO: is it necessary to pass via `ℤ`?
-  suffices Int.log b (↑(n ^ k) : ℝ) < k * (Int.log b (n : ℝ) + 1) by
-    rw [← Int.ofNat_lt]
-    simp only [Int.log_natCast] at this
-    simpa
-  suffices ⌊Real.logb b (n ^ k)⌋ < k * (⌊Real.logb b n⌋ + 1 : ℝ) by
-    rw [← @Int.cast_lt ℝ]
-    simpa [Real.floor_logb_natCast]
-  -- ↑⌊Real.logb (↑b) (↑n ^ k)⌋ < ↑k * (↑⌊Real.logb ↑b ↑n⌋ + 1)
-  calc _
-  _ ≤ k * Real.logb b n := by
-    rw [Real.logb_pow]
-    exact Int.floor_le (k * Real.logb b n)
-  _ < (k : ℝ) * (⌊Real.logb b n⌋ + 1) := by
-    gcongr
-    exact Int.lt_floor_add_one (Real.logb ↑b ↑n)
-  _ = _ := by simp
+  -- TODO: eliminate `1 < b` from assumptions
+  -- TODO: is there a way to avoid this?
+  cases k with
+  | zero => contradiction
+  | succ k =>
+    clear hk
+    induction k with
+    | zero => simp
+    | succ k IH =>
+      cases n with
+      | zero => simp
+      | succ n =>
+        have IH := Nat.lt_pow_of_log_lt hb IH
+        refine Nat.log_lt_of_lt_pow (by simp) ?_
+        have hn : n + 1 < b ^ (Nat.log b (n + 1) + 1) := Nat.lt_pow_succ_log_self hb (n + 1)
+        convert Nat.mul_lt_mul'' IH (hn) using 1
+        ring
 
 -- TODO: comment
 lemma periodic_pred_iff_mod_mem_filter_range {p : ℕ → Prop} [DecidablePred p] {c : ℕ}
@@ -74,7 +74,7 @@ theorem number_theory_295394 (n : ℕ) :
     rw [← hn_len]
     rw [Nat.digits_len 10 n (by norm_num) (by simpa)]
     rw [Nat.digits_len 10 (n ^ 3) (by norm_num) (by simpa)]
-    exact log_pow_lt_mul_log_add_one 10 n 3 (by norm_num)
+    exact log_pow_lt_mul_log_add_one 10 n 3 (by norm_num) (by norm_num)
 
   have hn3_sum : (Nat.digits 10 (n ^ 3)).sum ≤ 27 * k := by
     calc _
