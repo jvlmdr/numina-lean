@@ -2,6 +2,8 @@
 
 import Mathlib
 
+namespace problem_178469
+
 open Real
 
 /- Let $n$ be an integer of the form $a^2 + b^2$ where $a$ and $b$ are relatively prime integers
@@ -220,3 +222,5 @@ theorem number_theory_175773 (n : ℕ) :
       interval_cases p <;> norm_num
     · refine ⟨2, 3, rfl, rfl, fun p hp ↦ ?_⟩
       interval_cases p <;> norm_num
+
+end problem_178469
