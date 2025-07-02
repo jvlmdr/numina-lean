@@ -4,24 +4,25 @@ import Mathlib
 
 /- Find all positive integers $N$, such that it equals the sum of the digits of $N^{3}$. -/
 
--- TODO: used?
-lemma clog_le_log_add_one (b n : ℕ) : b.clog n ≤ b.log n + 1 := by
-  rw [← Int.ofNat_le]
-  simpa [Real.ceil_logb_natCast, Real.floor_logb_natCast] using
-    Int.ceil_le_floor_add_one (Real.logb b n)
-
-lemma log_pow_add_one_le_mul_log_add_one (b n k : ℕ) (hb : 1 < b) (hk : k ≠ 0) :
-    Nat.log b (n ^ k) + 1 ≤ k * (Nat.log b n + 1) := by
-  -- We don't need to assume `n ≠ 0` as the equation holds.
-  -- It does not hold for `k = 0`.
-  cases n.eq_zero_or_pos with
-  | inl hn => simp [hn, Nat.pos_iff_ne_zero, Nat.one_le_iff_ne_zero, hk]
-  | inr hn =>
-    sorry
-
--- lemma log_pow_lt_mul_log_add_one (b n k : ℕ) (hb : 1 < b) (hk : k ≠ 0) :
---     Nat.log b (n ^ k) < k * (Nat.log b n + 1) :=
---   log_pow_add_one_le_mul_log_add_one b n k hb hk
+lemma log_pow_lt_mul_log_add_one (b n k : ℕ) (hk : k ≠ 0) :
+    Nat.log b (n ^ k) < k * (Nat.log b n + 1) := by
+  -- TODO: is it necessary to pass via `ℤ`?
+  suffices Int.log b (↑(n ^ k) : ℝ) < k * (Int.log b (n : ℝ) + 1) by
+    rw [← Int.ofNat_lt]
+    simp only [Int.log_natCast] at this
+    simpa
+  suffices ⌊Real.logb b (n ^ k)⌋ < k * (⌊Real.logb b n⌋ + 1 : ℝ) by
+    rw [← @Int.cast_lt ℝ]
+    simpa [Real.floor_logb_natCast]
+  -- ↑⌊Real.logb (↑b) (↑n ^ k)⌋ < ↑k * (↑⌊Real.logb ↑b ↑n⌋ + 1)
+  calc _
+  _ ≤ k * Real.logb b n := by
+    rw [Real.logb_pow]
+    exact Int.floor_le (k * Real.logb b n)
+  _ < (k : ℝ) * (⌊Real.logb b n⌋ + 1) := by
+    gcongr
+    exact Int.lt_floor_add_one (Real.logb ↑b ↑n)
+  _ = _ := by simp
 
 -- TODO: comment
 lemma periodic_pred_iff_mod_mem_filter_range {p : ℕ → Prop} [DecidablePred p] {c : ℕ}
@@ -73,7 +74,7 @@ theorem number_theory_295394 (n : ℕ) :
     rw [← hn_len]
     rw [Nat.digits_len 10 n (by norm_num) (by simpa)]
     rw [Nat.digits_len 10 (n ^ 3) (by norm_num) (by simpa)]
-    exact log_pow_add_one_le_mul_log_add_one 10 n 3 (by norm_num) three_ne_zero
+    exact log_pow_lt_mul_log_add_one 10 n 3 (by norm_num)
 
   have hn3_sum : (Nat.digits 10 (n ^ 3)).sum ≤ 27 * k := by
     calc _
