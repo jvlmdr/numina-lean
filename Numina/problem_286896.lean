@@ -11,6 +11,8 @@ $$
 $$
 the minimum value. -/
 
+-- lemma lemma_1 (x y z : ℝ) (hx : 0 < x) (hy : 0 < y) (hz : 0 < z)
+--     (h_sum : x^2 + y^2 + z^2 = 1) :
 
 
 theorem inequalities_286896 :
@@ -39,5 +41,29 @@ theorem inequalities_286896 :
   · rw [mem_lowerBounds]
     simp only [exists_and_left, mem_setOf_eq, forall_exists_index, and_imp]
     rintro _ x hx y hy z hz h_one rfl
+
+    let f x y z : ℝ := x ^ 5 / (y ^ 2 + z ^ 2 - y * z)
+
+    let g x y z : ℝ := x * y ^ 2 + x * z ^ 2 - x * y * z
+
+    have hg_pos {x y z} (hx : 0 < x) (hy : 0 < y) (hz : 0 < z)  : 0 < g x y z := by
+      suffices 0 < x * (y ^ 2 + z ^ 2 - y * z) by
+        convert this using 1
+        ring
+      refine mul_pos hx ?_
+      calc _
+      _ ≤ (y - z) ^ 2 := sq_nonneg (y - z)
+      _ = y ^ 2 + z ^ 2 - 2 * (y * z) := by ring
+      _ < _ := by simp [hy, hz]
+
+    -- Apply Cauchy-Schwarz inequality.
+    have : (x ^ 3 + y ^ 3 + z ^ 3) ^ 2 ≤
+        (x ^ 6 / g x y z + y ^ 6 / g y z x + z ^ 6 / g z x y) * (g x y z + g y z x + g z x y) := by
+      convert Finset.univ.sum_mul_sq_le_sq_mul_sq
+        ![x ^ 3 / √(g x y z), y ^ 3 / √(g y z x), z ^ 3 / √(g z x y)]
+        ![√(g x y z), √(g y z x), √(g z x y)]
+      · simp [Fin.sum_univ_three, hx, hy, hz, (sqrt_pos.mpr (hg_pos _ _ _)).ne']
+      · simp [Fin.sum_univ_three, hx, hy, hz, div_pow, (hg_pos _ _ _).le, ← pow_mul]
+      · simp [Fin.sum_univ_three, hx, hy, hz, (hg_pos _ _ _).le]
 
     sorry
