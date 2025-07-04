@@ -94,6 +94,7 @@ import Numina.problem_290058
 import Numina.problem_291009
 import Numina.problem_295444
 import Numina.problem_295394
+import Numina.problem_286896
 import Numina.problem_99850
 import Numina.problem_def
 import Numina.problem_interesting

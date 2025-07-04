@@ -2,8 +2,8 @@
 
 import Mathlib
 
-open Real Set
-open scoped BigOperators Finset
+open Real
+open scoped Finset
 
 /- Let $x, y, z \in \mathbf{R}^{+}, x^{2}+y^{2}+z^{2}=1$. Find
 $$
@@ -11,10 +11,6 @@ $$
 $$
 the minimum value. -/
 
--- lemma lemma_1 (x y z : ℝ) (hx : 0 < x) (hy : 0 < y) (hz : 0 < z)
---     (h_sum : x^2 + y^2 + z^2 = 1) :
-
--- TODO: generalize to strict inequality if needed
 lemma pow_mean_le_pow_mean_weighted_of_pos_of_lt {ι : Type*} (s : Finset ι) (p q : ℝ)
     (hp : 0 < p) (hpq : p < q) (w z : ι → ℝ)
     (hw : ∀ i ∈ s, 0 ≤ w i) (hw' : ∑ i ∈ s, w i = 1) (hz : ∀ i ∈ s, 0 ≤ z i) :
@@ -51,6 +47,36 @@ lemma pow_mean_le_pow_mean_of_pos_of_lt {ι : Type*} (s : Finset ι) (p q : ℝ)
     · simp
     · simp [hs.card_ne_zero]
 
+-- Schur's inequality $\sum_{\text{cyc}} x^t (x - y) (x - z) \ge 0$ with $t = 1$.
+lemma schur_inequality {x y z : ℝ} (hx : 0 < x) (hy : 0 < y) (hz : 0 < z) :
+    0 ≤ x * (x - y) * (x - z) + y * (y - z) * (y - x) + z * (z - x) * (z - y) := by
+  -- Without loss of generality, assume `x ≤ y ≤ z`.
+  wlog hyz : y ≤ z generalizing y z
+  · convert this hz hy (le_of_not_ge hyz) using 1
+    ring
+  wlog hxy : x ≤ y generalizing x y z
+  · cases le_or_lt x z with
+    | inl hxz =>
+      convert this hy hx hz hxz (le_of_not_ge hxy) using 1
+      ring
+    | inr hzx =>
+      convert this hy hz hx hzx.le hyz using 1
+      ring
+  -- Re-arrange into an expression with all non-negative terms.
+  calc
+  _ ≤ (z - y) * (z * (z - x) - y * (y - x)) + x * (z - x) * (y - x) := by
+    refine add_nonneg ?_ ?_
+    · refine mul_nonneg ?_ ?_
+      · simpa using hyz
+      · rw [sub_nonneg]
+        gcongr
+        simpa using hxy
+    · refine mul_nonneg ?_ ?_
+      · refine mul_nonneg hx.le ?_
+        simpa using hxy.trans hyz
+      · simpa using hxy
+  _ = _ := by ring
+
 theorem inequalities_286896 :
   IsLeast
     {t | ∃ x y z, 0 < x ∧ 0 < y ∧ 0 < z ∧ x^2 + y^2 + z^2 = 1 ∧
@@ -59,7 +85,7 @@ theorem inequalities_286896 :
   rw [sqrt_div_self]
   -- TODO: is there a canonical way to obtain this from inequality with equality case?
   split_ands
-  · rw [mem_setOf_eq]
+  · rw [Set.mem_setOf_eq]
     -- As will be shown below, the minimum value is obtained at `x = y = z = 1 / √3`.
     use (√3)⁻¹, (√3)⁻¹, (√3)⁻¹
     split_ands
@@ -75,7 +101,7 @@ theorem inequalities_286896 :
       _ = _ := by ring
 
   · rw [mem_lowerBounds]
-    simp only [exists_and_left, mem_setOf_eq, forall_exists_index, and_imp]
+    simp only [exists_and_left, Set.mem_setOf_eq, forall_exists_index, and_imp]
     rintro _ x hx y hy z hz h_one rfl
 
     -- Introduce `g` to denote the denominator expressions.
@@ -87,11 +113,12 @@ theorem inequalities_286896 :
       _ < _ := by simp [g, hy, hz]
 
     calc _
-    _ ≤ 3 * √((x ^ 2 + y ^ 2 + z ^ 2) / 3) ^ 3 := by sorry
-
-    -- Apply power-mean inequality with `p = 2` and `q = 3`.
+    -- Introduce `x ^ 2 + y ^ 2 + z ^ 2 = 1` and apply power-mean inequality with `2 < 3`.
+    _ ≤ 3 * √((x ^ 2 + y ^ 2 + z ^ 2) / 3) ^ 3 := by
+      rw [pow_succ _ 2]
+      simp [h_one]
     _ ≤ x ^ 3 + y ^ 3 + z ^ 3 := by
-      -- Put in power mean form.
+      -- Put both sides in power-mean form `(∑ x ^ p) ^ p⁻¹`.
       rw [← le_div_iff₀' three_pos, ← rpow_natCast _ 3]
       refine (le_rpow_inv_iff_of_pos (sqrt_nonneg _) ?_ three_pos).mp ?_
       · refine (div_pos (add_pos (add_pos ?_ ?_) ?_) three_pos).le <;> simp [hx, hy, hz]
@@ -101,30 +128,25 @@ theorem inequalities_286896 :
       · simp [Fin.sum_univ_three, ← rpow_natCast]
       · simp [Fin.forall_fin_succ, hx.le, hy.le, hz.le]
 
-    -- Re-write as square divided by itself.
+    -- Rewrite as square divided by self.
+    -- Use lower bound sum of cubes to obtain upper bound on fraction.
     _ = (x^3 + y^3 + z^3) ^ 2 / (x^3 + y^3 + z^3) := by rw [sq, mul_self_div_self]
-
-    -- Use lower bound on the denominator to obtain upper bound on the fraction.
-    _ ≤ (x^3 + y^3 + z^3) ^ 2 /
-        (x * (y^2 + z^2) + y * (z^2 + x^2) + z * (x^2 + y^2) - 3 * x * y * z) := by
+    _ ≤ (x^3 + y^3 + z^3) ^ 2 / (x * g y z + y * g z x + z * g x y) := by
       refine (div_le_div_iff_of_pos_left ?_ ?_ ?_).mpr ?_
       · refine sq_pos_of_pos ?_
         refine add_pos (add_pos ?_ ?_) ?_ <;> simp [hx, hy, hz]
       · refine add_pos (add_pos ?_ ?_) ?_ <;> simp [hx, hy, hz]
-      · -- Prefer other form to prove this?
-        sorry
-      -- Use Schur's inequality here.
-      sorry
-
-    _ = (x^3 + y^3 + z^3) ^ 2 / (x * g y z + y * g z x + z * g x y) := by
-      congr 1
+      · refine add_pos (add_pos ?_ ?_) ?_ <;> simp [hx, hy, hz, hg_pos]
+      -- This is exactly Schur's inequality with `t = 1` after some manipulation.
+      rw [← sub_nonneg]
+      convert schur_inequality hx hy hz using 1
       ring
 
+    -- Apply Cauchy-Schwarz inequality to vectors of `x ^ 3 / √(x * g y z)` and `√(x * g y z)`.
     _ ≤ x^6 / (x * g y z) + y^6 / (y * g z x) + z^6 / (z * g x y) := by
       refine div_le_of_le_mul₀ ?_ ?_ ?_
       · refine (add_pos (add_pos ?_ ?_) ?_).le <;> simp [hx, hy, hz, hg_pos]
       · refine (add_pos (add_pos ?_ ?_) ?_).le <;> simp [hx, hy, hz, hg_pos]
-      -- Apply Cauchy-Schwarz inequality.
       convert Finset.sum_mul_sq_le_sq_mul_sq Finset.univ
         ![x ^ 3 / √(x * g y z), y ^ 3 / √(y * g z x), z ^ 3 / √(z * g x y)]
         ![√(x * g y z), √(y * g z x), √(z * g x y)] using 1
@@ -137,5 +159,6 @@ theorem inequalities_286896 :
           (mul_pos hx <| hg_pos hy hz).le
         simp [Fin.sum_univ_three, div_pow, ← pow_mul, this, hx, hy, hz]
 
+    -- Eliminate factors of `x, y, z` from top and bottom of each term.
     _ = x^5 / g y z + y^5 / g z x + z^5 / g x y := by
       simp [pow_succ' _ 5, mul_div_mul_left, hx.ne', hy.ne', hz.ne']
