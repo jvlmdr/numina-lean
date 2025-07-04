@@ -2,8 +2,7 @@
 
 import Mathlib
 
-open Real
-open scoped Finset
+open Real Finset
 
 /- Let $x, y, z \in \mathbf{R}^{+}, x^{2}+y^{2}+z^{2}=1$. Find
 $$
@@ -18,19 +17,19 @@ lemma pow_mean_le_pow_mean_weighted_of_pos_of_lt {ι : Type*} (s : Finset ι) (p
   -- Raise both sides to the power of `q`.
   refine (rpow_le_rpow_iff (z := q) ?_ ?_ (hp.trans hpq)).mp ?_
   · refine rpow_nonneg ?_ _
-    exact Finset.sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (rpow_nonneg (hz i hi) p)
+    exact sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (rpow_nonneg (hz i hi) p)
   · refine rpow_nonneg ?_ _
-    exact Finset.sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (rpow_nonneg (hz i hi) q)
+    exact sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (rpow_nonneg (hz i hi) q)
   -- Apply Jensen's inequality to the convex function `x ↦ x ^ (q / p)`.
   have hr : 1 < q / p := one_lt_div_iff.mpr <| Or.inl ⟨hp, hpq⟩
   have h_convex := (strictConvexOn_rpow hr).convexOn
   convert h_convex.map_sum_le hw hw' fun i hi ↦ rpow_nonneg (hz i hi) p using 1
-  · rw [← rpow_mul (Finset.sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (rpow_nonneg (hz i hi) p))]
+  · rw [← rpow_mul (sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (rpow_nonneg (hz i hi) p))]
     rw [inv_mul_eq_div]
     simp
-  · rw [← rpow_mul (Finset.sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (rpow_nonneg (hz i hi) q))]
+  · rw [← rpow_mul (sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (rpow_nonneg (hz i hi) q))]
     rw [inv_mul_cancel₀ (hp.trans hpq).ne', rpow_one]
-    refine Finset.sum_congr rfl fun i hi ↦ ?_
+    refine sum_congr rfl fun i hi ↦ ?_
     rw [← rpow_mul (hz i hi), mul_div_cancel₀ q hp.ne']
     simp
 
@@ -42,8 +41,8 @@ lemma pow_mean_le_pow_mean_of_pos_of_lt {ι : Type*} (s : Finset ι) (p q : ℝ)
   | inr hs =>
     convert pow_mean_le_pow_mean_weighted_of_pos_of_lt s p q hp hpq (fun _ ↦ 1 / #s) z ?_ ?_ hz
       using 1
-    · simp [Finset.sum_div, inv_mul_eq_div]
-    · simp [Finset.sum_div, inv_mul_eq_div]
+    · simp [sum_div, inv_mul_eq_div]
+    · simp [sum_div, inv_mul_eq_div]
     · simp
     · simp [hs.card_ne_zero]
 
@@ -83,21 +82,15 @@ theorem inequalities_286896 :
       t = x^5 / (y^2 + z^2 - y * z) + y^5 / (z^2 + x^2 - z * x) + z^5 / (x^2 + y^2 - x * y)}
     (√3 / 3) := by
   rw [sqrt_div_self]
-  -- TODO: is there a canonical way to obtain this from inequality with equality case?
   split_ands
   · rw [Set.mem_setOf_eq]
     -- As will be shown below, the minimum value is obtained at `x = y = z = 1 / √3`.
-    use (√3)⁻¹, (√3)⁻¹, (√3)⁻¹
-    split_ands
-    · simp
-    · simp
-    · simp
+    refine ⟨(√3)⁻¹, (√3)⁻¹, (√3)⁻¹, by simp, by simp, by simp, ?_, ?_⟩
     · simpa using add_thirds (1 : ℝ)
-    · -- TODO: quite fumbly...
+    · symm
       calc _
-      _ = √3 ^ 4 / √3 ^ 4 / √3 := by simp
-      _ = (√3 ^ 2 / √3 ^ 5) * √3 ^ 2 := by ring
-      _ = (√3 ^ 5 / √3 ^ 2)⁻¹ * 3 := by simp [inv_div]
+      _ = ((√3 ^ 2) ^ 2 * √3)⁻¹ * (√3 ^ 2)⁻¹⁻¹ * 3 := by ring
+      _ = (3 ^ 2 * √3)⁻¹ * 3 * 3 := by simp
       _ = _ := by ring
 
   · rw [mem_lowerBounds]
@@ -122,7 +115,7 @@ theorem inequalities_286896 :
       rw [← le_div_iff₀' three_pos, ← rpow_natCast _ 3]
       refine (le_rpow_inv_iff_of_pos (sqrt_nonneg _) ?_ three_pos).mp ?_
       · refine (div_pos (add_pos (add_pos ?_ ?_) ?_) three_pos).le <;> simp [hx, hy, hz]
-      convert pow_mean_le_pow_mean_of_pos_of_lt Finset.univ 2 3 two_pos (by norm_num) ![x, y, z] ?_
+      convert pow_mean_le_pow_mean_of_pos_of_lt univ 2 3 two_pos (by norm_num) ![x, y, z] ?_
         using 1
       · simp [Fin.sum_univ_three, sqrt_eq_rpow]
       · simp [Fin.sum_univ_three, ← rpow_natCast]
@@ -147,7 +140,7 @@ theorem inequalities_286896 :
       refine div_le_of_le_mul₀ ?_ ?_ ?_
       · refine (add_pos (add_pos ?_ ?_) ?_).le <;> simp [hx, hy, hz, hg_pos]
       · refine (add_pos (add_pos ?_ ?_) ?_).le <;> simp [hx, hy, hz, hg_pos]
-      convert Finset.sum_mul_sq_le_sq_mul_sq Finset.univ
+      convert sum_mul_sq_le_sq_mul_sq univ
         ![x ^ 3 / √(x * g y z), y ^ 3 / √(y * g z x), z ^ 3 / √(z * g x y)]
         ![√(x * g y z), √(y * g z x), √(z * g x y)] using 1
       · -- Cancel `√(x * g₁ y z)` from top and bottom of each term.
