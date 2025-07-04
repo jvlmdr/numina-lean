@@ -3,7 +3,7 @@
 import Mathlib
 
 open Real Set
-open scoped BigOperators
+open scoped BigOperators Finset
 
 /- Let $x, y, z \in \mathbf{R}^{+}, x^{2}+y^{2}+z^{2}=1$. Find
 $$
@@ -14,6 +14,42 @@ the minimum value. -/
 -- lemma lemma_1 (x y z : ℝ) (hx : 0 < x) (hy : 0 < y) (hz : 0 < z)
 --     (h_sum : x^2 + y^2 + z^2 = 1) :
 
+-- TODO: generalize to strict inequality if needed
+lemma pow_mean_le_pow_mean_weighted_of_pos_of_lt {ι : Type*} (s : Finset ι) (p q : ℝ)
+    (hp : 0 < p) (hpq : p < q) (w z : ι → ℝ)
+    (hw : ∀ i ∈ s, 0 ≤ w i) (hw' : ∑ i ∈ s, w i = 1) (hz : ∀ i ∈ s, 0 ≤ z i) :
+    (∑ i ∈ s, w i * z i ^ p) ^ p⁻¹ ≤ (∑ i ∈ s, w i * z i ^ q) ^ q⁻¹ := by
+  -- Raise both sides to the power of `q`.
+  refine (rpow_le_rpow_iff (z := q) ?_ ?_ (hp.trans hpq)).mp ?_
+  · refine rpow_nonneg ?_ _
+    exact Finset.sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (rpow_nonneg (hz i hi) p)
+  · refine rpow_nonneg ?_ _
+    exact Finset.sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (rpow_nonneg (hz i hi) q)
+  -- Apply Jensen's inequality to the convex function `x ↦ x ^ (q / p)`.
+  have hr : 1 < q / p := one_lt_div_iff.mpr <| Or.inl ⟨hp, hpq⟩
+  have h_convex := (strictConvexOn_rpow hr).convexOn
+  convert h_convex.map_sum_le hw hw' fun i hi ↦ rpow_nonneg (hz i hi) p using 1
+  · rw [← rpow_mul (Finset.sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (rpow_nonneg (hz i hi) p))]
+    rw [inv_mul_eq_div]
+    simp
+  · rw [← rpow_mul (Finset.sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (rpow_nonneg (hz i hi) q))]
+    rw [inv_mul_cancel₀ (hp.trans hpq).ne', rpow_one]
+    refine Finset.sum_congr rfl fun i hi ↦ ?_
+    rw [← rpow_mul (hz i hi), mul_div_cancel₀ q hp.ne']
+    simp
+
+lemma pow_mean_le_pow_mean_of_pos_of_lt {ι : Type*} (s : Finset ι) (p q : ℝ)
+    (hp : 0 < p) (hpq : p < q) (z : ι → ℝ) (hz : ∀ i ∈ s, 0 ≤ z i) :
+    ((∑ i ∈ s, z i ^ p) / #s) ^ p⁻¹ ≤ ((∑ i ∈ s, z i ^ q) / #s) ^ q⁻¹ := by
+  cases s.eq_empty_or_nonempty with
+  | inl hs => simp [hs, hp.ne', (hp.trans hpq).ne']
+  | inr hs =>
+    convert pow_mean_le_pow_mean_weighted_of_pos_of_lt s p q hp hpq (fun _ ↦ 1 / #s) z ?_ ?_ hz
+      using 1
+    · simp [Finset.sum_div, inv_mul_eq_div]
+    · simp [Finset.sum_div, inv_mul_eq_div]
+    · simp
+    · simp [hs.card_ne_zero]
 
 theorem inequalities_286896 :
   IsLeast
@@ -66,4 +102,31 @@ theorem inequalities_286896 :
       · simp [Fin.sum_univ_three, hx, hy, hz, div_pow, (hg_pos _ _ _).le, ← pow_mul]
       · simp [Fin.sum_univ_three, hx, hy, hz, (hg_pos _ _ _).le]
 
-    sorry
+    -- TODO: use `le_div_iff₀` instead?
+    have := div_le_of_le_mul₀
+      (by refine (add_pos (add_pos ?_ ?_) ?_).le <;> simp [hx, hy, hz, hg_pos])
+      (by refine (add_pos (add_pos ?_ ?_) ?_).le <;> simp [hx, hy, hz, div_pos, hg_pos]) this
+
+    -- TODO: use `g y z = y^2 + z^2 - y * z` instead?
+    have : (x^3 + y^3 + z^3) ^ 2 /
+        (x * (y^2 + z^2) + y * (z^2 + x^2) + z * (x^2 + y^2) - 3 * x * y * z) ≤
+        x^5 / (y^2 + z^2 - y * z) + y^5 / (z^2 + x^2 - z * x) + z^5 / (x^2 + y^2 - x * y) := by
+      convert this using 1
+      · ring
+      · simp [pow_succ' _ 5, g, mul_assoc, ← mul_sub, ← mul_add,
+          mul_div_mul_left, hx.ne', hy.ne', hz.ne']
+
+    calc _
+    _ ≤ 3 * √((x ^ 2 + y ^ 2 + z ^ 2) / 3) ^ 3 := by sorry
+    _ ≤ x ^ 3 + y ^ 3 + z ^ 3 := by
+      -- Put in form to match the power mean inequality.
+      rw [← le_div_iff₀' three_pos, ← rpow_natCast _ 3]
+      refine (le_rpow_inv_iff_of_pos (sqrt_nonneg _) ?_ three_pos).mp ?_
+      · refine (div_pos (add_pos (add_pos ?_ ?_) ?_) three_pos).le <;> simp [hx, hy, hz]
+      convert pow_mean_le_pow_mean_of_pos_of_lt Finset.univ 2 3 two_pos (by norm_num) ![x, y, z] ?_
+        using 1
+      · simp [Fin.sum_univ_three, sqrt_eq_rpow]
+      · simp [Fin.sum_univ_three, ← rpow_natCast]
+      · simp [Fin.forall_fin_succ, hx.le, hy.le, hz.le]
+
+    _ ≤ _ := by sorry
