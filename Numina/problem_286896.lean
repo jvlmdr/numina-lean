@@ -78,48 +78,20 @@ theorem inequalities_286896 :
     simp only [exists_and_left, mem_setOf_eq, forall_exists_index, and_imp]
     rintro _ x hx y hy z hz h_one rfl
 
-    let f x y z : ℝ := x ^ 5 / (y ^ 2 + z ^ 2 - y * z)
-
-    let g x y z : ℝ := x * y ^ 2 + x * z ^ 2 - x * y * z
-
-    have hg_pos {x y z} (hx : 0 < x) (hy : 0 < y) (hz : 0 < z)  : 0 < g x y z := by
-      suffices 0 < x * (y ^ 2 + z ^ 2 - y * z) by
-        convert this using 1
-        ring
-      refine mul_pos hx ?_
+    -- Introduce `g` to denote the denominator expressions.
+    let g y z : ℝ := y ^ 2 + z ^ 2 - y * z
+    have hg_pos {y z} (hy : 0 < y) (hz : 0 < z) : 0 < g y z := by
       calc _
       _ ≤ (y - z) ^ 2 := sq_nonneg (y - z)
       _ = y ^ 2 + z ^ 2 - 2 * (y * z) := by ring
-      _ < _ := by simp [hy, hz]
-
-    -- Apply Cauchy-Schwarz inequality.
-    have : (x ^ 3 + y ^ 3 + z ^ 3) ^ 2 ≤
-        (x ^ 6 / g x y z + y ^ 6 / g y z x + z ^ 6 / g z x y) * (g x y z + g y z x + g z x y) := by
-      convert Finset.univ.sum_mul_sq_le_sq_mul_sq
-        ![x ^ 3 / √(g x y z), y ^ 3 / √(g y z x), z ^ 3 / √(g z x y)]
-        ![√(g x y z), √(g y z x), √(g z x y)]
-      · simp [Fin.sum_univ_three, hx, hy, hz, (sqrt_pos.mpr (hg_pos _ _ _)).ne']
-      · simp [Fin.sum_univ_three, hx, hy, hz, div_pow, (hg_pos _ _ _).le, ← pow_mul]
-      · simp [Fin.sum_univ_three, hx, hy, hz, (hg_pos _ _ _).le]
-
-    -- TODO: use `le_div_iff₀` instead?
-    have := div_le_of_le_mul₀
-      (by refine (add_pos (add_pos ?_ ?_) ?_).le <;> simp [hx, hy, hz, hg_pos])
-      (by refine (add_pos (add_pos ?_ ?_) ?_).le <;> simp [hx, hy, hz, div_pos, hg_pos]) this
-
-    -- TODO: use `g y z = y^2 + z^2 - y * z` instead?
-    have : (x^3 + y^3 + z^3) ^ 2 /
-        (x * (y^2 + z^2) + y * (z^2 + x^2) + z * (x^2 + y^2) - 3 * x * y * z) ≤
-        x^5 / (y^2 + z^2 - y * z) + y^5 / (z^2 + x^2 - z * x) + z^5 / (x^2 + y^2 - x * y) := by
-      convert this using 1
-      · ring
-      · simp [pow_succ' _ 5, g, mul_assoc, ← mul_sub, ← mul_add,
-          mul_div_mul_left, hx.ne', hy.ne', hz.ne']
+      _ < _ := by simp [g, hy, hz]
 
     calc _
     _ ≤ 3 * √((x ^ 2 + y ^ 2 + z ^ 2) / 3) ^ 3 := by sorry
+
+    -- Apply power-mean inequality with `p = 2` and `q = 3`.
     _ ≤ x ^ 3 + y ^ 3 + z ^ 3 := by
-      -- Put in form to match the power mean inequality.
+      -- Put in power mean form.
       rw [← le_div_iff₀' three_pos, ← rpow_natCast _ 3]
       refine (le_rpow_inv_iff_of_pos (sqrt_nonneg _) ?_ three_pos).mp ?_
       · refine (div_pos (add_pos (add_pos ?_ ?_) ?_) three_pos).le <;> simp [hx, hy, hz]
@@ -129,4 +101,41 @@ theorem inequalities_286896 :
       · simp [Fin.sum_univ_three, ← rpow_natCast]
       · simp [Fin.forall_fin_succ, hx.le, hy.le, hz.le]
 
-    _ ≤ _ := by sorry
+    -- Re-write as square divided by itself.
+    _ = (x^3 + y^3 + z^3) ^ 2 / (x^3 + y^3 + z^3) := by rw [sq, mul_self_div_self]
+
+    -- Use lower bound on the denominator to obtain upper bound on the fraction.
+    _ ≤ (x^3 + y^3 + z^3) ^ 2 /
+        (x * (y^2 + z^2) + y * (z^2 + x^2) + z * (x^2 + y^2) - 3 * x * y * z) := by
+      refine (div_le_div_iff_of_pos_left ?_ ?_ ?_).mpr ?_
+      · refine sq_pos_of_pos ?_
+        refine add_pos (add_pos ?_ ?_) ?_ <;> simp [hx, hy, hz]
+      · refine add_pos (add_pos ?_ ?_) ?_ <;> simp [hx, hy, hz]
+      · -- Prefer other form to prove this?
+        sorry
+      -- Use Schur's inequality here.
+      sorry
+
+    _ = (x^3 + y^3 + z^3) ^ 2 / (x * g y z + y * g z x + z * g x y) := by
+      congr 1
+      ring
+
+    _ ≤ x^6 / (x * g y z) + y^6 / (y * g z x) + z^6 / (z * g x y) := by
+      refine div_le_of_le_mul₀ ?_ ?_ ?_
+      · refine (add_pos (add_pos ?_ ?_) ?_).le <;> simp [hx, hy, hz, hg_pos]
+      · refine (add_pos (add_pos ?_ ?_) ?_).le <;> simp [hx, hy, hz, hg_pos]
+      -- Apply Cauchy-Schwarz inequality.
+      convert Finset.sum_mul_sq_le_sq_mul_sq Finset.univ
+        ![x ^ 3 / √(x * g y z), y ^ 3 / √(y * g z x), z ^ 3 / √(z * g x y)]
+        ![√(x * g y z), √(y * g z x), √(z * g x y)] using 1
+      · -- Cancel `√(x * g₁ y z)` from top and bottom of each term.
+        have {x y z} (hx : 0 < x) (hy : 0 < y) (hz : 0 < z) : √(x * g y z) ≠ 0 :=
+          (sqrt_pos_of_pos <| mul_pos hx <| hg_pos hy hz).ne'
+        simp [Fin.sum_univ_three, this, hx, hy, hz]
+      · -- Simplify `√(x * g₁ y z) ^ 2` in each term.
+        have {x y z} (hx : 0 < x) (hy : 0 < y) (hz : 0 < z) : 0 ≤ x * g y z :=
+          (mul_pos hx <| hg_pos hy hz).le
+        simp [Fin.sum_univ_three, div_pow, ← pow_mul, this, hx, hy, hz]
+
+    _ = x^5 / g y z + y^5 / g z x + z^5 / g x y := by
+      simp [pow_succ' _ 5, mul_div_mul_left, hx.ne', hy.ne', hz.ne']
