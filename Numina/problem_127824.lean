@@ -55,7 +55,55 @@ lemma subperm_sum_take_le_sum_take_of_sorted {s l : List ℝ} (hsl : s <+~ l) (h
   convert subperm_sum_take_len_le_sum_of_sorted ((s.take_sublist n).subperm.trans hsl) hl
   simpa using hn
 
-theorem inequalities_127824 {n : ℕ} (hn : 0 < n) (a : Fin n → ℝ) (ha : ∀ i, 0 < a i) :
+
+lemma lemma_a (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a) (i : ℕ) :
+    (i + 1) / ∑ j ∈ range (i + 1), a j ≤ (a 0)⁻¹ := by
+  calc _
+  _ ≤ (i + 1) / ((i + 1) * a 0) := by
+    refine div_le_div_of_nonneg_left ?_ ?_ ?_
+    · linarith
+    · exact mul_pos (by linarith) (ha_pos 0)
+    calc _
+    _ = ∑ j ∈ range (i + 1), a 0 := by simp
+    _ ≤ _ := sum_le_sum fun j hi ↦ ha_mono (Nat.zero_le j)
+  _ = _ := by
+    refine div_mul_cancel_left₀ ?_ _
+    exact Nat.cast_add_one_ne_zero i
+
+example (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a) (k : ℕ) (hk : 2 ≤ k) :
+    ∑ i ∈ range (2 * k), (i + 1) / ∑ j ∈ range (i + 1), a j ≤ 4 * ∑ i ∈ range (k - 1), (a i)⁻¹ ∧
+    ∑ i ∈ range (2 * k + 1), (i + 1) / ∑ j ∈ range (i + 1), a j ≤ 4 * ∑ i ∈ range k, (a i)⁻¹ := by
+  induction k, hk using Nat.le_induction with
+  | base =>
+    split_ands
+    · -- We do not have strict inequality if all `a i` are equal.
+      calc _
+      _ = ∑ i ∈ range 4, (i + 1) / ∑ j ∈ range (i + 1), a j := by simp
+      _ ≤ ∑ i ∈ range 4, (a 0)⁻¹ := sum_le_sum fun i hi ↦ lemma_a a ha_pos ha_mono i
+      _ = _ := by simp
+
+    · -- It is just as easy to show strict inequality for the odd case.
+      refine le_of_lt ?_
+      calc _
+      _ = ∑ i ∈ range 5, (i + 1) / ∑ j ∈ range (i + 1), a j := by simp
+      _ = ∑ i ∈ insert 1 ((range 5).erase 1), (i + 1) / ∑ j ∈ range (i + 1), a j := by simp
+      _ < 4 / a 0 + 4 / a 1 := by
+        rw [Finset.sum_insert (by simp), add_comm]
+        refine add_lt_add_of_le_of_lt ?_ ?_
+        · calc _
+          _ ≤ ∑ i ∈ (range 5).erase 1, (a 0)⁻¹ := sum_le_sum fun i _ ↦ lemma_a a ha_pos ha_mono i
+          _ = _ := by simp [div_eq_mul_inv]
+        · refine div_lt_div₀ ?_ ?_ zero_le_four (ha_pos 1)
+          · norm_num
+          · simpa [sum_range_succ] using (ha_pos 0).le
+      _ = 4 * ((a 0)⁻¹ + (a 1)⁻¹) := by ring
+      _ = _ := by simp [sum_range_succ]
+
+  | succ k hk IH =>
+    sorry
+
+
+theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha : ∀ i, 0 < a i) :
     ∑ i, i / (∑ j ≤ i, a j) < 4 * ∑ i, (a i)⁻¹ := by
 
   -- TODO: clear `n` too?
@@ -67,6 +115,7 @@ theorem inequalities_127824 {n : ℕ} (hn : 0 < n) (a : Fin n → ℝ) (ha : ∀
     · sorry
     · sorry
 
+  -- TODO: remove `n` too?
   intro l hl_pos hl_len
 
   wlog h_sorted : l.Sorted (· ≤ ·) generalizing l
@@ -101,4 +150,8 @@ theorem inequalities_127824 {n : ℕ} (hn : 0 < n) (a : Fin n → ℝ) (ha : ∀
       · exact hs_sorted
     _ = 4 * (l.map (·⁻¹)).sum := by rw [(hs_perm.map fun x ↦ x⁻¹).sum_eq]
 
+
   sorry
+
+  -- suffices ∀ n, 4 ≤ n →
+  --     ∀ k, n = 2 * (k + 1) → ∑ i ∈ range n, i / ∑ j ≤ i, a i < 4 * ∑ i < , (a i)⁻¹ by
