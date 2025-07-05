@@ -70,6 +70,7 @@ lemma lemma_a (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
     refine div_mul_cancel_left₀ ?_ _
     exact Nat.cast_add_one_ne_zero i
 
+-- TODO: can we use `range ⌊(k - 1) / 2⌋₊` and unify?
 lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a) (k : ℕ) (hk : 2 ≤ k) :
     ∑ i ∈ range (2 * k), (i + 1) / ∑ j ∈ range (i + 1), a j ≤ 4 * ∑ i ∈ range (k - 1), (a i)⁻¹ ∧
     ∑ i ∈ range (2 * k + 1), (i + 1) / ∑ j ∈ range (i + 1), a j ≤ 4 * ∑ i ∈ range k, (a i)⁻¹ := by
@@ -100,8 +101,71 @@ lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
       _ = _ := by simp [sum_range_succ]
 
   | succ k hk IH =>
+    split_ands
+    · suffices (2 * k + 1) / ∑ j ∈ range (2 * k + 1), a j +
+          (2 * k + 2) / ∑ j ∈ range (2 * k + 2), a j ≤ 4 * (a (k - 1))⁻¹ by
+        calc _
+        -- Break out two terms from the left sum.
+        _ = ∑ i ∈ range (2 * k), (i + 1) / ∑ j ∈ range (i + 1), a j +
+            ((2 * k + 1) / ∑ j ∈ range (2 * k + 1), a j +
+            (2 * k + 2) / ∑ j ∈ range (2 * k + 2), a j) := by
+          simp [mul_add, sum_range_succ, add_assoc, one_add_one_eq_two]
+        -- Apply the inductive hyothesis and the bound for the two terms.
+        _ ≤ 4 * ∑ i ∈ range (k - 1), (a i)⁻¹ + 4 * (a (k - 1))⁻¹ :=
+          add_le_add IH.1 this
+        -- Break out one term from the right sum.
+        _ ≤ 4 * ∑ i ∈ range (k - 1 + 1), (a i)⁻¹ := by simp [sum_range_succ, mul_add]
+        _ = _ := by
+          suffices 1 ≤ k by simp [this]
+          linarith
 
-    sorry
+      calc _
+      _ ≤ (2 * k + 1) / ((k + 2) * a (k - 1)) + (2 * k + 2) / ((k + 3) * a (k - 1)) := by
+        refine add_le_add ?_ ?_
+        · refine div_le_div_of_nonneg_left (by linarith) ?_ ?_
+          · exact mul_pos (by linarith) (ha_pos (k - 1))
+          calc _
+          _ = ∑ j ∈ Ico (k - 1) (2 * k + 1), a (k - 1) := by
+            rw [sum_const, nsmul_eq_mul, Nat.card_Ico]
+            congr
+            -- TODO: simplify?
+            rw [Nat.cast_sub (Nat.sub_le_of_le_add (by linarith))]
+            rw [Nat.cast_sub (by linarith)]
+            simp only [Nat.cast_add, Nat.cast_mul]
+            ring
+          _ ≤ ∑ j ∈ Ico (k - 1) (2 * k + 1), a j :=
+            sum_le_sum fun i hi ↦ ha_mono (mem_Ico.mp hi).1
+          _ ≤ ∑ j ∈ Ico 0 (2 * k + 1), a j :=
+            sum_le_sum_of_subset_of_nonneg (Ico_subset_Ico_left (by linarith))
+              fun i hi hi' ↦ (ha_pos i).le
+          _ = _ := by simp
+        · refine div_le_div_of_nonneg_left (by linarith) ?_ ?_
+          · exact mul_pos (by linarith) (ha_pos (k - 1))
+          calc _
+          _ = ∑ j ∈ Ico (k - 1) (2 * k + 2), a (k - 1) := by
+            rw [sum_const, nsmul_eq_mul, Nat.card_Ico]
+            congr
+            -- TODO: simplify?
+            rw [Nat.cast_sub (Nat.sub_le_of_le_add (by linarith))]
+            rw [Nat.cast_sub (by linarith)]
+            simp only [Nat.cast_add, Nat.cast_mul]
+            ring
+          _ ≤ ∑ j ∈ Ico (k - 1) (2 * k + 2), a j :=
+            sum_le_sum fun i hi ↦ ha_mono (mem_Ico.mp hi).1
+          _ ≤ ∑ j ∈ Ico 0 (2 * k + 2), a j :=
+            sum_le_sum_of_subset_of_nonneg (Ico_subset_Ico_left (by linarith))
+              fun i hi hi' ↦ (ha_pos i).le
+          _ = _ := by simp
+
+      _ = (2 * ((k + 2⁻¹) / (k + 2)) + 2 * ((k + 1) / (k + 3))) * (a (k - 1))⁻¹ := by
+        simp only [← div_div]
+        ring
+      _ ≤ (2 + 2) * (a (k - 1))⁻¹ := by
+        refine mul_le_mul_of_nonneg_right ?_ (inv_pos_of_pos <| ha_pos (k - 1)).le
+        refine add_le_add ?_ ?_ <;> rw [mul_le_iff_le_one_right, div_le_one₀] <;> linarith
+      _ = _ := by norm_num
+
+    · sorry
 
 
 theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha : ∀ i, 0 < a i) :
