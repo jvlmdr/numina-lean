@@ -121,7 +121,7 @@ theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha :
   wlog h_sorted : l.Sorted (· ≤ ·) generalizing l
   · have hl_nil : l ≠ [] := by
       refine List.ne_nil_of_length_pos ?_
-      exact hl_len ▸ hn
+      exact hl_len ▸ hn_pos
 
     let s := l.insertionSort (· ≤ ·)
     have hs_perm : s ~ l := l.perm_insertionSort (· ≤ ·)
