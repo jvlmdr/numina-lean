@@ -70,7 +70,7 @@ lemma lemma_a (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
     refine div_mul_cancel_left₀ ?_ _
     exact Nat.cast_add_one_ne_zero i
 
-example (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a) (k : ℕ) (hk : 2 ≤ k) :
+lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a) (k : ℕ) (hk : 2 ≤ k) :
     ∑ i ∈ range (2 * k), (i + 1) / ∑ j ∈ range (i + 1), a j ≤ 4 * ∑ i ∈ range (k - 1), (a i)⁻¹ ∧
     ∑ i ∈ range (2 * k + 1), (i + 1) / ∑ j ∈ range (i + 1), a j ≤ 4 * ∑ i ∈ range k, (a i)⁻¹ := by
   induction k, hk using Nat.le_induction with
@@ -151,7 +151,6 @@ theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha :
       · exact hs_sorted
     _ = 4 * (l.map (·⁻¹)).sum := by rw [(hs_perm.map fun x ↦ x⁻¹).sum_eq]
 
-
   revert l
   suffices ∀ (a : ℕ → ℝ), (∀ i, 0 < a i) → Monotone a →
       ∑ i ∈ range n, (i + 1) / (∑ j ∈ range (i + 1), a j) < 4 * ∑ i ∈ range n, (a i)⁻¹ by
@@ -172,12 +171,34 @@ theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha :
         exact Nat.cast_lt.mpr hn
     _ ≤ 4 * (a 0)⁻¹ + 4 * ∑ i ∈ range n, (a (i + 1))⁻¹ := by
       suffices 0 ≤ ∑ i ∈ range n, (a (i + 1))⁻¹ by simpa
-      refine sum_nonneg fun i hi ↦ ?_
-      simpa using (ha_pos (i + 1)).le
+      exact sum_nonneg fun i hi ↦ (inv_pos_of_pos <| ha_pos (i + 1)).le
     _ = _ := by
       rw [sum_range_succ']
       ring
 
   | inr hn =>
-
-    sorry
+    cases n.even_or_odd with
+    | inl hk =>
+      obtain ⟨k, rfl⟩ : ∃ k, n = 2 * k := hk.exists_two_nsmul n
+      refine lt_of_le_of_lt (lemma_b a ha_pos ha_mono k (by linarith)).1 ?_
+      gcongr
+      refine sum_lt_sum_of_subset (i := k) ?_ ?_ ?_ ?_ ?_
+      · simp only [range_subset, tsub_le_iff_right]
+        linarith
+      · simp only [mem_range]
+        linarith
+      · simp
+      · exact inv_pos_of_pos <| ha_pos k
+      · exact fun j hj _ ↦ (inv_pos_of_pos <| ha_pos j).le
+    | inr h =>
+      obtain ⟨k, rfl⟩ : ∃ k, n = 2 * k + 1 := h
+      refine lt_of_le_of_lt (lemma_b a ha_pos ha_mono k (by linarith)).2 ?_
+      gcongr
+      refine sum_lt_sum_of_subset (i := k) ?_ ?_ ?_ ?_ ?_
+      · simp only [range_subset]
+        linarith
+      · simp only [mem_range]
+        linarith
+      · simp
+      · exact inv_pos_of_pos <| ha_pos k
+      · exact fun j hj _ ↦ (inv_pos_of_pos <| ha_pos j).le
