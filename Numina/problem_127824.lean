@@ -100,16 +100,17 @@ example (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a) (k : 
       _ = _ := by simp [sum_range_succ]
 
   | succ k hk IH =>
+
     sorry
 
 
 theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha : ∀ i, 0 < a i) :
-    ∑ i, i / (∑ j ≤ i, a j) < 4 * ∑ i, (a i)⁻¹ := by
+    ∑ i, (i + 1) / (∑ j ≤ i, a j) < 4 * ∑ i, (a i)⁻¹ := by
 
   -- TODO: clear `n` too?
   revert a
   suffices ∀ l : List ℝ, (∀ x ∈ l, 0 < x) → l.length = n →
-      ∑ i ∈ range n, i / (l.take (i + 1)).sum < 4 * (l.map (·⁻¹)).sum by
+      ∑ i ∈ range n, (i + 1) / (l.take (i + 1)).sum < 4 * (l.map (·⁻¹)).sum by
     intro a ha
     convert this ((List.finRange n).map a) (by simpa) (by simp)
     · sorry
@@ -128,9 +129,9 @@ theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha :
     have hs_sorted : s.Sorted (· ≤ ·) := l.sorted_insertionSort (· ≤ ·)
 
     calc _
-    _ ≤ ∑ i ∈ range n, i / (s.take (i + 1)).sum := by
+    _ ≤ ∑ i ∈ range n, (i + 1) / (s.take (i + 1)).sum := by
       refine sum_le_sum fun i hi ↦ ?_
-      refine div_le_div_of_nonneg_left (by simp) ?_ ?_
+      refine div_le_div_of_nonneg_left (by linarith) ?_ ?_
       · refine List.sum_pos _ ?_ ?_
         · refine fun x hx ↦ hl_pos x ?_
           rw [← hs_perm.mem_iff]
@@ -151,7 +152,32 @@ theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha :
     _ = 4 * (l.map (·⁻¹)).sum := by rw [(hs_perm.map fun x ↦ x⁻¹).sum_eq]
 
 
-  sorry
+  revert l
+  suffices ∀ (a : ℕ → ℝ), (∀ i, 0 < a i) → Monotone a →
+      ∑ i ∈ range n, (i + 1) / (∑ j ∈ range (i + 1), a j) < 4 * ∑ i ∈ range n, (a i)⁻¹ by
+    sorry
 
-  -- suffices ∀ n, 4 ≤ n →
-  --     ∀ k, n = 2 * (k + 1) → ∑ i ∈ range n, i / ∑ j ≤ i, a i < 4 * ∑ i < , (a i)⁻¹ by
+  intro a ha_pos ha_mono
+
+  cases lt_or_le n 4 with
+  | inl hn =>
+    obtain ⟨n, rfl⟩ : ∃ m, m + 1 = n := Nat.exists_add_one_eq.mpr hn_pos
+    calc _
+    _ ≤ ∑ i ∈ range (n + 1), (a 0)⁻¹ := sum_le_sum fun i hi ↦ lemma_a a ha_pos ha_mono i
+    _ = (n + 1) * (a 0)⁻¹ := by simp
+    _ < 4 * (a 0)⁻¹ := by
+      refine (mul_lt_mul_iff_of_pos_right ?_).mpr ?_
+      · exact inv_pos_of_pos (ha_pos 0)
+      · suffices ↑(n + 1) < ((4 : ℕ) : ℝ) by simpa
+        exact Nat.cast_lt.mpr hn
+    _ ≤ 4 * (a 0)⁻¹ + 4 * ∑ i ∈ range n, (a (i + 1))⁻¹ := by
+      suffices 0 ≤ ∑ i ∈ range n, (a (i + 1))⁻¹ by simpa
+      refine sum_nonneg fun i hi ↦ ?_
+      simpa using (ha_pos (i + 1)).le
+    _ = _ := by
+      rw [sum_range_succ']
+      ring
+
+  | inr hn =>
+
+    sorry
