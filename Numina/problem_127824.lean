@@ -110,9 +110,8 @@ lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
             ((2 * k + 1) / ∑ j ∈ range (2 * k + 1), a j +
             (2 * k + 2) / ∑ j ∈ range (2 * k + 2), a j) := by
           simp [mul_add, sum_range_succ, add_assoc, one_add_one_eq_two]
-        -- Apply the inductive hyothesis and the bound for the two terms.
-        _ ≤ 4 * ∑ i ∈ range (k - 1), (a i)⁻¹ + 4 * (a (k - 1))⁻¹ :=
-          add_le_add IH.1 this
+        -- Apply the inductive hypothesis and the bound for the two terms.
+        _ ≤ 4 * ∑ i ∈ range (k - 1), (a i)⁻¹ + 4 * (a (k - 1))⁻¹ := add_le_add IH.1 this
         -- Break out one term from the right sum.
         _ ≤ 4 * ∑ i ∈ range (k - 1 + 1), (a i)⁻¹ := by simp [sum_range_succ, mul_add]
         _ = _ := by
@@ -139,6 +138,7 @@ lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
             sum_le_sum_of_subset_of_nonneg (Ico_subset_Ico_left (by linarith))
               fun i hi hi' ↦ (ha_pos i).le
           _ = _ := by simp
+
         · refine div_le_div_of_nonneg_left (by linarith) ?_ ?_
           · exact mul_pos (by linarith) (ha_pos (k - 1))
           calc _
@@ -163,9 +163,62 @@ lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
       _ ≤ (2 + 2) * (a (k - 1))⁻¹ := by
         refine mul_le_mul_of_nonneg_right ?_ (inv_pos_of_pos <| ha_pos (k - 1)).le
         refine add_le_add ?_ ?_ <;> rw [mul_le_iff_le_one_right, div_le_one₀] <;> linarith
-      _ = _ := by norm_num
+      _ = _ := by rw [two_add_two_eq_four]
 
-    · sorry
+    · suffices (2 * k + 2) / ∑ j ∈ range (2 * k + 2), a j +
+          (2 * k + 3) / ∑ j ∈ range (2 * k + 3), a j ≤ 4 * (a k)⁻¹ by
+        calc _
+        -- Break out two terms from the left sum.
+        _ = ∑ i ∈ range ((2 * k + 1) + 2), (i + 1) / ∑ j ∈ range (i + 1), a j := by simp [mul_add]
+        _ = ∑ i ∈ range (2 * k + 1), (i + 1) / ∑ j ∈ range (i + 1), a j +
+            ((2 * k + 2) / ∑ j ∈ range (2 * k + 2), a j +
+            (2 * k + 3) / ∑ j ∈ range (2 * k + 3), a j) := by
+          simp [sum_range_succ, add_assoc, ← one_add_one_eq_two, ← two_add_one_eq_three]
+        -- Apply the inductive hypothesis and the bound for the two terms.
+        _ ≤ 4 * ∑ i ∈ range k, (a i)⁻¹ + 4 * (a k)⁻¹ := add_le_add IH.2 this
+        -- Break out one term from the right sum.
+        _ ≤ 4 * ∑ i ∈ range (k + 1), (a i)⁻¹ := by simp [sum_range_succ, mul_add]
+
+      calc _
+      _ ≤ (2 * k + 2) / ((k + 1) * a k) + (2 * k + 3) / ((k + 2) * a k) := by
+        refine add_le_add ?_ ?_
+        · refine div_le_div_of_nonneg_left (by linarith) ?_ ?_
+          · exact mul_pos (by linarith) (ha_pos k)
+          calc _
+          _ = ∑ j ∈ Ico (k + 1) (2 * (k + 1)), a k := by simp [two_mul]
+          _ = ∑ j ∈ Ico (k + 1) (2 * k + 2), a k := by simp [mul_add]
+          _ ≤ ∑ j ∈ Ico (k + 1) (2 * k + 2), a j := by
+            refine sum_le_sum fun i hi ↦ ha_mono ?_
+            simp only [mem_Ico] at hi
+            linarith
+          _ ≤ _ := by
+            refine sum_le_sum_of_subset_of_nonneg ?_ fun i hi hi' ↦ (ha_pos i).le
+            intro x
+            simp
+
+        · refine div_le_div_of_nonneg_left ?_ ?_ ?_
+          · linarith
+          · exact mul_pos (by linarith) (ha_pos k)
+          calc _
+          _ = ∑ j ∈ Ico (k + 1) (2 * k + 3), a k := by
+            suffices (k + 2 : ℝ) = ↑(2 * k + 2 - k) by simp [this]
+            rw [Nat.cast_sub (by linarith)]
+            simp only [Nat.cast_add, Nat.cast_mul]
+            ring
+
+          _ ≤ ∑ j ∈ Ico (k + 1) (2 * k + 3), a j := by
+            refine sum_le_sum fun i hi ↦ ha_mono ?_
+            linarith [mem_Ico.mp hi]
+          _ ≤ _ :=
+            sum_le_sum_of_subset_of_nonneg (fun i ↦ by simp) fun i hi hi' ↦ (ha_pos i).le
+
+      _ = (2 * ((k + 1) / (k + 1)) + 2 * ((k + 3 / 2) / (k + 2))) * (a k)⁻¹ := by
+        simp only [← div_div]
+        ring
+      _ ≤ (2 + 2) * (a k)⁻¹ := by
+        refine mul_le_mul_of_nonneg_right ?_ (inv_pos_of_pos <| ha_pos k).le
+        refine add_le_add ?_ ?_ <;> rw [mul_le_iff_le_one_right, div_le_one₀] <;> linarith
+      _ = _ := by rw [two_add_two_eq_four]
 
 
 theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha : ∀ i, 0 < a i) :
