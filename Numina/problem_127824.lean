@@ -36,12 +36,6 @@ lemma sublist_sum_take_len_le_sum_of_sorted {s l : List ℝ} (hsl : s <+ l) (hl 
           rw [List.take_take, inf_of_le_left hsl.length_le]
         _ = _ := by simp [List.dropLast_eq_take]
 
--- lemma sublist_sum_take_le_sum_take_of_sorted {s l : List ℝ} (hsl : s <+ l) (hl : l.Sorted (· ≤ ·))
---     {n : ℕ} (hn : n ≤ s.length) :
---     (l.take n).sum ≤ (s.take n).sum := by
---   convert sublist_sum_take_len_le_sum_of_sorted ((s.take_sublist n).trans hsl) hl
---   simpa using hn
-
 lemma subperm_sum_take_len_le_sum_of_sorted {s l : List ℝ} (hsl : s <+~ l) (hl : l.Sorted (· ≤ ·)) :
     (l.take s.length).sum ≤ s.sum := by
   rcases hsl with ⟨t, hts, htl⟩
@@ -70,8 +64,6 @@ lemma lemma_a (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
     refine div_mul_cancel_left₀ ?_ _
     exact Nat.cast_add_one_ne_zero i
 
-
--- TODO: replace with `n + 1` to avoid `n - 1`?
 lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a) (n : ℕ) (hn : 2 ≤ n) :
     ∑ i ∈ range (n + 1), ↑(i + 1) / ∑ j ∈ range (i + 1), a j ≤
       4 * ∑ i ∈ range (n / 2), (a i)⁻¹ := by
@@ -190,6 +182,39 @@ lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
         refine add_le_add ?_ ?_ <;> rw [div_le_one₀] <;> linarith
       _ = _ := by ring
 
+lemma lemma_b_fin (n : ℕ) (hn : 2 ≤ n) (a : Fin (n + 1) → ℝ) (ha_pos : ∀ i, 0 < a i)
+    (ha_mono : Monotone a) :
+    ∑ i : Fin (n + 1), (i + 1 : ℕ) / ∑ j ≤ i, a j ≤ 4 * ∑ i < (Fin.last n) / 2, (a i)⁻¹ := by
+  let f (i : ℕ) : Fin (n + 1) := ⟨i ⊓ n, Nat.lt_add_one_of_le inf_le_right⟩
+  have hf_apply_val (i : Fin (n + 1)) : f (i : ℕ) = i :=
+    Fin.val_inj.mp (min_eq_left (Fin.is_le i))
+
+  convert lemma_b (a ∘ f) ?_ ?_ n hn
+  · rw [sum_range]
+    refine sum_congr rfl fun i _ ↦ ?_
+    congr 1
+    calc _
+    _ = ∑ j ∈ (Iic i).map Fin.valEmbedding, a (f j) := by
+      rw [sum_map]
+      refine sum_congr rfl fun j hj ↦ ?_
+      simp [hf_apply_val]
+    _ = _ := by
+      congr
+      ext j
+      simp [Nat.lt_add_one_iff]
+  · calc _
+    _ = ∑ j ∈ (Iio (Fin.last n / 2)).map Fin.valEmbedding, (a (f j))⁻¹ := by
+      rw [sum_map]
+      simp [hf_apply_val]
+    _ = _ := by
+      congr
+      ext j
+      suffices ((2 : Fin (n + 1)) : ℕ) = 2 by simp [this]
+      rw [Fin.coe_ofNat_eq_mod]
+      refine Nat.mod_eq_of_lt (by linarith)
+  · exact fun i ↦ ha_pos (f i)
+  · exact ha_mono.comp fun i j h ↦ inf_le_inf_right n h
+
 
 theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha : ∀ i, 0 < a i) :
     ∑ i, (i + 1) / (∑ j ≤ i, a j) < 4 * ∑ i, (a i)⁻¹ := by
@@ -265,7 +290,7 @@ theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha :
       ring
 
   | inr hn =>
-    -- Replace `n` with `n + 1` to facilitate= use of the lemma, which uses `n - 1`.
+    -- Replace `n` with `n + 1` to facilitate use of the lemma, which uses `n - 1`.
     cases n with
     | zero => contradiction
     | succ n =>
