@@ -49,12 +49,26 @@ lemma subperm_sum_take_le_sum_take_of_sorted {s l : List ℝ} (hsl : s <+~ l) (h
   convert subperm_sum_take_len_le_sum_of_sorted ((s.take_sublist n).subperm.trans hsl) hl
   simpa using hn
 
+-- Rewrite `finRange` in terms of `List.range`.
+lemma finRange_eq_map_coe_range (n : ℕ) :
+    List.finRange (n + 1) = List.map (↑) (List.range (n + 1)) := by
+  refine Fin.val_injective.list_map ?_
+  calc _
+  _ = List.map id (List.range (n + 1)) := by simp
+  _ = _ := by
+    rw [List.map_map, List.map_inj_left]
+    intro i hi
+    refine (Fin.val_cast_of_lt ?_).symm
+    exact (List.mem_range.mp hi)
+
+-- The sum over `Iic i` of a function on `Fin n` can be rewritten as a `List.sum`.
 lemma sum_Iic_eq_sum_take_ofFn {n : ℕ} (hn : n ≠ 0) (a : Fin n → ℝ) (i : Fin n) :
     ∑ j ≤ i, a j = (List.take (i + 1) (List.ofFn a)).sum := by
   cases n with
   | zero => contradiction
   | succ n =>
     calc _
+    -- Rewrite as a sum over `List.range (i + 1)`.
     _ = ∑ j ∈ map Fin.valEmbedding (Iic i), a j := by
       rw [sum_map]
       simp
@@ -62,19 +76,21 @@ lemma sum_Iic_eq_sum_take_ofFn {n : ℕ} (hn : n ≠ 0) (a : Fin n → ℝ) (i :
       congr
       ext j
       simp [Nat.lt_add_one_iff]
-    -- TODO: check whether this can be made more succinct
-    _ = List.sum (.map (a ∘ (↑)) (.range (i + 1))) := List.sum_toFinset _ (List.nodup_range _)
-    _ = List.sum (.map (a ∘ (↑)) (.take (i + 1) (.range (n + 1)))) := by
-      rw [List.take_range]
-      simp [Fin.is_le]
-    _ = List.sum (.map (a ∘ (↑)) (.take (i + 1) (.map Fin.val (.finRange (n + 1))))) := by
-      simp
-    _ = List.sum (.take (i + 1) (.map a (.finRange (n + 1)))) := by
-      rw [List.map_take, List.map_map]
+    _ = (List.map a (List.map (↑) (List.range (i + 1)))).sum := by
+      rw [List.sum_toFinset _ (List.nodup_range _)]
       simp [Function.comp_def]
-    _ = _ := by rw [List.ofFn_eq_map]
+    -- Rewrite as a sum over `List.take` of `List.finRange`.
+    _ = (List.map a (List.take (i + 1) (List.finRange (n + 1)))).sum := by
+      rw [finRange_eq_map_coe_range, ← List.map_take, List.take_range]
+      congr
+      simpa using Fin.is_le i
+    _ = _ := by
+      rw [List.ofFn_eq_map]
+      simp
 
-lemma lemma_a (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a) (i : ℕ) :
+-- For `a` increasing, each terms is bounded above by the inverse of the smallest term.
+-- Here we consider `a : ℕ → ℝ` instead of `Fin (n + 1) → ℝ` to simplify the proof.
+lemma lemma_1 (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a) (i : ℕ) :
     (i + 1) / ∑ j ∈ range (i + 1), a j ≤ (a 0)⁻¹ := by
   calc _
   _ ≤ (i + 1) / ((i + 1) * a 0) := by
@@ -88,41 +104,35 @@ lemma lemma_a (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
     refine div_mul_cancel_left₀ ?_ _
     exact Nat.cast_add_one_ne_zero i
 
-lemma lemma_a_fin (n : ℕ) (a : Fin (n + 1) → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
+-- Specialize the lemma above for `a` defined on `Fin (n + 1)`.
+lemma lemma_1_fin (n : ℕ) (a : Fin (n + 1) → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
     (i : Fin (n + 1)) :
     (i + 1 : ℕ) / ∑ j ≤ i, a j ≤ (a 0)⁻¹ := by
   let f (i : ℕ) : Fin (n + 1) := ⟨i ⊓ n, Nat.lt_add_one_of_le inf_le_right⟩
   have hf_apply_val (i : Fin (n + 1)) : f (i : ℕ) = i :=
     Fin.val_inj.mp (min_eq_left (Fin.is_le i))
-  convert lemma_a (a ∘ f) ?_ ?_ i
+  convert lemma_1 (a ∘ f) ?_ ?_ i
   · simp
   · calc _
-    _ = ∑ j ∈ map Fin.valEmbedding (Iic i), a j := by
+    _ = ∑ j ∈ map Fin.valEmbedding (Iic i), a (f j) := by
       rw [sum_map]
-      simp
-    _ = ∑ j ≤ (i : ℕ), a j := by simp
-    _ = ∑ j ∈ range (i + 1), a (f j) := by
-      unfold f
-      symm
-      refine sum_congr ?_ ?_
-      · ext j
-        simp [Nat.lt_add_one_iff]
-      · intro j hj
-        congr
-        have hjn : j < n + 1 := lt_of_le_of_lt (mem_Iic.mp hj) i.isLt
-        calc _
-        _ = j := min_eq_left (Nat.le_of_lt_succ hjn)
-        _ = _ := (Nat.mod_eq_of_lt hjn).symm
+      simp [hf_apply_val]
+    _ = _ := by
+      congr
+      ext j
+      simp [Nat.lt_add_one_iff]
   · simp [f]
   · exact fun i ↦ ha_pos (f i)
   · exact ha_mono.comp fun i j h ↦ inf_le_inf_right n h
 
-lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a) (n : ℕ) (hn : 2 ≤ n) :
+-- The inductive hypothesis for `2 ≤ n`.
+-- Here we consider `a : ℕ → ℝ` instead of `Fin (n + 1) → ℝ` to simplify the proof.
+lemma lemma_2 (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a) (n : ℕ) (hn : 2 ≤ n) :
     ∑ i ∈ range (n + 1), ↑(i + 1) / ∑ j ∈ range (i + 1), a j ≤
       4 * ∑ i ∈ range (n / 2), (a i)⁻¹ := by
+  -- Replace `n` with `n + 2` for the first two steps.
   rw [le_iff_exists_add'] at hn
   rcases hn with ⟨n, rfl⟩
-
   induction n using Nat.twoStepInduction with
   | zero =>
     refine le_of_lt ?_
@@ -145,7 +155,6 @@ lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
 
   | one =>
     simp
-    -- suffices ∑ i ∈ range 4, ↑(i + 1) / ∑ j ∈ range (i + 1), a j ≤ 4 * (a 0)⁻¹ by simpa
     calc _
     _ = ∑ i ∈ range 4, ↑(i + 1) / ∑ j ∈ range (i + 1), a j := by simp
     _ ≤ ∑ i ∈ range 4, 1 / a 0 := by
@@ -166,7 +175,7 @@ lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
     rw [Nat.add_div_right (n + 2) two_pos, sum_range_add _ ((n + 2) / 2) 1, mul_add]
     refine add_le_add IH₀ ?_
     clear IH₀
-    -- Replace `n + 2` with general `n`.
+    -- Return from `n + 2` to general `k`.
     generalize n + 2 = k
     suffices ↑(k + 2) / ∑ x ∈ range (k + 2), a x + ↑(k + 3) / ∑ x ∈ range (k + 3), a x ≤
         4 * (a (k / 2))⁻¹ by
@@ -176,8 +185,7 @@ lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
     | inl h_even =>
       rw [even_iff_exists_two_mul] at h_even
       rcases h_even with ⟨m, hm⟩
-      rw [hm]
-      simp [add_assoc, -Nat.cast_add, -Nat.cast_mul]  -- TODO
+      rw [hm, Nat.mul_div_cancel_left _ two_pos]
       calc _
       -- Bound each sum below using the occurrences of `a m` to bound each fraction above.
       _ ≤ ↑(2 * m + 2) / (↑(m + 2) * a m) + ↑(2 * m + 3) / (↑(m + 3) * a m) := by
@@ -207,7 +215,8 @@ lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
 
     | inr h_odd =>
       rcases h_odd with ⟨m, hm⟩
-      simp [hm, add_assoc, -Nat.cast_add, -Nat.cast_mul, Nat.mul_add_div]  -- TODO
+      rw [hm, Nat.mul_add_div two_pos]
+      simp only [add_assoc, Nat.reduceAdd, Nat.reduceDiv, add_zero]
       calc _
       -- Bound each sum below using the occurrences of `a m` to bound each fraction above.
       _ ≤ ↑(2 * m + 3) / (↑(m + 3) * a m) + ↑(2 * m + 4) / (↑(m + 4) * a m) := by
@@ -235,14 +244,14 @@ lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
         refine add_le_add ?_ ?_ <;> rw [div_le_one₀] <;> linarith
       _ = _ := by ring
 
-lemma lemma_b_fin (n : ℕ) (hn : 2 ≤ n) (a : Fin (n + 1) → ℝ) (ha_pos : ∀ i, 0 < a i)
+-- Specialize the inductive hypothesis to a function defined on `Fin (n + 1)`.
+lemma lemma_2_fin (n : ℕ) (hn : 2 ≤ n) (a : Fin (n + 1) → ℝ) (ha_pos : ∀ i, 0 < a i)
     (ha_mono : Monotone a) :
     ∑ i : Fin (n + 1), (i + 1 : ℕ) / ∑ j ≤ i, a j ≤ 4 * ∑ i < (Fin.last n) / 2, (a i)⁻¹ := by
   let f (i : ℕ) : Fin (n + 1) := ⟨i ⊓ n, Nat.lt_add_one_of_le inf_le_right⟩
   have hf_apply_val (i : Fin (n + 1)) : f (i : ℕ) = i :=
     Fin.val_inj.mp (min_eq_left (Fin.is_le i))
-
-  convert lemma_b (a ∘ f) ?_ ?_ n hn
+  convert lemma_2 (a ∘ f) ?_ ?_ n hn
   · rw [sum_range]
     refine sum_congr rfl fun i _ ↦ ?_
     congr 1
@@ -270,11 +279,13 @@ lemma lemma_b_fin (n : ℕ) (hn : 2 ≤ n) (a : Fin (n + 1) → ℝ) (ha_pos : �
 
 theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha_pos : ∀ i, 0 < a i) :
     ∑ i : Fin n, (i + 1 : ℕ) / (∑ j ≤ i, a j) < 4 * ∑ i, (a i)⁻¹ := by
-
+  -- We can assume that `i ≤ j → a i ≤ a j` since, otherwise, we could bound the left above using
+  -- the sorted sequence (and the right would be unchanged).
+  -- Convert the sum over `Iic i` into a `List.take` expression.
   simp only [sum_Iic_eq_sum_take_ofFn hn_pos.ne']
-
   wlog ha_mono : Monotone a generalizing a
-  · let l := List.ofFn a
+  · -- Construct a function `b : Fin n → ℝ` which is a sorted version of `a`.
+    let l := List.ofFn a
     let s := l.insertionSort (· ≤ ·)
     have hl_len : l.length = n := by simp [l]
     have hs_len : s.length = n := by simp [s, l]
@@ -284,8 +295,8 @@ theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha_p
     have hs_sorted : s.Sorted (· ≤ ·) := l.sorted_insertionSort _
     have hb : ∃ b : Fin n → ℝ, List.ofFn b = s := hs_len ▸ ⟨_, s.ofFn_get⟩
     rcases hb with ⟨b, hb⟩
-
     calc _
+    -- Since the partial sum is bounded below, its inverse is bounded above.
     _ ≤ ∑ i : Fin n, (i + 1 : ℕ) / (s.take (i + 1)).sum := by
       refine sum_le_sum fun i hi ↦ ?_
       refine div_le_div_of_nonneg_left (by linarith) ?_ ?_
@@ -300,35 +311,31 @@ theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha_p
       refine subperm_sum_take_le_sum_take_of_sorted hs_perm.symm.subperm hs_sorted (i + 1) ?_
       rw [hl_len]
       exact i.isLt
+    -- Apply the lemma to the sorted list `b`.
     _ = ∑ i : Fin n, (i + 1 : ℕ) / ((List.ofFn b).take (i + 1)).sum := by rw [hb]
-    _ < 4 * ∑ i : Fin n, (b i)⁻¹ := by
+    _ < 4 * ∑ i, (b i)⁻¹ := by
       refine this b ?_ ?_
-      · rw [← List.forall_mem_ofFn_iff]
-        rw [hb]
+      · rw [← List.forall_mem_ofFn_iff, hb]
         refine fun x hx ↦ hl_pos x ?_
         exact hs_perm.mem_iff.mp hx
-      · rw [← List.sorted_le_ofFn_iff]
-        rw [hb]
+      · rw [← List.sorted_le_ofFn_iff, hb]
         exact hs_sorted
-    _ = 4 * List.sum (.map (fun x ↦ x⁻¹) s) := by
+    -- Use the fact that the lists have equal sum since one is a permutation of the other.
+    _ = 4 * ∑ i : Fin n, (a i)⁻¹ := by
       congr 1
-      rw [← hb]
-      simp [List.sum_ofFn]
-    _ = 4 * List.sum (.map (fun x ↦ x⁻¹) l) := by
-      congr 1
-      exact (hs_perm.map _).sum_eq
-    _ = _ := by
-      unfold l
-      congr 1
-      simp [List.sum_ofFn]
+      convert (hs_perm.map fun x ↦ x⁻¹).sum_eq using 1
+      · simp [← hb, List.sum_ofFn]
+      · simp [l, List.sum_ofFn]
 
+  -- Switch back to the `Iic i` form.
   simp only [← sum_Iic_eq_sum_take_ofFn hn_pos.ne']
-
+  -- For `n < 4`, the equation is trivially satisfied using the first term.
   cases lt_or_le n 4 with
   | inl hn =>
     obtain ⟨n, rfl⟩ : ∃ m, m + 1 = n := Nat.exists_add_one_eq.mpr hn_pos
     calc _
-    _ ≤ ∑ i : Fin (n + 1), (a 0)⁻¹ := sum_le_sum fun i hi ↦ lemma_a_fin _ a ha_pos ha_mono i
+    _ ≤ ∑ i : Fin (n + 1), (a 0)⁻¹ := sum_le_sum fun i hi ↦ lemma_1_fin _ a ha_pos ha_mono i
+    -- Bound above using just the first term of the sum.
     _ = (n + 1) * (a 0)⁻¹ := by simp
     _ < 4 * (a 0)⁻¹ := by
       refine (mul_lt_mul_iff_of_pos_right ?_).mpr ?_
@@ -343,16 +350,15 @@ theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha_p
       ring
 
   | inr hn =>
-    -- Replace `n` with `n + 1` to facilitate use of the lemma, which uses `n - 1`.
     cases n with
     | zero => contradiction
     | succ n =>
+      -- Apply the inductive hypothesis using monotonicity.
       calc _
-      _ ≤ 4 * ∑ i ∈ Iio (Fin.last n / 2), (a i)⁻¹ := lemma_b_fin n (by linarith) a ha_pos ha_mono
-      _ < _ := by
+      _ ≤ 4 * ∑ i ∈ Iio (Fin.last n / 2), (a i)⁻¹ := lemma_2_fin n (by linarith) a ha_pos ha_mono
+      _ < 4 * ∑ i : Fin (n + 1), (a i)⁻¹ := by
         gcongr
-        refine sum_lt_sum_of_subset ?_ ?_ ?_ (inv_pos_of_pos (ha_pos n))
-            fun i hi _ ↦ (inv_pos_of_pos (ha_pos i)).le
-        · exact subset_univ _
-        · exact mem_univ _
-        · simp [Fin.le_last]
+        -- Use the n-th element to establish strict inequality.
+        refine sum_lt_sum_of_subset (subset_univ _) (mem_univ _) ?_ (inv_pos_of_pos (ha_pos n))
+          fun i hi _ ↦ (inv_pos_of_pos (ha_pos i)).le
+        simp [Fin.le_last]

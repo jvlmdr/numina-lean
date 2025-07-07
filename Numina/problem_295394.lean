@@ -2,6 +2,8 @@
 
 import Mathlib
 
+namespace problem_295394
+
 /- Find all positive integers $N$, such that it equals the sum of the digits of $N^{3}$. -/
 
 -- Upper bound on the `Nat.log` of a power.
@@ -129,3 +131,5 @@ theorem number_theory_295394 (n : ℕ) :
     change n % 9 ∈ ({0, 1, 8} : Finset ℕ) at hn_mod
     -- Exhaustively check the candidates.
     exact lemma_1 n hn_eq hn_zero hn (by simpa using hn_mod)
+
+end problem_295394
