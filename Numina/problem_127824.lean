@@ -44,11 +44,35 @@ lemma subperm_sum_take_len_le_sum_of_sorted {s l : List ℝ} (hsl : s <+~ l) (hl
   · rw [hts.sum_eq]
 
 lemma subperm_sum_take_le_sum_take_of_sorted {s l : List ℝ} (hsl : s <+~ l) (hl : l.Sorted (· ≤ ·))
-    {n : ℕ} (hn : n ≤ s.length) :
+    (n : ℕ) (hn : n ≤ s.length) :
     (l.take n).sum ≤ (s.take n).sum := by
   convert subperm_sum_take_len_le_sum_of_sorted ((s.take_sublist n).subperm.trans hsl) hl
   simpa using hn
 
+lemma sum_Iic_eq_sum_take_ofFn {n : ℕ} (hn : n ≠ 0) (a : Fin n → ℝ) (i : Fin n) :
+    ∑ j ≤ i, a j = (List.take (i + 1) (List.ofFn a)).sum := by
+  cases n with
+  | zero => contradiction
+  | succ n =>
+    calc _
+    _ = ∑ j ∈ map Fin.valEmbedding (Iic i), a j := by
+      rw [sum_map]
+      simp
+    _ = ∑ j ∈ (List.range (i + 1)).toFinset, a j := by
+      congr
+      ext j
+      simp [Nat.lt_add_one_iff]
+    -- TODO: check whether this can be made more succinct
+    _ = List.sum (.map (a ∘ (↑)) (.range (i + 1))) := List.sum_toFinset _ (List.nodup_range _)
+    _ = List.sum (.map (a ∘ (↑)) (.take (i + 1) (.range (n + 1)))) := by
+      rw [List.take_range]
+      simp [Fin.is_le]
+    _ = List.sum (.map (a ∘ (↑)) (.take (i + 1) (.map Fin.val (.finRange (n + 1))))) := by
+      simp
+    _ = List.sum (.take (i + 1) (.map a (.finRange (n + 1)))) := by
+      rw [List.map_take, List.map_map]
+      simp [Function.comp_def]
+    _ = _ := by rw [List.ofFn_eq_map]
 
 lemma lemma_a (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a) (i : ℕ) :
     (i + 1) / ∑ j ∈ range (i + 1), a j ≤ (a 0)⁻¹ := by
@@ -63,6 +87,35 @@ lemma lemma_a (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
   _ = _ := by
     refine div_mul_cancel_left₀ ?_ _
     exact Nat.cast_add_one_ne_zero i
+
+lemma lemma_a_fin (n : ℕ) (a : Fin (n + 1) → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a)
+    (i : Fin (n + 1)) :
+    (i + 1 : ℕ) / ∑ j ≤ i, a j ≤ (a 0)⁻¹ := by
+  let f (i : ℕ) : Fin (n + 1) := ⟨i ⊓ n, Nat.lt_add_one_of_le inf_le_right⟩
+  have hf_apply_val (i : Fin (n + 1)) : f (i : ℕ) = i :=
+    Fin.val_inj.mp (min_eq_left (Fin.is_le i))
+  convert lemma_a (a ∘ f) ?_ ?_ i
+  · simp
+  · calc _
+    _ = ∑ j ∈ map Fin.valEmbedding (Iic i), a j := by
+      rw [sum_map]
+      simp
+    _ = ∑ j ≤ (i : ℕ), a j := by simp
+    _ = ∑ j ∈ range (i + 1), a (f j) := by
+      unfold f
+      symm
+      refine sum_congr ?_ ?_
+      · ext j
+        simp [Nat.lt_add_one_iff]
+      · intro j hj
+        congr
+        have hjn : j < n + 1 := lt_of_le_of_lt (mem_Iic.mp hj) i.isLt
+        calc _
+        _ = j := min_eq_left (Nat.le_of_lt_succ hjn)
+        _ = _ := (Nat.mod_eq_of_lt hjn).symm
+  · simp [f]
+  · exact fun i ↦ ha_pos (f i)
+  · exact ha_mono.comp fun i j h ↦ inf_le_inf_right n h
 
 lemma lemma_b (a : ℕ → ℝ) (ha_pos : ∀ i, 0 < a i) (ha_mono : Monotone a) (n : ℕ) (hn : 2 ≤ n) :
     ∑ i ∈ range (n + 1), ↑(i + 1) / ∑ j ∈ range (i + 1), a j ≤
@@ -215,78 +268,78 @@ lemma lemma_b_fin (n : ℕ) (hn : 2 ≤ n) (a : Fin (n + 1) → ℝ) (ha_pos : �
   · exact fun i ↦ ha_pos (f i)
   · exact ha_mono.comp fun i j h ↦ inf_le_inf_right n h
 
+theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha_pos : ∀ i, 0 < a i) :
+    ∑ i : Fin n, (i + 1 : ℕ) / (∑ j ≤ i, a j) < 4 * ∑ i, (a i)⁻¹ := by
 
-theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha : ∀ i, 0 < a i) :
-    ∑ i, (i + 1) / (∑ j ≤ i, a j) < 4 * ∑ i, (a i)⁻¹ := by
+  simp only [sum_Iic_eq_sum_take_ofFn hn_pos.ne']
 
-  -- TODO: clear `n` too?
-  revert a
-  suffices ∀ l : List ℝ, (∀ x ∈ l, 0 < x) → l.length = n →
-      ∑ i ∈ range n, (i + 1) / (l.take (i + 1)).sum < 4 * (l.map (·⁻¹)).sum by
-    intro a ha
-    convert this ((List.finRange n).map a) (by simpa) (by simp)
-    · sorry
-    · sorry
-
-  -- TODO: remove `n` too?
-  intro l hl_pos hl_len
-
-  wlog h_sorted : l.Sorted (· ≤ ·) generalizing l
-  · have hl_nil : l ≠ [] := by
-      refine List.ne_nil_of_length_pos ?_
-      exact hl_len ▸ hn_pos
-
+  wlog ha_mono : Monotone a generalizing a
+  · let l := List.ofFn a
     let s := l.insertionSort (· ≤ ·)
-    have hs_perm : s ~ l := l.perm_insertionSort (· ≤ ·)
-    have hs_sorted : s.Sorted (· ≤ ·) := l.sorted_insertionSort (· ≤ ·)
+    have hl_len : l.length = n := by simp [l]
+    have hs_len : s.length = n := by simp [s, l]
+    have hl_nil : l ≠ [] := List.ne_nil_of_length_pos (by simpa [hl_len])
+    have hl_pos : ∀ x ∈ l, 0 < x := by simpa [l] using ha_pos
+    have hs_perm : s ~ l := l.perm_insertionSort _
+    have hs_sorted : s.Sorted (· ≤ ·) := l.sorted_insertionSort _
+    have hb : ∃ b : Fin n → ℝ, List.ofFn b = s := hs_len ▸ ⟨_, s.ofFn_get⟩
+    rcases hb with ⟨b, hb⟩
 
     calc _
-    _ ≤ ∑ i ∈ range n, (i + 1) / (s.take (i + 1)).sum := by
+    _ ≤ ∑ i : Fin n, (i + 1 : ℕ) / (s.take (i + 1)).sum := by
       refine sum_le_sum fun i hi ↦ ?_
       refine div_le_div_of_nonneg_left (by linarith) ?_ ?_
       · refine List.sum_pos _ ?_ ?_
         · refine fun x hx ↦ hl_pos x ?_
-          rw [← hs_perm.mem_iff]
+          refine hs_perm.mem_iff.mp ?_
           exact List.mem_of_mem_take hx
         · suffices s ≠ [] by simpa
           refine mt ?_ hl_nil
           intro hs
           simpa [hs] using hs_perm
-      -- Use the lemma for the first `n` elements having lesser sum than any other `n` elements.
-      refine subperm_sum_take_le_sum_take_of_sorted hs_perm.symm.subperm hs_sorted ?_
-      linarith [List.mem_range.mp hi]
+      refine subperm_sum_take_le_sum_take_of_sorted hs_perm.symm.subperm hs_sorted (i + 1) ?_
+      rw [hl_len]
+      exact i.isLt
+    _ = ∑ i : Fin n, (i + 1 : ℕ) / ((List.ofFn b).take (i + 1)).sum := by rw [hb]
+    _ < 4 * ∑ i : Fin n, (b i)⁻¹ := by
+      refine this b ?_ ?_
+      · rw [← List.forall_mem_ofFn_iff]
+        rw [hb]
+        refine fun x hx ↦ hl_pos x ?_
+        exact hs_perm.mem_iff.mp hx
+      · rw [← List.sorted_le_ofFn_iff]
+        rw [hb]
+        exact hs_sorted
+    _ = 4 * List.sum (.map (fun x ↦ x⁻¹) s) := by
+      congr 1
+      rw [← hb]
+      simp [List.sum_ofFn]
+    _ = 4 * List.sum (.map (fun x ↦ x⁻¹) l) := by
+      congr 1
+      exact (hs_perm.map _).sum_eq
+    _ = _ := by
+      unfold l
+      congr 1
+      simp [List.sum_ofFn]
 
-    _ < 4 * (s.map fun x ↦ x⁻¹).sum := by
-      refine this s ?_ ?_ ?_
-      · exact fun x hx ↦ hl_pos x (hs_perm.mem_iff.mp hx)
-      · exact hs_perm.length_eq ▸ hl_len
-      · exact hs_sorted
-    _ = 4 * (l.map (·⁻¹)).sum := by rw [(hs_perm.map fun x ↦ x⁻¹).sum_eq]
-
-  revert l
-  suffices ∀ (a : ℕ → ℝ), (∀ i, 0 < a i) → Monotone a →
-      ∑ i ∈ range n, ↑(i + 1) / (∑ j ∈ range (i + 1), a j) < 4 * ∑ i ∈ range n, (a i)⁻¹ by
-    sorry
-
-  intro a ha_pos ha_mono
+  simp only [← sum_Iic_eq_sum_take_ofFn hn_pos.ne']
 
   cases lt_or_le n 4 with
   | inl hn =>
-    simp only [Nat.cast_add, Nat.cast_one]  -- TODO
     obtain ⟨n, rfl⟩ : ∃ m, m + 1 = n := Nat.exists_add_one_eq.mpr hn_pos
     calc _
-    _ ≤ ∑ i ∈ range (n + 1), (a 0)⁻¹ := sum_le_sum fun i hi ↦ lemma_a a ha_pos ha_mono i
+    _ ≤ ∑ i : Fin (n + 1), (a 0)⁻¹ := sum_le_sum fun i hi ↦ lemma_a_fin _ a ha_pos ha_mono i
     _ = (n + 1) * (a 0)⁻¹ := by simp
     _ < 4 * (a 0)⁻¹ := by
       refine (mul_lt_mul_iff_of_pos_right ?_).mpr ?_
       · exact inv_pos_of_pos (ha_pos 0)
       · suffices ↑(n + 1) < ((4 : ℕ) : ℝ) by simpa
         exact Nat.cast_lt.mpr hn
-    _ ≤ 4 * (a 0)⁻¹ + 4 * ∑ i ∈ range n, (a (i + 1))⁻¹ := by
-      suffices 0 ≤ ∑ i ∈ range n, (a (i + 1))⁻¹ by simpa
-      exact sum_nonneg fun i hi ↦ (inv_pos_of_pos <| ha_pos (i + 1)).le
-    _ = _ := by
-      rw [sum_range_succ']
+    _ ≤ 4 * (a 0)⁻¹ + 4 * ∑ i : Fin n, (a i.succ)⁻¹ := by
+      suffices 0 ≤ ∑ i : Fin n, (a i.succ)⁻¹ by simpa
+      exact sum_nonneg fun i hi ↦ (inv_pos_of_pos <| ha_pos i.succ).le
+    _ = 4 * ∑ i : Fin (n + 1), (a i)⁻¹ := by
+      rw [Fin.sum_univ_succ]
       ring
 
   | inr hn =>
@@ -295,13 +348,11 @@ theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha :
     | zero => contradiction
     | succ n =>
       calc _
-      _ ≤ 4 * ∑ i ∈ range (n / 2), (a i)⁻¹ := by
-        refine lemma_b a ha_pos ha_mono n ?_
-        linarith
+      _ ≤ 4 * ∑ i ∈ Iio (Fin.last n / 2), (a i)⁻¹ := lemma_b_fin n (by linarith) a ha_pos ha_mono
       _ < _ := by
         gcongr
         refine sum_lt_sum_of_subset ?_ ?_ ?_ (inv_pos_of_pos (ha_pos n))
             fun i hi _ ↦ (inv_pos_of_pos (ha_pos i)).le
-        · simpa using (Nat.div_le_self n 2).trans (Nat.le_add_right n 1)
-        · simp
-        · simpa using Nat.div_le_self n 2
+        · exact subset_univ _
+        · exact mem_univ _
+        · simp [Fin.le_last]
