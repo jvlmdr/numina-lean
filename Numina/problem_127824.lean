@@ -3,7 +3,6 @@
 import Mathlib
 
 open Finset
-
 open scoped List
 
 /- Prove that for any positive numbers $a_1, a_2, \cdots, a_n$, the inequality
