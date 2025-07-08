@@ -15,19 +15,19 @@ theorem number_theory_226583 {n : ℕ} :
       Nat.isZeckendorfRep_zeckendorf n
     -- Unpack the chain proposition on `l ++ [0]` into separate propositions.
     rw [List.chain'_append] at hl
-    rcases hl with ⟨hl_chain, _, hl_last⟩
+    rcases hl with ⟨hl, _, hl_last⟩
     split_ands
-    · exact hl_chain
+    · exact hl
     · intro h
       simpa using hl_last _ (List.getLast_mem_getLast? h)
     · exact Nat.sum_zeckendorf_fib n
-  · intro l ⟨hl_gap, hl_min, hl_sum⟩
+  · intro l ⟨hl_chain, hl_last, hl_sum⟩
     -- Establish the chain proposition from the separate propositions.
     have hl : l.IsZeckendorfRep := by
-      refine hl_gap.append (List.chain'_singleton 0) fun x hx ↦ ?_
+      refine hl_chain.append (List.chain'_singleton 0) fun x hx ↦ ?_
       suffices 1 < x by simpa
       have h : l ≠ [] := List.ne_nil_of_mem (List.mem_of_mem_getLast? hx)
-      convert hl_min h
+      convert hl_last h
       symm
       exact (List.getLast_eq_iff_getLast_eq_some h).mpr hx
     -- Use the `Equiv` to establish uniqueness.
