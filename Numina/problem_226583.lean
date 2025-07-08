@@ -32,4 +32,5 @@ theorem number_theory_226583 {n : ℕ} :
       exact (List.getLast_eq_iff_getLast_eq_some h).mpr hx
     -- Use the `Equiv` to establish uniqueness.
     suffices ⟨l, hl⟩ = Nat.zeckendorfEquiv n from congrArg Subtype.val this
-    exact Nat.zeckendorfEquiv.symm_apply_eq.mp hl_sum
+    rw [← Equiv.symm_apply_eq]
+    exact hl_sum
