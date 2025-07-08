@@ -2,6 +2,8 @@
 
 import Mathlib
 
+namespace problem_127824
+
 open Finset
 open scoped List
 
@@ -361,3 +363,5 @@ theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha_p
         refine sum_lt_sum_of_subset (subset_univ _) (mem_univ _) ?_ (inv_pos_of_pos (ha_pos n))
           fun i hi _ ↦ (inv_pos_of_pos (ha_pos i)).le
         simp [Fin.le_last]
+
+end problem_127824
