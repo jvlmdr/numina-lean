@@ -7,6 +7,24 @@ import Mathlib
 Show that in this interval $\left|f^{\prime}(x)\right| \le n$;
 the equality holds only when $f(x) = x^{n}$. -/
 
+-- TODO: rename
+lemma lemma_1 {n : ℕ} (a : Fin n → ℝ)
+    (ha : ∀ i, 0 ≤ a i)
+    -- (ha_sum : ∑ i, a i ≤ 1)
+    {x : ℝ} (hx : x ∈ Set.Icc (-1) 1) :
+    |∑ i : Fin n, a i * x ^ i.val| ≤ ∑ i : Fin n, a i := by
+  calc _
+  _ ≤ ∑ i, |a i * x ^ i.val| := Finset.abs_sum_le_sum_abs _ _
+  _ ≤ ∑ i, |a i| := by
+    refine Finset.sum_le_sum fun i _ ↦ ?_
+    rw [abs_mul]
+    refine mul_le_of_le_one_right (abs_nonneg _) ?_
+    rw [abs_pow]
+    exact pow_le_one₀ (abs_nonneg x) (abs_le.mpr hx)
+  _ = ∑ i : Fin n, a i := by
+    refine Finset.sum_congr rfl fun i _ ↦ ?_
+    exact abs_of_nonneg (ha i)
+
 theorem algebra_242129 {n : ℕ} (a : Fin (n + 1) → ℝ) (ha : ∀ i, 0 ≤ a i)
     (f : ℝ → ℝ) (hf : ∀ x, f x = ∑ i, a i * x ^ i.val)
     (h : ∀ x ∈ Set.Icc (-1) 1, |f x| ≤ 1) :
@@ -31,9 +49,21 @@ theorem algebra_242129 {n : ℕ} (a : Fin (n + 1) → ℝ) (ha : ∀ i, 0 ≤ a 
     -- TODO: integrate above into `calc`?
     calc _
     _ = |∑ i : Fin n, a i.succ * (i + 1 : ℕ) * x ^ i.val| := by simp
-    _ ≤ ∑ i : Fin n, a i.succ * (i + 1 : ℕ) := by
-      -- this could be the hard part?
-      sorry
+    -- _ ≤ ∑ i : Fin n, |a i.succ * (i + 1 : ℕ) * x ^ i.val| := Finset.abs_sum_le_sum_abs _ _
+    -- _ ≤ ∑ i : Fin n, |a i.succ * (i + 1 : ℕ)| := by
+    --   refine Finset.sum_le_sum fun i _ ↦ ?_
+    --   rw [abs_mul]
+    --   refine mul_le_of_le_one_right (abs_nonneg _) ?_
+    --   rw [abs_pow]
+    --   exact pow_le_one₀ (abs_nonneg x) (abs_le.mpr hx)
+    -- _ = ∑ i : Fin n, a i.succ * (i + 1 : ℕ) := by
+    --   refine Finset.sum_congr rfl fun i _ ↦ ?_
+    --   rw [abs_mul]
+    --   congr
+    --   · exact abs_of_nonneg (ha i.succ)
+    --   · exact Nat.abs_cast (i + 1)
+    _ ≤ ∑ i : Fin n, a i.succ * (i + 1 : ℕ) :=
+      lemma_1 _ (fun i ↦ mul_nonneg (ha i.succ) (Nat.cast_nonneg (i + 1))) hx
     _ ≤ ∑ i : Fin n, a i.succ * n := by
       refine Finset.sum_le_sum fun i _ ↦ ?_
       gcongr
