@@ -2,7 +2,7 @@
 
 import Mathlib
 
-open Polynomial
+open Finset Polynomial
 
 /- Let $f(x) = a_{0} + a_{1} x + a_{2} x^{2} + \ldots + a_{n} x^{n}$, $a_{i} \ge 0$
 ($i = 0, 1, 2, \ldots n$), and in the interval $[-1, +1]$, $|f(x)| \le 1$.
@@ -14,15 +14,15 @@ lemma abs_poly_le_sum_coeff_of_mem_Icc {n : ℕ} (a : Fin n → ℝ) (ha : ∀ i
     {x : ℝ} (hx : x ∈ Set.Icc (-1) 1) :
     |∑ i : Fin n, a i * x ^ i.val| ≤ ∑ i : Fin n, a i :=
   calc _
-  _ ≤ ∑ i, |a i * x ^ i.val| := Finset.abs_sum_le_sum_abs _ _
+  _ ≤ ∑ i, |a i * x ^ i.val| := abs_sum_le_sum_abs _ _
   _ ≤ ∑ i, |a i| := by
-    refine Finset.sum_le_sum fun i _ ↦ ?_
+    refine sum_le_sum fun i _ ↦ ?_
     rw [abs_mul]
     refine mul_le_of_le_one_right (abs_nonneg _) ?_
     rw [abs_pow]
     exact pow_le_one₀ (abs_nonneg x) (abs_le.mpr hx)
   _ = ∑ i : Fin n, a i := by
-    refine Finset.sum_congr rfl fun i _ ↦ ?_
+    refine sum_congr rfl fun i _ ↦ ?_
     exact abs_of_nonneg (ha i)
 
 lemma weighted_sum_eq_unique_pos_max_iff {ι : Type*} [DecidableEq ι] (s : Finset ι)
@@ -35,16 +35,16 @@ lemma weighted_sum_eq_unique_pos_max_iff {ι : Type*} [DecidableEq ι] (s : Fins
       refine ⟨?_, this⟩
       suffices w i * f i = f i from (mul_eq_right₀ hf_pos.ne').mp this
       convert h
-      rw [← Finset.add_sum_erase s _ hi]
+      rw [← add_sum_erase s _ hi]
       suffices ∑ x ∈ s.erase i, w x * f x = 0 by simpa
-      refine Finset.sum_eq_zero fun j hj ↦ ?_
+      refine sum_eq_zero fun j hj ↦ ?_
       suffices w j = 0 by simp [this]
-      exact this j (Finset.mem_of_mem_erase hj) (Finset.ne_of_mem_erase hj)
+      exact this j (mem_of_mem_erase hj) (ne_of_mem_erase hj)
     contrapose! h
     refine ne_of_lt ?_
     calc _
     _ < ∑ j ∈ s, w j * f i := by
-      refine Finset.sum_lt_sum ?_ (h.imp ?_)
+      refine sum_lt_sum ?_ (h.imp ?_)
       · intro j hj
         refine mul_le_mul_of_nonneg_left ?_ (hw j hj)
         refine (eq_or_ne j i).elim ?_ ?_
@@ -54,25 +54,25 @@ lemma weighted_sum_eq_unique_pos_max_iff {ι : Type*} [DecidableEq ι] (s : Fins
         refine ⟨hjs, ?_⟩
         have hwj : 0 < w j := lt_of_le_of_ne (hw j hjs) hwj.symm
         exact (mul_lt_mul_left hwj).mpr (hf_lt j hjs hji)
-    _ = (∑ j ∈ s, w j) * f i := by simp [Finset.sum_mul]
+    _ = (∑ j ∈ s, w j) * f i := by simp [sum_mul]
     _ ≤ _ := (mul_le_iff_le_one_left hf_pos).mpr hw_sum
   · intro ⟨ha_one, ha_zero⟩
     calc _
-    _ = w i * f i + ∑ j ∈ s.erase i, w j * f j := (Finset.add_sum_erase s _ hi).symm
+    _ = w i * f i + ∑ j ∈ s.erase i, w j * f j := (add_sum_erase s _ hi).symm
     _ = _ := by
       suffices ∑ j ∈ s.erase i, w j * f j = 0 by simpa [ha_one]
-      refine Finset.sum_eq_zero fun j hj ↦ ?_
+      refine sum_eq_zero fun j hj ↦ ?_
       suffices w j = 0 by simp [this]
       refine ha_zero j ?_ ?_
-      · exact Finset.mem_of_mem_erase hj
-      · exact Finset.ne_of_mem_erase hj
+      · exact mem_of_mem_erase hj
+      · exact ne_of_mem_erase hj
 
 lemma weighted_sum_eq_unique_pos_max_iff_univ {ι : Type*} [DecidableEq ι] [Fintype ι]
     (w f : ι → ℝ) (hw : ∀ i, 0 ≤ w i) (hw_sum : ∑ i, w i ≤ 1)
     (i : ι) (hf_pos : 0 < f i) (hf_lt : ∀ j ≠ i, f j < f i) :
     ∑ j, w j * f j = f i ↔ w i = 1 ∧ ∀ j, j ≠ i → w j = 0 := by
-  simpa using weighted_sum_eq_unique_pos_max_iff Finset.univ w f (fun i _ ↦ hw i) hw_sum
-    i (Finset.mem_univ i) hf_pos fun j _ ↦ hf_lt j
+  simpa using weighted_sum_eq_unique_pos_max_iff univ w f (fun i _ ↦ hw i) hw_sum
+    i (mem_univ i) hf_pos fun j _ ↦ hf_lt j
 
 theorem algebra_242129 (n : ℕ) (a : Fin (n + 1) → ℝ) (ha : ∀ i, 0 ≤ a i)
     -- (f : ℝ → ℝ) (hf : f = (∑ i :
@@ -103,11 +103,11 @@ theorem algebra_242129 (n : ℕ) (a : Fin (n + 1) → ℝ) (ha : ∀ i, 0 ≤ a 
   have h_sum_coeff_mul_le : ∑ i : Fin n, a i.succ * (i + 1 : ℕ) ≤ n := by
     calc _
     _ ≤ ∑ i : Fin n, a i.succ * n := by
-      refine Finset.sum_le_sum fun i _ ↦ ?_
+      refine sum_le_sum fun i _ ↦ ?_
       gcongr
       · exact ha _
       · exact i.isLt
-    _ = (∑ i : Fin n, a i.succ) * n := by rw [Finset.sum_mul]
+    _ = (∑ i : Fin n, a i.succ) * n := by rw [sum_mul]
     _ ≤ (n : ℝ) := by
       refine mul_le_of_le_one_left (Nat.cast_nonneg n) ?_
       refine le_trans ?_ ha_sum
@@ -133,7 +133,7 @@ theorem algebra_242129 (n : ℕ) (a : Fin (n + 1) → ℝ) (ha : ∀ i, 0 ≤ a 
         simp [Fin.sum_univ_succAbove _ (Fin.last n)]
       _ = C (a (Fin.last n)) * X ^ n + 0 := by
         congr 1
-        refine Finset.sum_eq_zero fun i _ ↦ ?_
+        refine sum_eq_zero fun i _ ↦ ?_
         simpa using this.2 _ i.castSucc_lt_last.ne
       _ = X ^ n := by simp [this.1]
 
