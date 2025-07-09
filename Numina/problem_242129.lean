@@ -155,5 +155,5 @@ theorem algebra_242129 (n : ℕ) (a : Fin (n + 1) → ℝ) (ha : ∀ i, 0 ≤ a 
     refine le_antisymm ?_ ?_
     · exact h_sum_deriv_coeffs_le
     · calc _
-      _ = |eval x (derivative f)| := hf_abs_deriv.symm
+      _ = |f.derivative.eval x| := hf_abs_deriv.symm
       _ ≤ _ := hf_abs_deriv_le x hx
