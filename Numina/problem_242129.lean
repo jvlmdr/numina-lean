@@ -2,17 +2,17 @@
 
 import Mathlib
 
+open Polynomial
+
 /- Let $f(x) = a_{0} + a_{1} x + a_{2} x^{2} + \ldots + a_{n} x^{n}$, $a_{i} \ge 0$
 ($i = 0, 1, 2, \ldots n$), and in the interval $[-1, +1]$, $|f(x)| \le 1$.
 Show that in this interval $\left|f^{\prime}(x)\right| \le n$;
 the equality holds only when $f(x) = x^{n}$. -/
 
--- TODO: rename
-lemma lemma_1 {n : ℕ} (a : Fin n → ℝ)
-    (ha : ∀ i, 0 ≤ a i)
-    -- (ha_sum : ∑ i, a i ≤ 1)
+-- For any polynomial with non-negative coefficients, the maximum on `[-1, 1]` is attained at 1.
+lemma abs_poly_le_sum_coeff_of_mem_Icc {n : ℕ} (a : Fin n → ℝ) (ha : ∀ i, 0 ≤ a i)
     {x : ℝ} (hx : x ∈ Set.Icc (-1) 1) :
-    |∑ i : Fin n, a i * x ^ i.val| ≤ ∑ i : Fin n, a i := by
+    |∑ i : Fin n, a i * x ^ i.val| ≤ ∑ i : Fin n, a i :=
   calc _
   _ ≤ ∑ i, |a i * x ^ i.val| := Finset.abs_sum_le_sum_abs _ _
   _ ≤ ∑ i, |a i| := by
@@ -25,45 +25,83 @@ lemma lemma_1 {n : ℕ} (a : Fin n → ℝ)
     refine Finset.sum_congr rfl fun i _ ↦ ?_
     exact abs_of_nonneg (ha i)
 
-theorem algebra_242129 {n : ℕ} (a : Fin (n + 1) → ℝ) (ha : ∀ i, 0 ≤ a i)
-    (f : ℝ → ℝ) (hf : ∀ x, f x = ∑ i, a i * x ^ i.val)
-    (h : ∀ x ∈ Set.Icc (-1) 1, |f x| ≤ 1) :
-    (∀ x ∈ Set.Icc (-1) 1, |deriv f x| ≤ n) ∧
-    ((∃ x ∈ Set.Icc (-1) 1, |deriv f x| = n) ↔ f = fun x ↦ x ^ n) := by
+lemma weighted_sum_eq_unique_pos_max_iff {ι : Type*} [DecidableEq ι] (s : Finset ι)
+    (w f : ι → ℝ) (hw : ∀ i ∈ s, 0 ≤ w i) (hw_sum : ∑ i ∈ s, w i ≤ 1)
+    (i : ι) (hi : i ∈ s) (hf_pos : 0 < f i) (hf_lt : ∀ j ∈ s, j ≠ i → f j < f i) :
+    ∑ j ∈ s, w j * f j = f i ↔ w i = 1 ∧ ∀ j ∈ s, j ≠ i → w j = 0 := by
+  constructor
+  · intro h
+    suffices ∀ j ∈ s, j ≠ i → w j = 0 by
+      refine ⟨?_, this⟩
+      suffices w i * f i = f i from (mul_eq_right₀ hf_pos.ne').mp this
+      convert h
+      rw [← Finset.add_sum_erase s _ hi]
+      suffices ∑ x ∈ s.erase i, w x * f x = 0 by simpa
+      refine Finset.sum_eq_zero fun j hj ↦ ?_
+      suffices w j = 0 by simp [this]
+      exact this j (Finset.mem_of_mem_erase hj) (Finset.ne_of_mem_erase hj)
+    contrapose! h
+    refine ne_of_lt ?_
+    calc _
+    _ < ∑ j ∈ s, w j * f i := by
+      refine Finset.sum_lt_sum ?_ (h.imp ?_)
+      · intro j hj
+        refine mul_le_mul_of_nonneg_left ?_ (hw j hj)
+        refine (eq_or_ne j i).elim ?_ ?_
+        · exact fun hji ↦ (congrArg f hji).le
+        · exact fun hji ↦ (hf_lt j hj hji).le
+      · intro j ⟨hjs, hji, hwj⟩
+        refine ⟨hjs, ?_⟩
+        have hwj : 0 < w j := lt_of_le_of_ne (hw j hjs) hwj.symm
+        exact (mul_lt_mul_left hwj).mpr (hf_lt j hjs hji)
+    _ = (∑ j ∈ s, w j) * f i := by simp [Finset.sum_mul]
+    _ ≤ _ := (mul_le_iff_le_one_left hf_pos).mpr hw_sum
+  · intro ⟨ha_one, ha_zero⟩
+    calc _
+    _ = w i * f i + ∑ j ∈ s.erase i, w j * f j := (Finset.add_sum_erase s _ hi).symm
+    _ = _ := by
+      suffices ∑ j ∈ s.erase i, w j * f j = 0 by simpa [ha_one]
+      refine Finset.sum_eq_zero fun j hj ↦ ?_
+      suffices w j = 0 by simp [this]
+      refine ha_zero j ?_ ?_
+      · exact Finset.mem_of_mem_erase hj
+      · exact Finset.ne_of_mem_erase hj
+
+lemma weighted_sum_eq_unique_pos_max_iff_univ {ι : Type*} [DecidableEq ι] [Fintype ι]
+    (w f : ι → ℝ) (hw : ∀ i, 0 ≤ w i) (hw_sum : ∑ i, w i ≤ 1)
+    (i : ι) (hf_pos : 0 < f i) (hf_lt : ∀ j ≠ i, f j < f i) :
+    ∑ j, w j * f j = f i ↔ w i = 1 ∧ ∀ j, j ≠ i → w j = 0 := by
+  simpa using weighted_sum_eq_unique_pos_max_iff Finset.univ w f (fun i _ ↦ hw i) hw_sum
+    i (Finset.mem_univ i) hf_pos fun j _ ↦ hf_lt j
+
+theorem algebra_242129 (n : ℕ) (a : Fin (n + 1) → ℝ) (ha : ∀ i, 0 ≤ a i)
+    -- (f : ℝ → ℝ) (hf : f = (∑ i :
+    (f : ℝ[X]) (hf : f = ∑ i, C (a i) * X ^ i.val)
+    (hf_abs : ∀ x ∈ Set.Icc (-1) 1, |f.eval x| ≤ 1) :
+    (∀ x ∈ Set.Icc (-1) 1, |f.derivative.eval x| ≤ n) ∧
+    (0 < n → ((∃ x ∈ Set.Icc (-1) 1, |f.derivative.eval x| = n) ↔ f = X ^ n)) := by
+  -- Note that we must exclude `n = 0` from the condition for equality.
+  -- In this case, $|f'(x)| = 0 ≤ n$ for any $f(x) = a_0$; we cannot infer $f(x) = x^0 = 1$.
 
   -- From `|f x| ≤ 1`, we can establish a bound on the sum of the coefficients.
   have ha_sum : ∑ i, a i ≤ 1 := by
     calc _
-    _ = f 1 := by simp [hf]
-    _ ≤ |f 1| := le_abs_self (f 1)
-    _ ≤ 1 := h 1 (by simp)
+    _ = f.leval 1 := by simp [hf]
+    _ ≤ |f.eval 1| := le_abs_self _
+    _ ≤ 1 := hf_abs 1 (by simp)
 
-  constructor
-  · intro x hx
-    rw [funext hf]
-    rw [deriv_sum (fun i _ ↦ (differentiable_pow i.val).const_mul (a i) x)]
-    simp [← mul_assoc]
-    simp [Fin.sum_univ_succ]
-    suffices |∑ i : Fin n, a i.succ * (i + 1 : ℕ) * x ^ i.val| ≤ n by simpa
+  have hf_deriv (x : ℝ) :
+      f.derivative.eval x = ∑ i : Fin n, a i.succ * (i + 1 : ℕ) * x ^ i.val := by
+    change f.derivative.aeval x = _
+    simp [hf, Fin.sum_univ_succ, mul_assoc]
 
-    -- TODO: integrate above into `calc`?
+  have hf_abs_deriv_le (x : ℝ) (hx : x ∈ Set.Icc (-1) 1) :
+      |f.derivative.eval x| ≤ ∑ i : Fin n, a i.succ * (i + 1 : ℕ) := by
+    simpa [hf_deriv] using abs_poly_le_sum_coeff_of_mem_Icc _
+      (fun i ↦ mul_nonneg (ha i.succ) (Nat.cast_nonneg (i + 1))) hx
+
+  have h_sum_coeff_mul_le : ∑ i : Fin n, a i.succ * (i + 1 : ℕ) ≤ n := by
     calc _
-    _ = |∑ i : Fin n, a i.succ * (i + 1 : ℕ) * x ^ i.val| := by simp
-    -- _ ≤ ∑ i : Fin n, |a i.succ * (i + 1 : ℕ) * x ^ i.val| := Finset.abs_sum_le_sum_abs _ _
-    -- _ ≤ ∑ i : Fin n, |a i.succ * (i + 1 : ℕ)| := by
-    --   refine Finset.sum_le_sum fun i _ ↦ ?_
-    --   rw [abs_mul]
-    --   refine mul_le_of_le_one_right (abs_nonneg _) ?_
-    --   rw [abs_pow]
-    --   exact pow_le_one₀ (abs_nonneg x) (abs_le.mpr hx)
-    -- _ = ∑ i : Fin n, a i.succ * (i + 1 : ℕ) := by
-    --   refine Finset.sum_congr rfl fun i _ ↦ ?_
-    --   rw [abs_mul]
-    --   congr
-    --   · exact abs_of_nonneg (ha i.succ)
-    --   · exact Nat.abs_cast (i + 1)
-    _ ≤ ∑ i : Fin n, a i.succ * (i + 1 : ℕ) :=
-      lemma_1 _ (fun i ↦ mul_nonneg (ha i.succ) (Nat.cast_nonneg (i + 1))) hx
     _ ≤ ∑ i : Fin n, a i.succ * n := by
       refine Finset.sum_le_sum fun i _ ↦ ?_
       gcongr
@@ -76,5 +114,40 @@ theorem algebra_242129 {n : ℕ} (a : Fin (n + 1) → ℝ) (ha : ∀ i, 0 ≤ a 
       rw [Fin.sum_univ_succ]
       simpa using ha 0
 
-  · -- TODO: confirm condition here
-    sorry
+  -- TODO: possible to write as single `suffices`?
+
+  constructor
+  · intro x hx
+    calc _
+    _ ≤ ∑ i : Fin n, a i.succ * (i + 1 : ℕ) := hf_abs_deriv_le x hx
+    _ ≤ (n : ℝ) := h_sum_coeff_mul_le
+  · intro hn
+    -- Prove the reverse direction first as it is trivial.
+    refine ⟨?_, fun hf ↦ ⟨1, by simp, by simp [hf]⟩⟩
+    intro ⟨x, hx, hf_abs_deriv⟩
+
+    suffices a (Fin.last n) = 1 ∧ ∀ i ≠ Fin.last n, a i = 0 by
+      calc _
+      _ = ∑ i : Fin (n + 1), C (a i) * X ^ i.val := by rw [hf]
+      _ = C (a (Fin.last n)) * X ^ n + ∑ i : Fin n, C (a i.castSucc) * X ^ i.val := by
+        simp [Fin.sum_univ_succAbove _ (Fin.last n)]
+      _ = C (a (Fin.last n)) * X ^ n + 0 := by
+        congr 1
+        refine Finset.sum_eq_zero fun i _ ↦ ?_
+        simpa using this.2 _ i.castSucc_lt_last.ne
+      _ = X ^ n := by simp [this.1]
+
+    suffices ∑ i : Fin (n + 1), a i * i = n by
+      refine (weighted_sum_eq_unique_pos_max_iff_univ a _ ha ha_sum _ ?_ ?_).mp this
+      · simpa using hn
+      · intro j hj
+        simpa using Fin.val_lt_last hj
+
+    calc _
+    _ = ∑ i : Fin n, a i.succ * (i + 1 : ℕ) := by simp [Fin.sum_univ_succ]
+    _ = _ := by
+      refine le_antisymm ?_ ?_
+      · exact h_sum_coeff_mul_le
+      · calc _
+        _ = |eval x (derivative f)| := hf_abs_deriv.symm
+        _ ≤ _ := hf_abs_deriv_le x hx
