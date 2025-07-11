@@ -2,6 +2,8 @@
 
 import Mathlib
 
+namespace problem_101699
+
 open Real
 
 /- Solve the system of equations:
@@ -149,3 +151,5 @@ theorem algebra_101699 {x y : ℝ} (hx : 0 ≤ x) (hy : 0 ≤ y)
   _ = (73 / 9 ^ 2 : ℝ) := by ring
   _ = (√73 / 9) ^ 2 := by simp [div_pow]
   _ = _ := by ring
+
+end problem_101699
