@@ -5,6 +5,7 @@ import Mathlib
 /- $n$ is a positive integer. Try to determine how many real numbers $x$ satisfy
 $1 \le x < n$ and $x^{3} - [x^{3}] = (x - [x])^{3}$. -/
 
+-- The mapping from (z, r) to z + r is injective on the set with r in [0, 1).
 lemma injOn_int_add_real_Ico :
     Set.InjOn (fun m : ℤ × ℝ ↦ m.1 + m.2) {(_, r) : ℤ × ℝ | r ∈ Set.Ico 0 1} := by
   intro u hu v hv h
@@ -13,6 +14,7 @@ lemma injOn_int_add_real_Ico :
   · simpa [Int.floor_eq_zero_iff.mpr, hu, hv] using congrArg Int.floor h
   · simpa [Int.fract_eq_self.mpr, hu, hv] using congrArg Int.fract h
 
+-- The set of reals `x` that satisfy `p x` is equivalent to (integer, fraction) pairs `x = z + r`.
 lemma lemma_1 (p : ℝ → Prop) :
     {x | p x}.ncard = {(z, r) : ℤ × ℝ | r ∈ Set.Ico 0 1 ∧ p (z + r)}.ncard := by
   calc _
@@ -31,6 +33,7 @@ lemma lemma_1 (p : ℝ → Prop) :
     refine injOn_int_add_real_Ico.mono ?_
     exact fun m ⟨hr, _⟩ ↦ hr
 
+-- We have `(a + r)^3 - ⌊(a + r)^3⌋ = r^3` iff `a^3 + 3 a^2 r + 3 a r^2` is an integer.
 lemma lemma_2 (a : ℤ) (r : ℝ) (hr : r ∈ Set.Ico 0 1) :
     (a + r)^3 - ⌊(a + r)^3⌋ = r^3 ↔ ∃ n : ℤ, a^3 + 3*a^2*r + 3*a*r^2 = n := by
   calc _
@@ -48,6 +51,7 @@ lemma lemma_2 (a : ℤ) (r : ℝ) (hr : r ∈ Set.Ico 0 1) :
     rw [Set.mem_Ico] at hr
     refine ⟨pow_nonneg ?_ 3, pow_lt_one₀ ?_ ?_ three_ne_zero⟩ <;> linarith
 
+-- The function `r ↦ a^3 + 3 a^2 r + 3 a r^2` is strictly monotone on `0 ≤ r`.
 lemma lemma_3 {a : ℤ} (ha : 1 ≤ a) :
     StrictMonoOn (fun r : ℝ ↦ a^3 + 3*a^2*r + 3*a*r^2) (Set.Ici 0) := by
   refine MonotoneOn.add_strictMono ?_ ?_
@@ -61,15 +65,16 @@ lemma lemma_3 {a : ℤ} (ha : 1 ≤ a) :
     · simpa using ha
     · exact (sq_lt_sq₀ hx hy).mpr hxy
 
+-- As `r` ranges on `[0, 1)`, `a^3 + 3 a^2 r + 3 a r^2` ranges on `[a^3, a^3 + 3 a^2 + 3 a)`.
+-- The set of integer values in this range is `[a^3, a^3 + 3 a^2 + 3 a)`.
 lemma lemma_4 {a : ℤ} (ha : 1 ≤ a) :
-    (fun r : ℝ ↦ a^3 + 3*a^2*r + 3*a*r^2) ''
-      {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, a^3 + 3*a^2*r + 3*a*r^2 = k} =
+    Set.range Int.cast ∩ ((fun r : ℝ ↦ a^3 + 3*a^2*r + 3*a*r^2) '' Set.Ico 0 1) =
     Int.cast '' Set.Ico (a ^ 3) (a ^ 3 + 3 * a ^ 2 + 3 * a) := by
+  -- Introduce `f` to simplify notation.
   let f (a : ℤ) (r : ℝ) : ℝ := a^3 + 3*a^2*r + 3*a*r^2
-
   have hf_mono {a : ℤ} (ha : 1 ≤ a) : StrictMonoOn (f a) (Set.Ici 0) := lemma_3 ha
   have hf_inj {a : ℤ} (ha : 1 ≤ a) : Set.InjOn (f a) (Set.Ici 0) := (hf_mono ha).injOn
-
+  -- Further, we can establish that `r ↦ f a r` is a bijection.
   have hf_cont {a : ℤ} : Continuous (f a) := by
     unfold f
     refine .add (.add ?_ ?_) ?_
@@ -85,23 +90,13 @@ lemma lemma_4 {a : ℤ} (ha : 1 ≤ a) :
         exact (hf_mono ha).mono Set.Icc_subset_Ici_self
     · exact (hf_inj ha).mono Set.Ico_subset_Ici_self
 
-  calc f a '' {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, f a r = k}
-  _ = (f a '' Set.Ico 0 1) ∩ Set.range Int.cast := by
-    ext y
-    simp only [Set.mem_image, Set.mem_setOf_eq, Set.mem_inter_iff, Set.mem_range]
-    constructor
-    · intro ⟨r, ⟨hr, ⟨k, hk⟩⟩, hy⟩
-      refine ⟨⟨r, hr, ?_⟩, ⟨k, ?_⟩⟩
-      · exact hy
-      · exact hk.symm.trans hy
-    · intro ⟨⟨r, hr, hy⟩, ⟨k, hk⟩⟩
-      refine ⟨r, ⟨hr, ⟨k, ?_⟩⟩, ?_⟩
-      · exact hy.trans hk.symm
-      · exact hy
-  _ = Set.Ico (f a 0) (f a 1) ∩ Set.range Int.cast := by rw [(hf_bijOn ha).image_eq]
-  _ = Set.Ico ((a^3 : ℤ) : ℝ) (a^3 + 3*a^2 + 3*a : ℤ) ∩ Set.range Int.cast := by simp [f]
+  calc _
+  -- The image of `f a` on `[0, 1)` is `[f a 0, f a 1)`.
+  _ = Set.range Int.cast ∩ Set.Ico (f a 0) (f a 1) := by rw [(hf_bijOn ha).image_eq]
+  _ = Set.range Int.cast ∩ Set.Ico ((a^3 : ℤ) : ℝ) (a^3 + 3*a^2 + 3*a : ℤ) := by simp [f]
+  -- Obtain the set of integers within the interval.
   _ = Int.cast '' ((Int.cast : ℤ → ℝ) ⁻¹' Set.Ico ↑(a^3) ↑(a^3 + 3*a^2 + 3*a : ℤ)) :=
-    Set.image_preimage_eq_inter_range.symm
+    Set.image_preimage_eq_range_inter.symm
   _ = _ := by simp only [Int.preimage_Ico, Int.ceil_intCast]
 
 -- The sum of squares is a product that is divisible by 6.
@@ -121,24 +116,16 @@ lemma sum_range_sq_mul_six (n : ℕ) :
   | zero => simp
   | succ n => simpa using sum_range_succ_sq_mul_six n
 
--- lemma sum_range_succ_mul_two (n : ℕ) :
---     (∑ k ∈ Finset.range (n + 1), k) * 2 = n * (n + 1) := by
---   rw [Finset.sum_range_id_mul_two, add_tsub_cancel_right]
---   ring
-
 theorem algebra_213467 (n : ℕ) (hn : 0 < n) :
     {x : ℝ | x ∈ Set.Ico 1 ↑n ∧ x^3 - ⌊x^3⌋ = (x - ⌊x⌋)^3}.ncard = n^3 - n := by
-
+  -- Introduce `f` to simplify notation.
   let f (a : ℤ) (r : ℝ) : ℝ := a^3 + 3*a^2*r + 3*a*r^2
-
-  have hf_mono {a : ℤ} (ha : 1 ≤ a) : StrictMonoOn (f a) (Set.Ici 0) := lemma_3 ha
-  have hf_inj {a : ℤ} (ha : 1 ≤ a) : Set.InjOn (f a) (Set.Ici 0) := (hf_mono ha).injOn
-
   calc _
+  -- Split `x` into its integer and fractional parts.
   _ = {x : ℝ | ⌊x⌋ ∈ Set.Ico 1 (n : ℤ) ∧
       (⌊x⌋ + Int.fract x)^3 - ⌊(⌊x⌋ + Int.fract x)^3⌋ = Int.fract x^3}.ncard := by
     simp [Int.le_floor, Int.floor_lt]
-
+  -- The number of such `x` is equal to the number of pairs `(a, r)`.
   _ = {(a, r) : ℤ × ℝ | r ∈ Set.Ico 0 1 ∧ a ∈ Set.Ico 1 (n : ℤ) ∧
       (a + r)^3 - ⌊(a + r)^3⌋ = r^3}.ncard := by
     rw [lemma_1]
@@ -147,7 +134,7 @@ theorem algebra_213467 (n : ℕ) (hn : 0 < n) :
     simp only [Set.mem_setOf_eq, and_congr_right_iff]
     intro hr
     simp [Int.fract_eq_self.mpr hr, Int.floor_eq_zero_iff.mpr hr]
-
+  -- The condition on `r` is equivalent to the existence of an integer `k`.
   _ = {(a, r) : ℤ × ℝ | r ∈ Set.Ico 0 1 ∧ a ∈ Set.Ico 1 (n : ℤ) ∧
       ∃ k : ℤ, a^3 + 3*a^2*r + 3*a*r^2 = k}.ncard := by
     congr
@@ -171,24 +158,32 @@ theorem algebra_213467 (n : ℕ) (hn : 0 < n) :
   _ = ((Function.uncurry fun a r ↦ (a, f a r)) '' ⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
       {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, f a r = k}).ncard := by
     refine (Set.ncard_image_of_injOn ?_).symm
-    rw [Set.InjOn]
-    simp only [Prod.forall]
-    simp only [Function.uncurry_apply_pair]
-    simp only [Prod.mk.injEq]
-    -- simp [Set.InjOn, -Set.mem_Ico]
+    simp only [Set.InjOn, Prod.forall, Function.uncurry_apply_pair, Prod.mk.injEq]
     intro a₁ r₁ har₁ a₂ r₂ har₂ ⟨h_fst, h_snd⟩
     simp [-Set.mem_Ico] at har₁ har₂
     have ⟨⟨hr₁, _⟩, ha₁⟩ : (r₁ ∈ Set.Ico 0 1 ∧ ∃ k : ℤ, f a₁ r₁ = ↑k) ∧ a₁ ∈ Set.Ico 1 ↑n := by
       simpa using har₁
     have ⟨⟨hr₂, _⟩, ha₂⟩ : (r₂ ∈ Set.Ico 0 1 ∧ ∃ k : ℤ, f a₂ r₂ = ↑k) ∧ a₂ ∈ Set.Ico 1 ↑n := by
       simpa using har₂
-    constructor
-    · exact h_fst
-    · exact (hf_inj ha₁.1).mono Set.Ico_subset_Ici_self hr₁ hr₂ (h_fst ▸ h_snd)
+    refine ⟨h_fst, ?_⟩
+    -- Use injectivity of `r ↦ f a r` to prove `r₁ = r₂`.
+    suffices Set.InjOn (fun r : ℝ ↦ f a₁ r) (Set.Ico 0 1) from this hr₁ hr₂ (h_fst ▸ h_snd)
+    exact ((lemma_3 ha₁.1).mono Set.Ico_subset_Ici_self).injOn
 
   _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
       (f a '' {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, f a r = k})).ncard := by
     simp [Set.image_iUnion, Set.image_image]
+
+  _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
+      (Set.range Int.cast ∩ f a '' (Set.Ico 0 (1 : ℝ)))).ncard := by
+    congr
+    refine Set.iUnion₂_congr fun a ha ↦ ?_
+    refine congrArg _ ?_
+    ext y
+    simp only [Set.mem_image, Set.mem_setOf_eq, Set.mem_inter_iff, Set.mem_range]
+    constructor
+    · exact fun ⟨r, ⟨hr, k, hk⟩, hy⟩ ↦ ⟨⟨k, hk ▸ hy⟩, ⟨r, hr, hy⟩⟩
+    · exact fun ⟨⟨k, hk⟩, ⟨r, hr, hy⟩⟩ ↦ ⟨r, ⟨hr, k, hk ▸ hy⟩, hy⟩
 
   _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
       (Int.cast '' (Set.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a)) : Set ℝ)).ncard := by
@@ -250,7 +245,6 @@ theorem algebra_213467 (n : ℕ) (hn : 0 < n) :
       rw [Finset.mem_Ico, not_and'] at ha'
       simpa using ha' ha
 
-  -- TODO: extract as lemma?
   -- Introduce factors of 6 and 2 to obtain integer expressions for each sum.
   _ = (∑ a in Finset.range n, (a^2 + a)) * 3 := by
     rw [Finset.sum_mul]
@@ -263,9 +257,6 @@ theorem algebra_213467 (n : ℕ) (hn : 0 < n) :
   _ = (n^3 - n) * 2 / 2 := by
     congr 1
     rw [Finset.sum_range_id_mul_two, sum_range_sq_mul_six]
-    -- -- This is easy to prove for `n + 1` using `ring`.
-    -- have : n * (n + 1) * (2 * n + 1) + n * (n + 1) * 3 = n * (n + 1) * (n + 2) * 2 := by ring
-
     -- This is easy to prove in `ℤ` using `ring`.
     have : (n - 1) * n * (2 * n - 1) + n * (n - 1) * 3 = ((n^3 - n) * 2 : ℤ) := by ring
     rw [← @Nat.cast_inj ℤ]
