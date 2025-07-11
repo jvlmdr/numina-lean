@@ -21,8 +21,8 @@ theorem number_theory_234330 (r s : ℤ) (u v : ℕ) (hu : u ≠ 0) (hv : v ≠ 
       ∃ l m : ℕ, l ≠ 0 ∧ m ≠ 0 ∧ (l * r + m * s) / (l * u + m * v) = x) ∧
     ∀ l m : ℕ, l ≠ 0 → m ≠ 0 →
       ((l * r + m * s) / (l * u + m * v) : ℚ) ∈ (.uIoo (r / u) (s / v) : Set ℚ) := by
-
-  have h_gap : (s / v - r / u : ℚ) = 1 / (u * v) := by
+  -- First, observe that `s / v = r / u + 1 / (u * v)` and hence `s / v < r / u`.
+  have h_sub : (s / v - r / u : ℚ) = 1 / (u * v) := by
     calc _
     _ = (s * u - r * v : ℚ) / (u * v) := by
       rw [div_sub_div _ _ (by simpa) (by simpa)]
@@ -31,62 +31,80 @@ theorem number_theory_234330 (r s : ℤ) (u v : ℕ) (hu : u ≠ 0) (hv : v ≠ 
       congr
       simpa using congrArg ((↑) : ℤ → ℚ) h
 
+  -- Use this to rewrite `uIcc` as `Icc`.
   have h_lt : r / u < (s / v : ℚ) := by
-    rw [← sub_pos, h_gap]
-    suffices 0 < (1 / ↑(u * v) : ℚ) by simpa
-    refine Nat.one_div_cast_pos ?_
-    exact Nat.mul_ne_zero hu hv
-
-  -- Convert `uIcc` to `Icc`.
+    rw [← sub_pos, h_sub]
+    suffices 0 < (u * v : ℚ)⁻¹ by simpa
+    rw [inv_pos]
+    refine mul_pos ?_ ?_ <;> simpa [Nat.pos_iff_ne_zero]
   rw [Set.uIoo_of_lt h_lt]
 
   constructor
-  · intro x hx
+  · -- Let `x = p / q` with `r / u < p / q < s / v`.
+    intro x hx_mem
     let p := x.num
     let q := x.den
-    have hpq : p / q = x := Rat.num_div_den x
+    have hq : q ≠ 0 := x.den_nz
+    have hx : p / q = x := Rat.num_div_den x
 
+    -- If we set `m = p * u - q * r` and `l = s * q - v * p`,
+    -- then we can show that `l * r + m * s = p` and `l * u + m * v = q`.
+
+    -- From `0 < p / q - r / u`, we see `0 < p * u - r * q = m`.
     let m : ℤ := p * u - q * r
     have hm_pos : 0 < m := by
-      unfold m
-      suffices (0 : ℚ) < p * u - q * r by simpa [← @Int.cast_lt ℚ]
-      have : 0 < x - r / u := by simpa using hx.1
-      rw [← hpq] at this
-      rw [div_sub_div _ _ (by simp [q]) (by simpa)] at this
+      have : 0 < (p / q - r / u : ℚ) := by simpa [hx] using hx_mem.1
+      rw [div_sub_div _ _ (by simpa) (by simpa)] at this
+      have : 0 < (p * u - q * r : ℤ) / (q * u : ℚ) := by simpa
+      rw [← @Int.cast_lt ℚ]
       refine (div_pos_iff_of_pos_right ?_).mp this
-      refine mul_pos ?_ ?_
-      · simpa using x.den_pos
-      · simpa using Nat.pos_of_ne_zero hu
-
+      refine mul_pos ?_ ?_ <;> simpa [Nat.pos_iff_ne_zero]
+    -- Likewise, from `0 < s / v - p / q`, we see `0 < s * q - v * p = l`.
     let l : ℤ := s * q - v * p
     have hl_pos : 0 < l := by
-      unfold l
-      suffices 0 < (s * q - v * p : ℚ) by simpa [← @Int.cast_lt ℚ]
-      -- suffices (0 : ℚ) < p * u - q * r by simpa [← @Int.cast_lt ℚ]
-      have : 0 < s / v - x := by simpa using hx.2
-      rw [← hpq] at this
-      rw [div_sub_div _ _ (by simpa) (by simp [q])] at this
+      have : 0 < (s / v - p / q : ℚ) := by simpa [hx] using hx_mem.2
+      rw [div_sub_div _ _ (by simpa) (by simpa)] at this
+      have : 0 < (s * q - v * p : ℤ) / (v * q : ℚ) := by simpa
+      rw [← @Int.cast_lt ℚ]
       refine (div_pos_iff_of_pos_right ?_).mp this
-      refine mul_pos ?_ ?_
-      · simpa using Nat.pos_of_ne_zero hv
-      · simpa using x.den_pos
+      refine mul_pos ?_ ?_ <;> simpa [Nat.pos_iff_ne_zero]
 
     refine ⟨l.toNat, m.toNat, by simpa, by simpa, ?_⟩
 
+    -- Replace `(x.toNat : ℚ)` with `(x : ℚ)` where `x` is positive.
     have h_cast_toNat {x : ℤ} (hx : 0 ≤ x) : (x.toNat : ℚ) = x :=
       congrArg Int.cast (Int.toNat_of_nonneg hx)
     rw [h_cast_toNat hl_pos.le, h_cast_toNat hm_pos.le]
 
-    convert hpq
-    · calc _
-      _ = ((s * q - v * p) * r + (p * u - q * r) * s : ℚ) := by simp [l, m]
-      _ = (p * (s * u - r * v) : ℚ) := by ring
-      _ = (p * (s * u - r * v : ℤ) : ℚ) := by simp
+    convert hx
+    · suffices l * r + m * s = p by simpa [← @Int.cast_inj ℚ]
+      calc _
+      _ = p * (s * u - r * v) := by ring
       _ = _ := by simp [h]
-    · calc _
-      _ = ((s * q - v * p) * u + (p * u - q * r) * v : ℚ) := by simp [l, m]
-      _ = (q * (s * u - r * v) : ℚ) := by ring
-      _ = (q * (s * u - r * v : ℤ) : ℚ) := by simp
+    · suffices l * u + m * v = q by simpa [← @Int.cast_inj ℚ]
+      calc _
+      _ = q * (s * u - r * v) := by ring
       _ = _ := by simp [h]
 
-  · sorry
+  · intro l m hl hm
+    rw [Set.mem_Ioo]
+    -- Before cross-multiplying the fractions, establish that the denominator is positive.
+    have h_den : 0 < (l * u + m * v : ℚ) := by
+      refine add_pos ?_ ?_
+      · refine mul_pos ?_ ?_ <;> simpa [Nat.pos_iff_ne_zero]
+      · refine mul_pos ?_ ?_ <;> simpa [Nat.pos_iff_ne_zero]
+    split_ands
+    · -- Cross-multiply and eliminate the common terms from both sides.
+      refine (div_lt_div_iff₀ (by simpa [Nat.pos_iff_ne_zero]) h_den).mpr ?_
+      suffices r * u * l + r * v * m < (r * u * l + s * u * m : ℚ) by convert this using 1 <;> ring
+      suffices r * v * m < (s * u * m : ℚ) by simpa
+      -- Eliminate the constant positive factor.
+      refine mul_lt_mul_of_pos_right ?_ (by simpa [Nat.pos_iff_ne_zero])
+      refine (div_lt_div_iff₀ ?_ ?_).mp h_lt <;> simpa [Nat.pos_iff_ne_zero]
+    · -- Cross-multiply and eliminate the common terms from both sides.
+      refine (div_lt_div_iff₀ h_den (by simpa [Nat.pos_iff_ne_zero])).mpr ?_
+      suffices r * v * l + s * v * m < (s * u * l + s * v * m : ℚ) by convert this using 1 <;> ring
+      suffices r * v * l < (s * u * l : ℚ) by simpa
+      -- Eliminate the constant positive factor.
+      refine mul_lt_mul_of_pos_right ?_ (by simpa [Nat.pos_iff_ne_zero])
+      refine (div_lt_div_iff₀ ?_ ?_).mp h_lt <;> simpa [Nat.pos_iff_ne_zero]
