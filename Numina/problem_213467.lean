@@ -135,15 +135,56 @@ lemma lemma_3' (a : ℤ) (r : ℝ) (hr : r ∈ Set.Ico 0 1) :
     rw [Set.mem_Ico] at hr
     refine ⟨pow_nonneg ?_ 3, pow_lt_one₀ ?_ ?_ three_ne_zero⟩ <;> linarith
 
-
 lemma lemma_4 (a : ℤ) :
-    {r : ℝ | r ∈ Set.Ico 0 1 ∧ ∃ k : ℤ, a^3 + 3*a^2*r + 3*a*r^2 = k} =
-    Int.cast '' (Set.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a)) := by
+    (fun r : ℝ ↦ a^3 + 3*a^2*r + 3*a*r^2) ''
+      {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, a^3 + 3*a^2*r + 3*a*r^2 = k} =
+    Int.cast '' Set.Ico (a ^ 3) (a ^ 3 + 3 * a ^ 2 + 3 * a) := by
   sorry
-
 
 theorem algebra_213467 (n : ℕ) (hn : 0 < n) :
     {x : ℝ | x ∈ Set.Ico 1 ↑n ∧ x^3 - ⌊x^3⌋ = (x - ⌊x⌋)^3}.ncard = n^3 - n := by
+
+  let f (a : ℤ) (r : ℝ) : ℝ := a^3 + 3*a^2*r + 3*a*r^2
+
+  have hf_cont {a : ℤ} : Continuous (f a) := by
+    unfold f
+    refine .add (.add ?_ ?_) ?_
+    · exact continuous_const
+    · exact continuous_mul_left _
+    · exact .mul continuous_const (continuous_pow 2)
+
+  have hf_mono {a : ℤ} (ha : 1 ≤ a) : StrictMonoOn (f a) (Set.Ici 0) := by
+    unfold f
+    refine MonotoneOn.add_strictMono ?_ ?_
+    · refine Monotone.monotoneOn ?_ _
+      refine .const_add ?_ _
+      refine monotone_mul_left_of_nonneg ?_
+      simp [sq_nonneg]
+    · intro x hx y hy hxy
+      simp only
+      refine (mul_lt_mul_left ?_).mpr ?_
+      · simpa using ha
+      · exact (sq_lt_sq₀ hx hy).mpr hxy
+
+  have hf_inj {a : ℤ} (ha : 1 ≤ a) : Set.InjOn (f a) (Set.Ici 0) := (hf_mono ha).injOn
+
+  have hf_bijOn {a : ℤ} (ha : 1 ≤ a) : Set.BijOn (f a) (Set.Ico 0 1) (Set.Ico (f a 0) (f a 1)) := by
+    convert Set.InjOn.bijOn_image ?_
+    · refine Set.Subset.antisymm ?_ ?_
+      · refine intermediate_value_Ico zero_le_one ?_
+        exact hf_cont.continuousOn
+      · refine StrictMonoOn.image_Ico_subset ?_
+        exact (hf_mono ha).mono Set.Icc_subset_Ici_self
+    · exact (hf_inj ha).mono Set.Ico_subset_Ici_self
+
+  have h_surjOn' {a : ℤ} (ha : 1 ≤ a) := (hf_bijOn ha).surjOn
+  have h_injOn' {a : ℤ} (ha : 1 ≤ a) := (hf_bijOn ha).injOn
+  have h_image_eq' {a : ℤ} (ha : 1 ≤ a) := (hf_bijOn ha).image_eq
+
+  have h_image_preimage' {a : ℤ} (ha : 1 ≤ a) (t₁ : Set ℝ) :=
+    (h_surjOn' ha).image_preimage (t₁ := t₁)
+  have h_preimage_image' {a : ℤ} (ha : 1 ≤ a) (t₁ : Set ℝ) :=
+    (h_injOn' ha).preimage_image_inter (s₁ := t₁)
 
   calc _
   _ = {x : ℝ | ⌊x⌋ ∈ Set.Ico 1 (n : ℤ) ∧
@@ -168,19 +209,49 @@ theorem algebra_213467 (n : ℕ) (hn : 0 < n) :
     exact lemma_3' a r hr
 
   _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
-      {r : ℝ | r ∈ Set.Ico 0 1 ∧ ∃ k : ℤ, a^3 + 3*a^2*r + 3*a*r^2 = k}).ncard := by
+      {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, a^3 + 3*a^2*r + 3*a*r^2 = k}).ncard := by
     congr
     ext ⟨a, r⟩
-    simp [-Set.mem_Ico]
-    -- just reordering
-    sorry
+    simp [-Set.mem_Ico] -- TODO
+    rw [and_assoc]
+    refine and_congr_right' ?_
+    rw [and_comm]
 
   _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
-      (Int.cast '' Set.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a) : Set ℝ)).ncard := by
-    simp only [lemma_4]
+      {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, f a r = k}).ncard := rfl  -- TODO
 
-  _ = (Prod.map id (Int.cast : ℤ → ℝ) ''
-      ⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) '' Set.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a)).ncard := by
+  _ = ((Function.uncurry fun a r ↦ (a, f a r)) '' ⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
+      {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, f a r = k}).ncard := by
+    refine (Set.ncard_image_of_injOn ?_).symm
+    rw [Set.InjOn]
+    simp only [Prod.forall]
+    simp only [Function.uncurry_apply_pair]
+    simp only [Prod.mk.injEq]
+    -- simp [Set.InjOn, -Set.mem_Ico]
+    intro a₁ r₁ har₁ a₂ r₂ har₂ ⟨h_fst, h_snd⟩
+    simp [-Set.mem_Ico] at har₁ har₂
+    have ⟨⟨hr₁, _⟩, ha₁⟩ : (r₁ ∈ Set.Ico 0 1 ∧ ∃ k : ℤ, f a₁ r₁ = ↑k) ∧ a₁ ∈ Set.Ico 1 ↑n := by
+      simpa using har₁
+    have ⟨⟨hr₂, _⟩, ha₂⟩ : (r₂ ∈ Set.Ico 0 1 ∧ ∃ k : ℤ, f a₂ r₂ = ↑k) ∧ a₂ ∈ Set.Ico 1 ↑n := by
+      simpa using har₂
+    constructor
+    · exact h_fst
+    · exact h_injOn' ha₁.1 hr₁ hr₂ (h_fst ▸ h_snd)
+
+  _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
+      (f a '' {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, f a r = k})).ncard := by
+    simp [Set.image_iUnion, Set.image_image]
+
+  _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
+      (Int.cast '' (Set.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a)) : Set ℝ)).ncard := by
+    congr
+    refine Set.iUnion₂_congr fun a ha ↦ ?_
+    refine congrArg _ ?_
+    unfold f
+    rw [lemma_4]
+
+  _ = (Prod.map id (Int.cast : ℤ → ℝ) '' ⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
+      Set.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a)).ncard := by
     simp [Set.image_iUnion, Set.image_image]
 
   _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) '' Set.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a)).ncard := by
