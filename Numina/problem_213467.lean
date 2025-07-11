@@ -122,9 +122,11 @@ theorem algebra_213467 (n : ℕ) (hn : 0 < n) :
   let f (a : ℤ) (r : ℝ) : ℝ := a^3 + 3*a^2*r + 3*a*r^2
   calc _
   -- Split `x` into its integer and fractional parts.
+  -- The `Ico` constraint can be placed on the integer part alone.
   _ = {x : ℝ | ⌊x⌋ ∈ Set.Ico 1 (n : ℤ) ∧
       (⌊x⌋ + Int.fract x)^3 - ⌊(⌊x⌋ + Int.fract x)^3⌋ = Int.fract x^3}.ncard := by
     simp [Int.le_floor, Int.floor_lt]
+
   -- The number of such `x` is equal to the number of pairs `(a, r)`.
   _ = {(a, r) : ℤ × ℝ | r ∈ Set.Ico 0 1 ∧ a ∈ Set.Ico 1 (n : ℤ) ∧
       (a + r)^3 - ⌊(a + r)^3⌋ = r^3}.ncard := by
@@ -134,57 +136,54 @@ theorem algebra_213467 (n : ℕ) (hn : 0 < n) :
     simp only [Set.mem_setOf_eq, and_congr_right_iff]
     intro hr
     simp [Int.fract_eq_self.mpr hr, Int.floor_eq_zero_iff.mpr hr]
+
   -- The condition on `r` is equivalent to the existence of an integer `k`.
-  _ = {(a, r) : ℤ × ℝ | r ∈ Set.Ico 0 1 ∧ a ∈ Set.Ico 1 (n : ℤ) ∧
-      ∃ k : ℤ, a^3 + 3*a^2*r + 3*a*r^2 = k}.ncard := by
+  _ = {(a, r) : ℤ × ℝ | r ∈ Set.Ico 0 1 ∧ a ∈ Set.Ico 1 (n : ℤ) ∧ ∃ k : ℤ, f a r = k}.ncard := by
     congr
     ext ⟨a, r⟩
     simp only [Set.mem_setOf_eq, and_congr_right_iff]
     intro hr ha
     exact lemma_2 a r hr
 
-  _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
-      {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, a^3 + 3*a^2*r + 3*a*r^2 = k}).ncard := by
-    congr
-    ext ⟨a, r⟩
-    simp [-Set.mem_Ico] -- TODO
-    rw [and_assoc]
-    refine and_congr_right' ?_
-    rw [and_comm]
-
-  _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
-      {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, f a r = k}).ncard := rfl  -- TODO
-
-  _ = ((Function.uncurry fun a r ↦ (a, f a r)) '' ⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
-      {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, f a r = k}).ncard := by
+  -- Replace the number of pairs `(a, r)` with the number of pairs `(a, f a r)`.
+  _ = ((Function.uncurry fun a r ↦ (a, f a r)) ''
+      {(a, r) : ℤ × ℝ | r ∈ Set.Ico 0 1 ∧ a ∈ Set.Ico 1 (n : ℤ) ∧ ∃ k : ℤ, f a r = k}).ncard := by
     refine (Set.ncard_image_of_injOn ?_).symm
     simp only [Set.InjOn, Prod.forall, Function.uncurry_apply_pair, Prod.mk.injEq]
-    intro a₁ r₁ har₁ a₂ r₂ har₂ ⟨h_fst, h_snd⟩
-    simp [-Set.mem_Ico] at har₁ har₂
-    have ⟨⟨hr₁, _⟩, ha₁⟩ : (r₁ ∈ Set.Ico 0 1 ∧ ∃ k : ℤ, f a₁ r₁ = ↑k) ∧ a₁ ∈ Set.Ico 1 ↑n := by
-      simpa using har₁
-    have ⟨⟨hr₂, _⟩, ha₂⟩ : (r₂ ∈ Set.Ico 0 1 ∧ ∃ k : ℤ, f a₂ r₂ = ↑k) ∧ a₂ ∈ Set.Ico 1 ↑n := by
-      simpa using har₂
-    refine ⟨h_fst, ?_⟩
+    intro a₁ r₁ ⟨hr₁, ha₁, _⟩ a₂ r₂ ⟨hr₂, ha₂, _⟩ h
+    refine ⟨h.1, ?_⟩
     -- Use injectivity of `r ↦ f a r` to prove `r₁ = r₂`.
-    suffices Set.InjOn (fun r : ℝ ↦ f a₁ r) (Set.Ico 0 1) from this hr₁ hr₂ (h_fst ▸ h_snd)
+    suffices Set.InjOn (fun r : ℝ ↦ f a₁ r) (Set.Ico 0 1) from this hr₁ hr₂ (h.1 ▸ h.2)
     exact ((lemma_3 ha₁.1).mono Set.Ico_subset_Ici_self).injOn
 
+  -- Write the set of pairs as a union over `a`.
+  _ = ((Function.uncurry fun a r ↦ (a, f a r)) ''
+      ⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) '' {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, f a r = k}).ncard := by
+    congr
+    refine congrArg _ ?_
+    ext ⟨a, r⟩
+    -- Re-order the conditions.
+    suffices (r ∈ Set.Ico 0 1 ∧ a ∈ Set.Ico 1 ↑n ∧ ∃ k : ℤ, f a r = k) ↔
+        (r ∈ Set.Ico 0 1 ∧ ∃ k : ℤ, f a r = k) ∧ a ∈ Set.Ico 1 ↑n by simpa
+    rw [and_assoc, and_congr_right_iff]
+    simp [and_comm]
+  -- Move the image of `f a` inside the union.
   _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
       (f a '' {r ∈ Set.Ico 0 (1 : ℝ) | ∃ k : ℤ, f a r = k})).ncard := by
     simp [Set.image_iUnion, Set.image_image]
-
+  -- Rewrite the condition as intersection with the set of integers.
   _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
       (Set.range Int.cast ∩ f a '' (Set.Ico 0 (1 : ℝ)))).ncard := by
     congr
     refine Set.iUnion₂_congr fun a ha ↦ ?_
     refine congrArg _ ?_
     ext y
+    -- Re-order the conditions.
     simp only [Set.mem_image, Set.mem_setOf_eq, Set.mem_inter_iff, Set.mem_range]
     constructor
     · exact fun ⟨r, ⟨hr, k, hk⟩, hy⟩ ↦ ⟨⟨k, hk ▸ hy⟩, ⟨r, hr, hy⟩⟩
     · exact fun ⟨⟨k, hk⟩, ⟨r, hr, hy⟩⟩ ↦ ⟨r, ⟨hr, k, hk ▸ hy⟩, hy⟩
-
+  -- Rewrite the set of integers as the image of a finite set.
   _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
       (Int.cast '' (Set.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a)) : Set ℝ)).ncard := by
     congr
@@ -192,48 +191,45 @@ theorem algebra_213467 (n : ℕ) (hn : 0 < n) :
     refine congrArg _ ?_
     exact lemma_4 ha.1
 
+  -- Move the image (of an injective function) outside of the union and eliminate it.
   _ = (Prod.map id (Int.cast : ℤ → ℝ) '' ⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) ''
       Set.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a)).ncard := by
     simp [Set.image_iUnion, Set.image_image]
-
   _ = (⋃ a ∈ Set.Ico 1 (n : ℤ), (a, ·) '' Set.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a)).ncard := by
     refine Set.ncard_image_of_injective _ ?_
     rw [Prod.map_injective]
     exact ⟨Function.injective_id, Int.cast_injective⟩
 
+  -- Switch to `Finset`.
   _ = ((Finset.Ico 1 (n : ℤ)).biUnion fun a ↦
       (Finset.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a)).image fun k ↦ (a, k)).toSet.ncard := by
     simp
-
   _ = ((Finset.Ico 1 (n : ℤ)).biUnion fun a ↦
       (Finset.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a)).image (a, ·)).card :=
     Set.ncard_coe_Finset _
-
+  -- Rewrite cardinality of union as a sum of cardinalities.
   _ = ∑ a ∈ Finset.Ico 1 (n : ℤ), ((Finset.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a)).image (a, ·)).card := by
     rw [Finset.card_biUnion]
     intro a ha b hb hab
     suffices ∀ {s t : Finset ℤ}, Disjoint (s.image (a, ·)) (t.image (b, ·)) from this
     simp [Finset.disjoint_iff_ne, hab]
-
   _ = ∑ a ∈ Finset.Ico 1 (n : ℤ), (Finset.Ico (a ^ 3) (a^3 + 3*a^2 + 3*a)).card := by
     refine Finset.sum_congr rfl fun a _ ↦ ?_
     refine Finset.card_image_of_injective _ ?_
     exact Prod.mk.inj_left a
 
+  -- Switch from `ℤ` to `ℕ` to evaluate the sum.
   _ = ∑ a ∈ Finset.Ico 1 (n : ℤ), Int.toNat (3 * a ^ 2 + 3 * a) := by simp [add_assoc]
-
   _ = ∑ a ∈ (Finset.Ico 1 n).map Nat.castEmbedding, Int.toNat (3 * a ^ 2 + 3 * a) := by
     congr
     refine Finset.coe_injective ?_
     simpa using (Nat.image_cast_int_Ico 1 n).symm
-
   _ = ∑ a ∈ Finset.Ico 1 n, (3 * a ^ 2 + 3 * a) := by
     rw [Finset.sum_map]
     refine Finset.sum_congr rfl fun x hx ↦ ?_
     calc _
     _ = Int.toNat (Nat.cast (3 * x ^ 2 + 3 * x)) := by simp
     _ = _ := Int.toNat_natCast _
-
   -- Include `a = 0` in the sum (without affecting the value) to obtain a sum over `range`.
   _ = ∑ a in Finset.range n, (3 * a^2 + 3 * a) := by
     refine Finset.sum_subset ?_ ?_
@@ -244,7 +240,6 @@ theorem algebra_213467 (n : ℕ) (hn : 0 < n) :
       rw [Finset.mem_range] at ha
       rw [Finset.mem_Ico, not_and'] at ha'
       simpa using ha' ha
-
   -- Introduce factors of 6 and 2 to obtain integer expressions for each sum.
   _ = (∑ a in Finset.range n, (a^2 + a)) * 3 := by
     rw [Finset.sum_mul]
