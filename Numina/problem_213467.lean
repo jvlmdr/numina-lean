@@ -2,6 +2,8 @@
 
 import Mathlib
 
+namespace problem_213467
+
 /- $n$ is a positive integer. Try to determine how many real numbers $x$ satisfy
 $1 \le x < n$ and $x^{3} - [x^{3}] = (x - [x])^{3}$. -/
 
@@ -261,3 +263,5 @@ theorem algebra_213467 (n : ℕ) (hn : 0 < n) :
     have h₃ : n ≤ n^3 := Nat.le_self_pow three_ne_zero n
     simpa [h₁, h₂, h₃] using this
   _ = n^3 - n := by simp
+
+end problem_213467
