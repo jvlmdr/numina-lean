@@ -2,6 +2,8 @@
 
 import Mathlib
 
+namespace problem_152180
+
 open Complex Finset
 open scoped Real
 
@@ -9,7 +11,7 @@ open scoped Real
   (-1)^{n} C_{n}^{n} \sin (\alpha+n \theta)$. -/
 
 -- Copied from newer version of Mathlib.
-lemma Complex.exp_neg_pi_div_two_mul_I : exp (-π / 2 * I) = -I := by
+lemma exp_neg_pi_div_two_mul_I : exp (-π / 2 * I) = -I := by
   rw [← cos_add_sin_I, neg_div, cos_neg, cos_pi_div_two, sin_neg, sin_pi_div_two, zero_add, neg_mul,
     one_mul]
 
@@ -80,3 +82,5 @@ theorem algebra_152180 {n : ℕ} (α θ : ℝ) :
       simp
     _ = _  := by
       simp
+
+end problem_152180
