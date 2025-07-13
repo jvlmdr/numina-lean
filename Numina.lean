@@ -88,6 +88,7 @@ import Numina.problem_234330
 import Numina.problem_242129
 import Numina.problem_244639
 import Numina.problem_245605
+import Numina.problem_247029
 import Numina.problem_247723
 import Numina.problem_250464
 import Numina.problem_251758
