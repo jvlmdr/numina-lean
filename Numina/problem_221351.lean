@@ -35,6 +35,10 @@ lemma minFac_mem_primeFactors {n : ℕ} (hn : 1 < n) : n.minFac ∈ n.primeFacto
   · exact Nat.minFac_dvd n
   · linarith
 
+lemma ne_two_of_odd {n : ℕ} (hn : Odd n) : n ≠ 2 := by
+  contrapose! hn
+  simp [hn]
+
 lemma lemma_1 {n : ℕ} (hn : n ≠ 0) : Nat.Coprime (9 ^ n - 1) (9 ^ (2 * n) + 9 ^ n + 1) := by
   sorry
 
@@ -129,74 +133,58 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
     -- It remains to show that `1 < m` leads to a contradiction.
     have hab_coprime : Nat.Coprime a b := lemma_1 (Nat.not_eq_zero_of_lt hm)
 
-    -- It suffices to show that `x` has four distinct prime factors.
     exfalso
-    -- suffices ∃ s : Finset ℕ, s.card = 4 ∧ s ⊆ (9 ^ n - 1).primeFactors by
-    --   refine h_card.not_gt ?_
-    --   rcases this with ⟨s, hs_card, hs_subset⟩
-    --   simpa [hs_card] using Finset.card_le_card hs_subset
+
+    have ha_zero : a ≠ 0 := by
+      refine ne_of_gt ?_
+      suffices 1 < 9 ^ m by simpa [a]
+      exact Nat.one_lt_pow (by linarith) (by norm_num)
+
+    have hb_gt : 2 < b := by
+      calc _
+      _ < 1 + 1 + 1 := by simp
+      _ ≤ 9 ^ (2 * m) + 9 ^ m + 1 := by gcongr <;> simp [Nat.one_le_pow]
 
     have h13 : 13 ∣ a ∨ 13 ∣ b := (Nat.Prime.dvd_mul (by norm_num)).mp (hab ▸ h13)
     cases h13 with
     | inl ha13 =>
 
-      suffices ∃ s : Multiset ℕ, 3 < s.card ∧ s.Nodup ∧ s.toFinset ⊆ (9 ^ n - 1).primeFactors by
+      -- We know that `x = a * b` (coprime product) is divisible by 2 and 13.
+      -- Here we consider the case where `13 ∣ a`.
+      -- We also have `2 ∣ a` since `b = 9 ^ (2 * m) + 9 ^ m + 1` is odd.
+      -- Since `b` is at least 3, it has another prime factor `b.minFac`.
+
+      -- Note that we can further factorize `a = 9 ^ m - 1 = (3^m + 1) (3^m - 1)`.
+      -- It will suffice to find two odd prime factors of `a`.
+      suffices ∃ p, p.Prime ∧ p ∣ a ∧ p ≠ 2 ∧ ∃ q, q.Prime ∧ q ∣ a ∧ q ≠ 2 ∧ p ≠ q by
+        rcases this with ⟨p, hp_prime, hpa, hp2, q, hq_prime, hqa, hq2, hpq⟩
         refine h_card.not_gt ?_
-        rcases this with ⟨s, hs_card, hs_nodup, hs_subset⟩
         calc _
-        _ < s.card := hs_card
-        _ = s.toFinset.card := (Multiset.toFinset_card_of_nodup hs_nodup).symm
-        _ ≤ _ := Finset.card_le_card hs_subset
-
-      -- -- We just need one more prime factor of `a`.
-      -- suffices ∃ p, p.Prime ∧ p ∣ a ∧ p ≠ 2 ∧ p ≠ 13 by
-      --   rcases this with ⟨p, hp_prime, hp_dvd, hp2, hp13⟩
-      --   use {b.minFac, p, 13, 2}
-      --   refine ⟨?_, ?_⟩
-      --   -- Show that all four numbers are distinct.
-      --   · suffices Multiset.Nodup {b.minFac, p, 13, 2} by
-      --       simpa using Multiset.toFinset_card_of_nodup this
-      --     suffices b.minFac ∉ ({p, 13} : Finset ℕ) ∧ b.minFac ≠ 2 ∧ p ≠ 13 ∧ p ≠ 2 by
-      --       simpa [and_assoc]
-      --     refine ⟨?_, ?_, hp13, hp2⟩
-      --     · -- TODO: clean up
-      --       have hb_fac : b.minFac ∈ b.primeFactors := minFac_mem_primeFactors (by simp [b])
-      --       have h_disj := hab_coprime.disjoint_primeFactors
-      --       have ha_fac : {p, 13} ⊆ a.primeFactors := by
-      --         have ha_zero : a ≠ 0 := by simpa [hab] using hx_zero
-      --         suffices (Nat.Prime p ∧ p ∣ a) ∧ Nat.Prime 13 ∧ 13 ∣ a by
-      --           simpa [Finset.subset_iff, Nat.mem_primeFactors_of_ne_zero ha_zero]
-      --         refine ⟨?_, ?_⟩
-      --         · exact ⟨hp_prime, hp_dvd⟩
-      --         · exact ⟨by norm_num, ha13⟩
-      --       rw [Finset.disjoint_right] at h_disj
-      --       exact mt (fun h ↦ ha_fac h) (h_disj hb_fac)
-      --     · suffices ¬2 ∣ b by simpa
-      --       suffices Odd b from this.not_two_dvd_nat
-      --       refine Even.add_one ?_
-      --       refine Odd.add_odd ?_ ?_
-      --       · exact .pow (by simp [Nat.odd_iff])
-      --       · exact .pow (by simp [Nat.odd_iff])
-
-      --   -- Show that all four numbers are prime divisors.
-      --   · simp only [Finset.subset_iff, Finset.mem_insert, Finset.mem_singleton,
-      --       forall_eq_or_imp, forall_eq, Nat.mem_primeFactors_of_ne_zero hx_zero]
-      --     refine ⟨?_, ?_, ?_, ?_⟩
-      --     · refine ⟨?_, ?_⟩
-      --       · exact Nat.minFac_prime (by simp [b])
-      --       · refine .trans b.minFac_dvd ?_
-      --         exact hab ▸ Nat.dvd_mul_left b a
-      --     · refine ⟨hp_prime, ?_⟩
-      --       refine .trans hp_dvd ?_
-      --       exact hab ▸ Nat.dvd_mul_right a b
-      --     · refine ⟨by norm_num, ?_⟩
-      --       refine .trans ha13 ?_
-      --       exact hab ▸ Nat.dvd_mul_right a b
-      --     · exact ⟨Nat.prime_two, hx2⟩
-
-      -- have hq13 : ¬13 ∣ b := by
-      --   contrapose! hab_coprime with hq
-      --   exact Nat.not_coprime_of_dvd_of_dvd (by norm_num) ha13 hq
+        _ < Multiset.card {p, q, 2} + Multiset.card {b.minFac} := by simp
+        _ = (Multiset.toFinset {p, q, 2}).card + (Multiset.toFinset {b.minFac}).card := by
+          congr 1
+          suffices Multiset.Nodup {p, q, 2} from (Multiset.toFinset_card_of_nodup this).symm
+          suffices p ≠ q ∧ p ≠ 2 ∧ q ≠ 2 by simpa [and_assoc]
+          exact ⟨hpq, hp2, hq2⟩
+        _ = Finset.card {p, q, 2} + Finset.card {b.minFac} := by simp
+        _ ≤ a.primeFactors.card + b.primeFactors.card := by
+          refine add_le_add ?_ ?_
+          · refine Finset.card_le_card ?_
+            suffices (p.Prime ∧ p ∣ a) ∧ (q.Prime ∧ q ∣ a) ∧ Nat.Prime 2 ∧ 2 ∣ a by
+              simpa [Finset.subset_iff, ha_zero]
+            refine ⟨⟨hp_prime, hpa⟩, ⟨hq_prime, hqa⟩, Nat.prime_two, ?_⟩
+            suffices Nat.Coprime 2 b by
+              rw [hab] at hx2
+              exact this.dvd_of_dvd_mul_right hx2
+            refine Odd.coprime_two_left ?_
+            refine Even.add_one (Odd.add_odd ?_ ?_) <;> simp [Odd.pow, Nat.odd_iff]
+          · refine Finset.card_le_card ?_
+            suffices b.minFac.Prime ∧ b.minFac ∣ b by simpa [Finset.subset_iff]
+            exact ⟨Nat.minFac_prime <| by linarith, Nat.minFac_dvd b⟩
+        _ = (a * b).primeFactors.card := by
+          rw [hab_coprime.primeFactors_mul]
+          rw [Finset.card_union_of_disjoint hab_coprime.disjoint_primeFactors]
+        _ = _ := by rw [hab]
 
       -- Apply the same logic to obtain `3 ∣ m`, and therefore
       -- `p = 9 ^ k - 1` can be factored into two coprime numbers.
@@ -211,7 +199,6 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
         rw [hmk]
         ring
 
-
       -- Since `1 < m = 3 * k`, we have `0 < k`.
       have hk : 1 ≤ k := by linarith
       have hk_zero : k ≠ 0 := Nat.not_eq_zero_of_lt hk  -- TODO?
@@ -220,16 +207,11 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
       cases hk.eq_or_lt with
       | inl hk =>
         -- If `k = 1`, then `d = 9^2 + 9 + 1 = 91 = 7 * 13`, hence `7 ∣ d ∣ a`.
-        use {7, 13, b.minFac, 2}
-        -- TODO: avoid repeition! do we take two odd factors from p in both cases?
-        refine ⟨by simp, ?_, ?_⟩
-        · suffices 7 ≠ b.minFac ∧ 13 ≠ b.minFac ∧ ¬2 ∣ b by simpa
-          sorry
-        · simp [Finset.subset_iff, Nat.mem_primeFactors_of_ne_zero hx_zero]  -- TODO
-          sorry
+        suffices 7 ∣ a by refine ⟨7, ?_, this, ?_, 13, ?_, ha13, ?_, ?_⟩ <;> norm_num
+        rcases hk with rfl
+        exact .trans (by norm_num) (Dvd.intro_left c hcd.symm)
 
       | inr hk =>
-
         obtain ⟨p, hp_prime, hpc, hp2⟩ : ∃ p, p.Prime ∧ p ∣ c ∧ Odd p := by
           -- As before, we can factorize `c = 9 ^ k - 1 = (3^k + 1) (3^k - 1)`.
           -- Since these are consecutive even numbers, one of them is not divisible by 4,
@@ -259,64 +241,14 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
             suffices Odd d from this.not_two_dvd_nat
             refine Even.add_one (Odd.add_odd ?_ ?_) <;> simp [Odd.pow, Nat.odd_iff]
 
-        use {p, q, b.minFac, 2}
-        refine ⟨by simp, ?_, ?_⟩
-        · suffices p ≠ q ∧ p ≠ b.minFac ∧ p ≠ 2 ∧ q ≠ b.minFac ∧ q ≠ 2 ∧ ¬2 ∣ b by
-            simpa [and_assoc]
-          split_ands
-          · -- Follows from `p ∣ c`, `q ∣ d`, and `c` and `d` are coprime.
-            contrapose! hcd_coprime with hpq
-            rw [Nat.Prime.not_coprime_iff_dvd]
-            exact ⟨p, hp_prime, hpc, hpq ▸ hqd⟩
-          · contrapose! hab_coprime with hp
-            rw [Nat.Prime.not_coprime_iff_dvd]
-            refine ⟨p, hp_prime, ?_, ?_⟩
-            · refine hpc.trans ?_
-              exact hcd ▸ Nat.dvd_mul_right c d
-            · exact hp ▸ Nat.minFac_dvd b
-          · refine mt hp_prime.even_iff.mpr ?_
-            simpa
-          · contrapose! hab_coprime with hq
-            rw [Nat.Prime.not_coprime_iff_dvd]
-            refine ⟨q, hq_prime, ?_, ?_⟩
-            · refine hqd.trans ?_
-              exact hcd ▸ Nat.dvd_mul_left d c
-            · exact hq ▸ Nat.minFac_dvd b
-          · refine mt hq_prime.even_iff.mpr ?_
-            simpa
-          · -- TODO: avoid repeitition for b and d?
-            suffices Odd b from this.not_two_dvd_nat
-            refine Even.add_one (Odd.add_odd ?_ ?_) <;> simp [Odd.pow, Nat.odd_iff]
-
-        · simp [Finset.subset_iff, Nat.mem_primeFactors_of_ne_zero hx_zero]
-          -- TODO: add `c * d ∣ x` as assumption? group by factor?
-          refine ⟨?_, ?_, ?_, ?_⟩
-          · refine ⟨hp_prime, ?_⟩
-            calc _
-            _ ∣ c := hpc
-            _ ∣ c * d := Nat.dvd_mul_right c d
-            _ = a := by rw [hcd]
-            _ ∣ a * b := Nat.dvd_mul_right a b
-            _ = _ := by rw [hab]
-          · refine ⟨hq_prime, ?_⟩
-            calc _
-            _ ∣ d := hqd
-            _ ∣ c * d := Nat.dvd_mul_left d c
-            _ = a := by rw [hcd]
-            _ ∣ a * b := Nat.dvd_mul_right a b
-            _ = _ := by rw [hab]
-          · refine ⟨Nat.minFac_prime <| by simp [b], ?_⟩
-            calc _
-            _ ∣ b := Nat.minFac_dvd b
-            _ ∣ a * b := Nat.dvd_mul_left b a
-            _ = _ := by rw [hab]
-          · exact ⟨Nat.prime_two, hx2⟩
+        refine ⟨p, hp_prime, ?_, ne_two_of_odd hp2, q, hq_prime, ?_, ne_two_of_odd hq2, ?_⟩
+        · exact hpc.trans (Dvd.intro d hcd.symm)
+        · exact hqd.trans (Dvd.intro_left c hcd.symm)
+        · contrapose! hcd_coprime with hpq
+          rw [Nat.Prime.not_coprime_iff_dvd]
+          exact ⟨p, hp_prime, hpc, hpq ▸ hqd⟩
 
     | inr hb =>
-      -- have ha : ¬13 ∣ a := by
-      --   contrapose! hab_coprime with ha
-      --   exact Nat.not_coprime_of_dvd_of_dvd (by norm_num) ha hb
-
       -- We know that `x = a * b` is divisible by 2 and 13.
       -- Since `a` is the product of two consecutive even numbers > 2, it is not a power of 2.
       -- Therefore, `a` has another odd prime factor `p`.
@@ -360,6 +292,16 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
           · simpa using this.pow m
         _ ≡ _ [MOD 8] := rfl
 
+      suffices hb : b.primeFactors = {13} by
+        use b.primeFactorsList.length
+        refine Nat.eq_prime_pow_of_unique_prime_dvd (by simp) ?_
+        intro x hx_prime hx_dvd
+        suffices x ∈ b.primeFactors by simpa [hb]
+        rw [Nat.mem_primeFactors]
+        exact ⟨hx_prime, hx_dvd, by simp⟩
+
+      -- TODO: cleanup
+
       have ha_zero : a ≠ 0 := by
         unfold a
         refine ne_of_gt ?_
@@ -368,74 +310,46 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
         · linarith
         · norm_num
 
-      have hb : b.primeFactors = {13} := by
-        rw [hab, hab_coprime.primeFactors_mul,
-          Finset.card_union_of_disjoint hab_coprime.disjoint_primeFactors] at h_card
+      rw [hab, hab_coprime.primeFactors_mul,
+        Finset.card_union_of_disjoint hab_coprime.disjoint_primeFactors] at h_card
 
-        have ha_card : 2 ≤ a.primeFactors.card := by
-          suffices ∃ s : Finset ℕ, 2 ≤ s.card ∧ s ⊆ a.primeFactors by
-            rcases this with ⟨s, hs_card, hs_subset⟩
-            exact le_trans hs_card (Finset.card_le_card hs_subset)
+      have ha_card : 2 ≤ a.primeFactors.card := by
+        suffices ∃ s : Finset ℕ, 2 ≤ s.card ∧ s ⊆ a.primeFactors by
+          rcases this with ⟨s, hs_card, hs_subset⟩
+          exact le_trans hs_card (Finset.card_le_card hs_subset)
 
-          use {p, 2}
+        use {p, 2}
+        refine ⟨?_, ?_⟩
+        · -- TODO: just use `.card = 2`?
+          suffices Multiset.Nodup {p, 2} by
+            simpa using (Multiset.toFinset_card_of_nodup this).ge
+          suffices p ≠ 2 by simpa
+          contrapose! hp_odd with hp
+          simp [hp]
+
+        · simp [Finset.subset_iff, Nat.mem_primeFactors_of_ne_zero ha_zero]  -- TODO
           refine ⟨?_, ?_⟩
-          · -- TODO: just use `.card = 2`?
-            suffices Multiset.Nodup {p, 2} by
-              simpa using (Multiset.toFinset_card_of_nodup this).ge
-            suffices p ≠ 2 by simpa
-            contrapose! hp_odd with hp
-            simp [hp]
+          · exact ⟨hp_prime, hpa⟩
+          · refine ⟨Nat.prime_two, ?_⟩
+            -- Since `2 ∣ x = a * b` and `b` is odd, we must have `2 ∣ a`.
+            have : 2 ∣ a ∨ 2 ∣ b := by
+              refine Nat.prime_two.dvd_mul.mp ?_
+              exact hab ▸ hx2
+            refine this.resolve_right ?_
+            refine Odd.not_two_dvd_nat ?_
+            -- TODO: check for repetition?
+            refine Even.add_one (Odd.add_odd ?_ ?_) <;> simp [Odd.pow, Nat.odd_iff]
 
-          · simp [Finset.subset_iff, Nat.mem_primeFactors_of_ne_zero ha_zero]  -- TODO
-            refine ⟨?_, ?_⟩
-            · exact ⟨hp_prime, hpa⟩
-            · refine ⟨Nat.prime_two, ?_⟩
-              -- Since `2 ∣ x = a * b` and `b` is odd, we must have `2 ∣ a`.
-              have : 2 ∣ a ∨ 2 ∣ b := by
-                refine Nat.prime_two.dvd_mul.mp ?_
-                exact hab ▸ hx2
-              refine this.resolve_right ?_
-              refine Odd.not_two_dvd_nat ?_
-              -- TODO: check for repetition?
-              refine Even.add_one (Odd.add_odd ?_ ?_) <;> simp [Odd.pow, Nat.odd_iff]
+      -- TODO?
+      have : b.primeFactors.card ≤ 1 := by
+        suffices b.primeFactors.card + 2 ≤ 3 by simpa
+        rw [add_comm]
+        calc _
+        _ ≤ a.primeFactors.card + b.primeFactors.card := by gcongr  -- TODO
+        _ = 3 := h_card  -- TODO: move here?
 
-        -- TODO?
-        have : b.primeFactors.card ≤ 1 := by
-          suffices b.primeFactors.card + 2 ≤ 3 by simpa
-          rw [add_comm]
-          calc _
-          _ ≤ a.primeFactors.card + b.primeFactors.card := by gcongr  -- TODO
-          _ = 3 := h_card  -- TODO: move here?
-
-        refine (Finset.eq_singleton_or_nontrivial ?_).resolve_right ?_
-        · rw [Nat.mem_primeFactors]
-          exact ⟨by norm_num, hb, by simp⟩
-        · rw [← Finset.one_lt_card_iff_nontrivial]
-          simpa
-
-      -- have hb_gt : 2 < b := by
-      --   unfold b
-      --   calc _
-      --   _ < 1 + 1 + 1 := by simp
-      --   _ ≤ _ := by gcongr <;> simp [Nat.one_le_pow]
-      -- have hb : ∃ k, 0 < k ∧ b = 13 ^ k := by
-      --   use b.primeFactorsList.length
-      --   refine ⟨?_, ?_⟩
-      --   · rw [List.length_pos_iff_ne_nil]
-      --     suffices b ≠ 1 by simpa
-      --     linarith
-      --   · have hb_zero : b ≠ 0 := by simp [b]
-      --     refine Nat.eq_prime_pow_of_unique_prime_dvd hb_zero ?_
-      --     intro x hx_prime hx_dvd
-      --     suffices x ∈ b.primeFactors by simpa [hb]
-      --     rw [Nat.mem_primeFactors]
-      --     exact ⟨hx_prime, hx_dvd, hb_zero⟩
-      -- rcases hb with ⟨k, hk_pos, hk⟩
-
-      use b.primeFactorsList.length
-      have hb_zero : b ≠ 0 := by simp [b]
-      refine Nat.eq_prime_pow_of_unique_prime_dvd hb_zero ?_
-      intro x hx_prime hx_dvd
-      suffices x ∈ b.primeFactors by simpa [hb]
-      rw [Nat.mem_primeFactors]
-      exact ⟨hx_prime, hx_dvd, hb_zero⟩
+      refine (Finset.eq_singleton_or_nontrivial ?_).resolve_right ?_
+      · rw [Nat.mem_primeFactors]
+        exact ⟨by norm_num, hb, by simp⟩
+      · rw [← Finset.one_lt_card_iff_nontrivial]
+        simpa
