@@ -21,7 +21,7 @@ lemma nine_pow_mod_thirteen_eq_one_iff (n : ℕ) :
 lemma periodic_thirteen_pow_mod_eight : Function.Periodic (fun n ↦ 13 ^ n % 8) 2 := by
   simp [pow_add, Nat.mul_mod]
 
-lemma thirteen_pow_mod_eight_mem (n : ℕ) : 13 ^ n % 8 ∈ ({1, 5} : Set ℕ) := by
+lemma thirteen_pow_mod_eight_mem (n : ℕ) : 13 ^ n % 8 = 1 ∨ 13 ^ n % 8 = 5 := by
   rw [← periodic_thirteen_pow_mod_eight.map_mod_nat]
   -- Test the two possible values of `n % 3`.
   suffices ∀ k < 2, 13 ^ k % 8 ∈ ({1, 5} : Set ℕ) from this (n % 2) (Nat.mod_lt n two_pos)
@@ -313,14 +313,16 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
           · exact ⟨Nat.prime_two, hx2⟩
 
     | inr hb =>
-      have ha : ¬13 ∣ a := by
-        contrapose! hab_coprime with ha
-        exact Nat.not_coprime_of_dvd_of_dvd (by norm_num) ha hb
+      -- have ha : ¬13 ∣ a := by
+      --   contrapose! hab_coprime with ha
+      --   exact Nat.not_coprime_of_dvd_of_dvd (by norm_num) ha hb
 
-      -- TODO: avoid repetition
-      -- `a` must have an odd prime factor.
+      -- We know that `x = a * b` is divisible by 2 and 13.
+      -- Since `a` is the product of two consecutive even numbers > 2, it is not a power of 2.
+      -- Therefore, `a` has another odd prime factor `p`.
+      -- Note that `p ≠ 13` since `13 ∣ b` and `a` is coprimme to `b`.
       obtain ⟨p, hp_prime, hpa, hp_odd⟩ : ∃ p, p.Prime ∧ p ∣ a ∧ Odd p := by
-        -- As before, we can factorize `c = 9 ^ k - 1 = (3^k + 1) (3^k - 1)`.
+        -- As before, we can factorize `a = 9 ^ m - 1 = (3^m + 1) (3^m - 1)`.
         -- Since these are consecutive even numbers, one of them is not divisible by 4,
         -- hence their product is not a power of 2 (has at least one odd prime factor).
         have ha : a = (3 ^ m - 1) * (3 ^ m - 1 + 2) := by
@@ -334,6 +336,29 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
         refine exist_odd_prime_and_dvd_mul_add_two ?_
         refine Nat.lt_sub_of_add_lt ?_
         exact lt_self_pow₀ (by norm_num) hm
+
+      -- Therefore, `x = a * b` cannot have any other prime factors besides 2, 13, `p`.
+      -- However, `p` is a factor of `a`, and 2 cannot divide `b` since it is odd.
+      -- Therefore, `b` must be a power of 13.
+      -- Note that `b = 9 ^ (2 * m) + 9 ^ m + 1 ≡ 3 [MOD 8]`.
+      -- If we consider powers of 13 modulo 8, we see that they alterante 1, 5, 1, 5.
+      -- This provides a contradiction.
+
+      -- Note: We don't require the fact that `k > 0`.
+      suffices ∃ k, b = 13 ^ k by
+        rcases this with ⟨k, hk⟩
+        have h_pow_mem : 13 ^ k % 8 ∈ ({1, 5} : Set ℕ) := by
+          simpa using thirteen_pow_mod_eight_mem k
+        suffices b % 8 = 3 by simp [← hk, this] at h_pow_mem
+        suffices b ≡ 3 [MOD 8] by simpa [Nat.ModEq]
+        unfold b
+        calc _
+        _ ≡ 1 + 1 + 1 [MOD 8] := by
+          have : 9 ≡ 1 [MOD 8] := by simp [Nat.ModEq]
+          refine .add (.add ?_ ?_) rfl
+          · simpa using this.pow (2 * m)
+          · simpa using this.pow m
+        _ ≡ _ [MOD 8] := rfl
 
       have ha_zero : a ≠ 0 := by
         unfold a
@@ -388,42 +413,29 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
         · rw [← Finset.one_lt_card_iff_nontrivial]
           simpa
 
-      have : ∃ k > 0, b = 13 ^ k := by
-        -- umm.. why is this not trivial???
+      -- have hb_gt : 2 < b := by
+      --   unfold b
+      --   calc _
+      --   _ < 1 + 1 + 1 := by simp
+      --   _ ≤ _ := by gcongr <;> simp [Nat.one_le_pow]
+      -- have hb : ∃ k, 0 < k ∧ b = 13 ^ k := by
+      --   use b.primeFactorsList.length
+      --   refine ⟨?_, ?_⟩
+      --   · rw [List.length_pos_iff_ne_nil]
+      --     suffices b ≠ 1 by simpa
+      --     linarith
+      --   · have hb_zero : b ≠ 0 := by simp [b]
+      --     refine Nat.eq_prime_pow_of_unique_prime_dvd hb_zero ?_
+      --     intro x hx_prime hx_dvd
+      --     suffices x ∈ b.primeFactors by simpa [hb]
+      --     rw [Nat.mem_primeFactors]
+      --     exact ⟨hx_prime, hx_dvd, hb_zero⟩
+      -- rcases hb with ⟨k, hk_pos, hk⟩
 
-        -- `IsPrimePow.minFac_pow_factorization_eq`?
-        -- `isPrimePow_iff_card_primeFactors_eq_one`
-        -- `Nat.factorization_prod_pow_eq_self`
-        -- `Nat.prod_factorization_eq_prod_primeFactors`
-
-        -- have : IsPrimePow b := by
-        --   rw [isPrimePow_iff_card_primeFactors_eq_one]
-        --   simp [hb]
-        -- have : b = b.minFac ^ b.factorization b.minFac :=
-        --   (IsPrimePow.minFac_pow_factorization_eq this).symm
-
-        -- have : b.minFac = 13 := by
-        --   suffices {b.minFac} = ({13} : Finset ℕ) by simpa
-        --   calc _
-        --   _ = b.primeFactors := by
-        --     sorry
-        --   _ = _ := hb
-
-        sorry
-
-      rcases this with ⟨k, hk_pos, hk⟩
-
-      have h₁ : b % 8 ∈ ({1, 5} : Set ℕ) := hk ▸ thirteen_pow_mod_eight_mem k
-
-      have h₂ : b % 8 = 3 := by
-        suffices b ≡ 3 [MOD 8] by simpa [Nat.ModEq]
-        unfold b
-        calc _
-        _ ≡ 1 + 1 + 1 [MOD 8] := by
-          have : 9 ≡ 1 [MOD 8] := by simp [Nat.ModEq]
-          refine .add (.add ?_ ?_) rfl
-          · simpa using this.pow (2 * m)
-          · simpa using this.pow m
-        _ ≡ _ [MOD 8] := rfl
-
-      simp [h₂] at h₁
+      use b.primeFactorsList.length
+      have hb_zero : b ≠ 0 := by simp [b]
+      refine Nat.eq_prime_pow_of_unique_prime_dvd hb_zero ?_
+      intro x hx_prime hx_dvd
+      suffices x ∈ b.primeFactors by simpa [hb]
+      rw [Nat.mem_primeFactors]
+      exact ⟨hx_prime, hx_dvd, hb_zero⟩
