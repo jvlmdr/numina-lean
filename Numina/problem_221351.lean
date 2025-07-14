@@ -17,6 +17,17 @@ lemma nine_pow_mod_thirteen_eq_one_iff (n : ℕ) :
   intro k hk
   interval_cases k <;> simp
 
+-- The remainders of the powers of 9 when divided by 13 are 9, 3, 1 repeating cyclically.
+lemma periodic_thirteen_pow_mod_eight : Function.Periodic (fun n ↦ 13 ^ n % 8) 2 := by
+  simp [pow_add, Nat.mul_mod]
+
+lemma thirteen_pow_mod_eight_mem (n : ℕ) : 13 ^ n % 8 ∈ ({1, 5} : Set ℕ) := by
+  rw [← periodic_thirteen_pow_mod_eight.map_mod_nat]
+  -- Test the two possible values of `n % 3`.
+  suffices ∀ k < 2, 13 ^ k % 8 ∈ ({1, 5} : Set ℕ) from this (n % 2) (Nat.mod_lt n two_pos)
+  intro k hk
+  interval_cases k <;> simp
+
 lemma minFac_mem_primeFactors {n : ℕ} (hn : 1 < n) : n.minFac ∈ n.primeFactors := by
   rw [Nat.mem_primeFactors]
   split_ands
@@ -125,17 +136,17 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
     --   rcases this with ⟨s, hs_card, hs_subset⟩
     --   simpa [hs_card] using Finset.card_le_card hs_subset
 
-    suffices ∃ s : Multiset ℕ, 3 < s.card ∧ s.Nodup ∧ s.toFinset ⊆ (9 ^ n - 1).primeFactors by
-      refine h_card.not_gt ?_
-      rcases this with ⟨s, hs_card, hs_nodup, hs_subset⟩
-      calc _
-      _ < s.card := hs_card
-      _ = s.toFinset.card := (Multiset.toFinset_card_of_nodup hs_nodup).symm
-      _ ≤ _ := Finset.card_le_card hs_subset
-
     have h13 : 13 ∣ a ∨ 13 ∣ b := (Nat.Prime.dvd_mul (by norm_num)).mp (hab ▸ h13)
     cases h13 with
     | inl ha13 =>
+
+      suffices ∃ s : Multiset ℕ, 3 < s.card ∧ s.Nodup ∧ s.toFinset ⊆ (9 ^ n - 1).primeFactors by
+        refine h_card.not_gt ?_
+        rcases this with ⟨s, hs_card, hs_nodup, hs_subset⟩
+        calc _
+        _ < s.card := hs_card
+        _ = s.toFinset.card := (Multiset.toFinset_card_of_nodup hs_nodup).symm
+        _ ≤ _ := Finset.card_le_card hs_subset
 
       -- -- We just need one more prime factor of `a`.
       -- suffices ∃ p, p.Prime ∧ p ∣ a ∧ p ≠ 2 ∧ p ≠ 13 by
@@ -306,4 +317,113 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
         contrapose! hab_coprime with ha
         exact Nat.not_coprime_of_dvd_of_dvd (by norm_num) ha hb
 
-      sorry
+      -- TODO: avoid repetition
+      -- `a` must have an odd prime factor.
+      obtain ⟨p, hp_prime, hpa, hp_odd⟩ : ∃ p, p.Prime ∧ p ∣ a ∧ Odd p := by
+        -- As before, we can factorize `c = 9 ^ k - 1 = (3^k + 1) (3^k - 1)`.
+        -- Since these are consecutive even numbers, one of them is not divisible by 4,
+        -- hence their product is not a power of 2 (has at least one odd prime factor).
+        have ha : a = (3 ^ m - 1) * (3 ^ m - 1 + 2) := by
+          calc _
+          _ = (3 ^ 2) ^ m - 1 := by simp
+          _ = (3 ^ m) ^ 2 - 1 ^ 2 := by simp [Nat.pow_right_comm 3 m 2]
+          _ = (3 ^ m + 1) * (3 ^ m - 1) := Nat.sq_sub_sq (3 ^ m) 1
+          _ = (3 ^ m - 1) * (3 ^ m + 1) := by ring
+          _ = _ := by simp [Nat.sub_add_comm, Nat.one_le_pow]
+        simp only [ha]
+        refine exist_odd_prime_and_dvd_mul_add_two ?_
+        refine Nat.lt_sub_of_add_lt ?_
+        exact lt_self_pow₀ (by norm_num) hm
+
+      have ha_zero : a ≠ 0 := by
+        unfold a
+        refine ne_of_gt ?_
+        suffices 1 < 9 ^ m by simpa
+        refine Nat.one_lt_pow ?_ ?_
+        · linarith
+        · norm_num
+
+      have hb : b.primeFactors = {13} := by
+        rw [hab, hab_coprime.primeFactors_mul,
+          Finset.card_union_of_disjoint hab_coprime.disjoint_primeFactors] at h_card
+
+        have ha_card : 2 ≤ a.primeFactors.card := by
+          suffices ∃ s : Finset ℕ, 2 ≤ s.card ∧ s ⊆ a.primeFactors by
+            rcases this with ⟨s, hs_card, hs_subset⟩
+            exact le_trans hs_card (Finset.card_le_card hs_subset)
+
+          use {p, 2}
+          refine ⟨?_, ?_⟩
+          · -- TODO: just use `.card = 2`?
+            suffices Multiset.Nodup {p, 2} by
+              simpa using (Multiset.toFinset_card_of_nodup this).ge
+            suffices p ≠ 2 by simpa
+            contrapose! hp_odd with hp
+            simp [hp]
+
+          · simp [Finset.subset_iff, Nat.mem_primeFactors_of_ne_zero ha_zero]  -- TODO
+            refine ⟨?_, ?_⟩
+            · exact ⟨hp_prime, hpa⟩
+            · refine ⟨Nat.prime_two, ?_⟩
+              -- Since `2 ∣ x = a * b` and `b` is odd, we must have `2 ∣ a`.
+              have : 2 ∣ a ∨ 2 ∣ b := by
+                refine Nat.prime_two.dvd_mul.mp ?_
+                exact hab ▸ hx2
+              refine this.resolve_right ?_
+              refine Odd.not_two_dvd_nat ?_
+              -- TODO: check for repetition?
+              refine Even.add_one (Odd.add_odd ?_ ?_) <;> simp [Odd.pow, Nat.odd_iff]
+
+        -- TODO?
+        have : b.primeFactors.card ≤ 1 := by
+          suffices b.primeFactors.card + 2 ≤ 3 by simpa
+          rw [add_comm]
+          calc _
+          _ ≤ a.primeFactors.card + b.primeFactors.card := by gcongr  -- TODO
+          _ = 3 := h_card  -- TODO: move here?
+
+        refine (Finset.eq_singleton_or_nontrivial ?_).resolve_right ?_
+        · rw [Nat.mem_primeFactors]
+          exact ⟨by norm_num, hb, by simp⟩
+        · rw [← Finset.one_lt_card_iff_nontrivial]
+          simpa
+
+      have : ∃ k > 0, b = 13 ^ k := by
+        -- umm.. why is this not trivial???
+
+        -- `IsPrimePow.minFac_pow_factorization_eq`?
+        -- `isPrimePow_iff_card_primeFactors_eq_one`
+        -- `Nat.factorization_prod_pow_eq_self`
+        -- `Nat.prod_factorization_eq_prod_primeFactors`
+
+        -- have : IsPrimePow b := by
+        --   rw [isPrimePow_iff_card_primeFactors_eq_one]
+        --   simp [hb]
+        -- have : b = b.minFac ^ b.factorization b.minFac :=
+        --   (IsPrimePow.minFac_pow_factorization_eq this).symm
+
+        -- have : b.minFac = 13 := by
+        --   suffices {b.minFac} = ({13} : Finset ℕ) by simpa
+        --   calc _
+        --   _ = b.primeFactors := by
+        --     sorry
+        --   _ = _ := hb
+
+        sorry
+
+      rcases this with ⟨k, hk_pos, hk⟩
+
+      have h₁ : b % 8 ∈ ({1, 5} : Set ℕ) := hk ▸ thirteen_pow_mod_eight_mem k
+
+      have h₂ : b % 8 = 3 := by
+        suffices b ≡ 3 [MOD 8] by simpa [Nat.ModEq]
+        unfold b
+        calc _
+        _ ≡ 1 + 1 + 1 [MOD 8] := by
+          have : 9 ≡ 1 [MOD 8] := by simp [Nat.ModEq]
+          refine .add (.add ?_ ?_) rfl
+          · simpa using this.pow (2 * m)
+          · simpa using this.pow m
+        _ ≡ _ [MOD 8] := rfl
+
+      simp [h₂] at h₁
