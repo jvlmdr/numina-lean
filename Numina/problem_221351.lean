@@ -2,6 +2,8 @@
 
 import Mathlib
 
+namespace problem_221351
+
 /- Given a natural number $x = 9^{n} - 1$, where $n$ is a natural number. It is known that
 $x$ has exactly three distinct prime divisors, one of which is 13. Find $x$. -/
 
@@ -331,3 +333,5 @@ theorem number_theory_221351 (x : ℕ) (n : ℕ) (hx : x = 9 ^ n - 1)
         rw [hx_ab, hab_coprime.primeFactors_mul,
           Finset.card_union_of_disjoint hab_coprime.disjoint_primeFactors]
       _ = 3 := h_card
+
+end problem_221351
