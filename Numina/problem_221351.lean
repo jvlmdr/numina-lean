@@ -39,8 +39,38 @@ lemma ne_two_of_odd {n : ℕ} (hn : Odd n) : n ≠ 2 := by
   contrapose! hn
   simp [hn]
 
-lemma lemma_1 {n : ℕ} (hn : n ≠ 0) : Nat.Coprime (9 ^ n - 1) (9 ^ (2 * n) + 9 ^ n + 1) := by
-  sorry
+lemma lemma_1 {m : ℕ} (hm : m ≠ 0) : Nat.Coprime (9 ^ m - 1) (9 ^ (2 * m) + 9 ^ m + 1) := by
+  let p := 9 ^ m - 1
+  let q := 9 ^ (2 * m) + 9 ^ m + 1
+  refine Nat.coprime_of_dvd fun k hk_prime hp hq ↦ ?_
+  -- Observe that `q - (9 ^ (2 * m) - 1) - (9 ^ m - 1) = q - p * (9 ^ m + 2) = 3`.
+  -- Therefore, if `k` divides both `p` and `q`, it must be equal to 3.
+  -- However, `p = 9 ^ m - 1` is not divisible by 3.
+  suffices k ∣ 3 by
+    rw [Nat.prime_dvd_prime_iff_eq hk_prime Nat.prime_three] at this
+    rcases this with rfl
+    replace hp : 1 ≡ (3 ^ 2) ^ m [MOD 3] := by
+      simpa [Nat.modEq_iff_dvd', Nat.one_le_pow] using hp
+    suffices 1 ≠ (3 ^ 2) ^ m % 3 from this hp
+    simp [Nat.pow_mod, hm]
+  calc _
+  _ ∣ q - p * (9 ^ m + 2) := Nat.dvd_sub' hq (hp.mul_right _)
+  _ = q - ((9 ^ (2 * m) - 1) + (9 ^ m - 1)) := by
+    congr
+    unfold p
+    -- Easy to prove using `ring` in `ℤ`.
+    have : (9 ^ m - 1 : ℤ) * (9 ^ m + 2) = 9 ^ (2 * m) - 1 + (9 ^ m - 1) := by ring
+    simpa [← @Nat.cast_inj ℤ]
+  _ = 3 := by
+    unfold q
+    -- Easy to prove using `ring` in `ℤ`.
+    have : 9 ^ (2 * m) + 9 ^ m + 1 - (9 ^ (2 * m) - 1 + (9 ^ m - 1)) = (3 : ℤ) := by ring
+    -- Prove that subtraction does not lead to truncation for `Nat.cast_sub`.
+    have hq : 9 ^ (2 * m) - 1 + (9 ^ m - 1) ≤ 9 ^ (2 * m) + 9 ^ m + 1 := by
+      calc _
+      _ ≤ 9 ^ (2 * m) + 9 ^ m := by refine add_le_add ?_ ?_ <;> simp
+      _ ≤ _ := by simp
+    simpa [← @Nat.cast_inj ℤ, hq]
 
 -- Based on `Nat.four_dvd_or_exists_odd_prime_and_dvd_of_two_lt`.
 lemma exist_odd_prime_and_dvd_mul_add_two {n : ℕ} (hn : 2 < n) :
@@ -100,8 +130,7 @@ theorem number_theory_221351 (x : ℕ) (n : ℕ) (hx : x = 9 ^ n - 1)
   have hn3 : 3 ∣ n := by
     rw [Nat.dvd_iff_mod_eq_zero, ← nine_pow_mod_thirteen_eq_one_iff]
     suffices 1 ≡ 9 ^ n [MOD 13] from this.symm
-    refine (Nat.modEq_iff_dvd' ?_).mpr h13
-    simp [Nat.one_le_pow]
+    exact (Nat.modEq_iff_dvd' (Nat.one_le_pow' n _)).mpr h13
 
   -- Obtain `n = 3 * m`.
   rcases hn3 with ⟨m, hmn⟩
