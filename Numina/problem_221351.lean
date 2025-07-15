@@ -80,7 +80,7 @@ lemma exist_odd_prime_and_dvd_mul_add_two {n : ℕ} (hn : 2 < n) :
       rw [mul_dvd_mul_iff_left two_ne_zero]
       exact Odd.not_two_dvd_nat h_odd
 
-theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
+theorem number_theory_221351 (x : ℕ) (n : ℕ) (hx : x = 9 ^ n - 1)
     (h_card : x.primeFactors.card = 3) (h13 : 13 ∣ x) :
     x = 728 := by
   -- Replace `x` with `9 ^ n - 1` everywhere.
@@ -90,22 +90,19 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
     contrapose! h_card with hx
     simp [hx]
 
-  -- Clearly `x` is even, hence one of the other prime factors is 2.
+  -- Clearly `x` is even, therefore 2 is a prime factor in addition to 13.
   have hx2 : 2 ∣ 9 ^ n - 1 := by
     rw [← even_iff_two_dvd]
     refine Odd.tsub_odd (.pow ?_) odd_one
     simp [Nat.odd_iff]
 
-  -- Since `13 ∣ 9 ^ n - 1`, we must have `n % 3 = 0` by the periodicity of `9 ^ n % 13`.
+  -- Since `13 ∣ x = 9 ^ n - 1`, we must have `n % 3 = 0` by the periodicity of `9 ^ n % 13`.
   have hn3 : 3 ∣ n := by
-    rw [Nat.dvd_iff_mod_eq_zero]
-    rw [← nine_pow_mod_thirteen_eq_one_iff]
-    -- TODO
-    suffices 9 ^ n % 13 = 1 % 13 by simpa
-    change 9 ^ n ≡ 1 [MOD 13]
-    -- TODO
-    rw [← Int.ofNat_dvd, Nat.cast_sub (by simp [Nat.one_le_pow]), ← Nat.modEq_iff_dvd] at h13
-    exact h13.symm
+    rw [Nat.dvd_iff_mod_eq_zero, ← nine_pow_mod_thirteen_eq_one_iff]
+    suffices 1 ≡ 9 ^ n [MOD 13] from this.symm
+    refine (Nat.modEq_iff_dvd' ?_).mpr h13
+    simp [Nat.one_le_pow]
+
   -- Obtain `n = 3 * m`.
   rcases hn3 with ⟨m, hmn⟩
 
@@ -156,6 +153,11 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
 
       -- Note that we can further factorize `a = 9 ^ m - 1 = (3^m + 1) (3^m - 1)`.
       -- It will suffice to find two odd prime factors of `a`.
+
+      -- TODO?
+      -- suffices ∃ p q : ℕ, {p, q} ⊆ a.primeFactors ∧ Multiset.Nodup {p, q, 2} by
+      --   sorry
+
       suffices ∃ p, p.Prime ∧ p ∣ a ∧ p ≠ 2 ∧ ∃ q, q.Prime ∧ q ∣ a ∧ q ≠ 2 ∧ p ≠ q by
         rcases this with ⟨p, hp_prime, hpa, hp2, q, hq_prime, hqa, hq2, hpq⟩
         refine h_card.not_gt ?_
@@ -188,7 +190,12 @@ theorem number_theory_221351 (n : ℕ) (x : ℕ) (hx : x = 9 ^ n - 1)
 
       -- Apply the same logic to obtain `3 ∣ m`, and therefore
       -- `p = 9 ^ k - 1` can be factored into two coprime numbers.
-      have hm3 : 3 ∣ m := by sorry
+      have hm3 : 3 ∣ m := by
+        rw [Nat.dvd_iff_mod_eq_zero, ← nine_pow_mod_thirteen_eq_one_iff]
+        suffices 1 ≡ 9 ^ m [MOD 13] from this.symm
+        refine (Nat.modEq_iff_dvd' ?_).mpr ha13
+        simp [Nat.one_le_pow]
+
       rcases hm3 with ⟨k, hmk⟩
 
       let c := 9 ^ k - 1
