@@ -93,35 +93,42 @@ lemma lemma_0b {f : ℝ → ℝ} {b : ℝ} (hb_zero : b ≠ 0)
     f 2⁻¹ = b := by
   simpa [lemma_0a hb_zero hf₂] using (hf₁ 2⁻¹ (by simp)).symm
 
--- Put the recursive definition in a form which is more suitable for induction.
-lemma lemma_1a {f : ℝ → ℝ} {b : ℝ}
+lemma lemma_1a1 {f : ℝ → ℝ} {b : ℝ}
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (n k : ℕ) (hkn : k ≤ 2 ^ n) :
+    f (k / 2 ^ (n + 1)) = b * f (k / 2 ^ n) := by
+  symm
+  convert hf₁ (k / 2 ^ (n + 1)) ?_ using 1
+  · congr
+    ring
+  · split_ands
+    · simp [div_nonneg]
+    · rw [div_le_div_iff₀ (by simp) two_pos]
+      suffices (k : ℝ) ≤ 2 ^ n by simpa [pow_succ]
+      simpa [← @Nat.cast_le ℝ] using hkn
+
+lemma lemma_1a2 {f : ℝ → ℝ} {b : ℝ}
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
-    (n k : ℕ) (hkn : k ≤ 2 ^ (n + 1)) :
-    f (k / 2 ^ (n + 1)) =
-      if k < 2 ^ n then b * f (k / 2 ^ n) else b + (1 - b) * f (↑(k - 2 ^ n) / 2 ^ n) := by
-  split_ifs with hk
-  · symm
-    convert hf₁ (k / 2 ^ (n + 1)) ?_ using 1
-    · congr
+    (n k : ℕ) (hkn : k ≤ 2 ^ n) :
+    f (↑(2 ^ n + k) / 2 ^ (n + 1)) = b + (1 - b) * f (k / 2 ^ n) := by
+  convert hf₂ ((1 + k / 2 ^ n) / 2) ?_ using 1
+  · congr 1
+    suffices ↑(2 ^ n + k) / 2 ^ n = (1 + k / 2 ^ n : ℝ) by
+      convert congrArg (· / 2) this using 1
       ring
-    · split_ands
-      · simp [div_nonneg]
-      · rw [div_le_div_iff₀ (by simp) two_pos]
-        suffices (k : ℝ) ≤ 2 ^ n by simpa [pow_succ]
-        simpa [← @Nat.cast_le ℝ] using hk.le
-  · rw [not_lt] at hk
-    convert hf₂ (k / 2 ^ (n + 1)) ?_ using 1
-    · congr
-      calc _
-      _ = (k / 2 ^ n - 1 : ℝ) := by simp [hk, sub_div]
-      _ = _ := by ring
-    · split_ands
-      · rw [div_le_div_iff₀ two_pos (by simp)]
-        suffices 2 ^ n ≤ (k : ℝ) by simpa [pow_succ]
-        simpa [← @Nat.cast_le ℝ] using hk
-      · rw [div_le_iff₀ (by simp)]
-        simpa [← @Nat.cast_le ℝ] using hkn
+    simp [add_div]
+  · congr
+    ring
+  · split_ands
+    · gcongr
+      simp [div_nonneg]
+    · refine div_le_one_of_le₀ ?_ two_pos.le
+      -- This feels like it should be easier...
+      -- TODO: maybe use `2 ^ n ≤ k ≤ 2 ^ (n + 1)` with subtraction?
+      suffices 1 + (k / 2 ^ n : ℝ) ≤ 1 + 1 by simpa [one_add_one_eq_two]
+      rw [add_le_add_iff_left]
+      refine div_le_one_of_le₀ ?_ (by simp)
+      simpa [← @Nat.cast_le ℝ] using hkn
 
 lemma lemma_1b {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
@@ -137,10 +144,11 @@ lemma lemma_1b {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
     · suffices f 1 = 1 by simp [this]
       exact lemma_0a (by linarith) hf₂
   | succ n IH =>
-    rw [lemma_1a hf₁ hf₂ n k hkn]
-    split_ifs with hk
-    · calc (k / 2 ^ (n + 1) : ℝ)
-      _ = (1 / 2) * (k / 2 ^ n) := by ring
+    cases lt_or_le k (2 ^ n) with
+    | inl hk =>
+      rw [lemma_1a1 hf₁ n k hk.le]
+      calc _
+      _ = 2⁻¹ * (k / 2 ^ n : ℝ) := by ring
       _ ≤ b * (k / 2 ^ n) := by
         gcongr
         linarith
@@ -148,66 +156,66 @@ lemma lemma_1b {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
         gcongr
         · linarith
         · exact IH _ hk.le
-    · simp only [not_lt] at hk
+    | inr hk =>
+      obtain ⟨j, rfl⟩ : ∃ j, 2 ^ n + j = k := Nat.le.dest hk
+      replace hkn : j ≤ 2 ^ n := by
+        rw [pow_succ] at hkn
+        linarith
+      rw [lemma_1a2 hf₂ n j hkn]
       calc _
-      _ ≤ b + (1 - b) * (↑(k - 2 ^ n) / 2 ^ n) := by
-        suffices k / 2 ^ (n + 1) ≤ b + (1 - b) * (k / 2 ^ n - 1) by simpa [hk, sub_div]
-        suffices 2⁻¹ * (k / 2 ^ n) ≤ (2 * b - 1) + (1 - b) * (k / 2 ^ n) by
-          convert this using 1 <;> ring
-        rw [← sub_le_iff_le_add]
-        suffices (b - 2⁻¹) * (k / 2 ^ n) ≤ (b - 2⁻¹) * 2 by convert this using 1 <;> ring
+      _ = 2⁻¹ + (j / 2 ^ (n + 1) : ℝ) := by simp [add_div, pow_succ, div_mul_cancel_left₀]
+      -- Rewrite in terms of `1 - j / 2 ^ n` to show inequality.
+      _ = 1 - 2⁻¹ * (1 - j / 2 ^ n : ℝ) := by ring
+      _ ≤ 1 - (1 - b) * (1 - j / 2 ^ n) := by
+        gcongr
+        · simpa [div_le_one₀, ← @Nat.cast_le ℝ] using hkn
+        · linarith
+      _ = b + (1 - b) * (j / 2 ^ n : ℝ) := by ring
+      _ ≤ _ := by
         gcongr
         · linarith
-        · refine div_le_of_le_mul₀ (by simp) two_pos.le ?_
-          simpa [← @Nat.cast_le ℝ, pow_succ'] using hkn
-      _ ≤ b + (1 - b) * f (↑(k - 2 ^ n) / 2 ^ n) := by
-        gcongr
-        · linarith
-        · refine IH _ ?_
-          simpa [pow_succ, mul_two] using hkn
-      _ ≤ _ := by simp [hk]
+        · exact IH j hkn
 
-lemma lemma_1c {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
+-- TODO: these might be better folded into the main proof?
+-- they are simple applications of lemma_1b, lemma_1a1, lemma_1a2
+
+-- The function `f` lies above the line joining `(2⁻¹, b)` and `(1, 1)`
+-- on all binary rationals in the interval `(2⁻¹, 1)`.
+lemma lemma_2a {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
-    (n k : ℕ) (hkn : k < 2 ^ n) :
+    (n k : ℕ) (hkn : k ≤ 2 ^ n) :
     b * (k / 2 ^ n) ≤ f (2⁻¹ * k / 2 ^ n) := by
   rw [Set.mem_Ioo] at hb
-  suffices b * (k / 2 ^ n) ≤ f (k / 2 ^ (n + 1)) by
-    convert this using 2
+  calc b * (k / 2 ^ n)
+  _ ≤ b * f (k / 2 ^ n) := by
+    gcongr
+    · linarith
+    · exact lemma_1b hb hf₁ hf₂ n k hkn
+  _ = f (k / 2 ^ (n + 1)) := (lemma_1a1 hf₁ n k hkn).symm
+  _ = f (2⁻¹ * k / 2 ^ n) := by
+    congr 1
     ring
-  rw [lemma_1a hf₁ hf₂]
-  swap
-  · rw [pow_succ]
-    linarith
-  simp [hkn]  -- TODO
-  gcongr
-  · linarith
-  · exact lemma_1b hb hf₁ hf₂ n k hkn.le  -- TODO: weaken `hkn`?
 
-lemma lemma_1d {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
+-- The function `f` lies above the line joining `(2⁻¹, b)` and `(1, 1)`
+-- on all binary rationals in the interval `(2⁻¹, 1)`.
+lemma lemma_2b {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
     (n k : ℕ) (hkn : k ≤ 2 ^ n) :
     b + (1 - b) * (k / 2 ^ n) ≤ f (2⁻¹ + 2⁻¹ * (k / 2 ^ n)) := by
   rw [Set.mem_Ioo] at hb
-  suffices b + (1 - b) * (k / 2 ^ n) ≤ f (↑(2 ^ n + k) / 2 ^ (n + 1)) by
-    convert this using 2
+  calc _
+  _ ≤ b + (1 - b) * f (k / 2 ^ n) := by
+    gcongr
+    · linarith
+    · exact lemma_1b hb hf₁ hf₂ n k hkn
+  _ = f (↑(2 ^ n + k) / 2 ^ (n + 1)) := (lemma_1a2 hf₂ n k hkn).symm
+  _ = f (2⁻¹ + 2⁻¹ * (k / 2 ^ n)) := by
+    congr
     calc _
-    _ = (2 ^ n / 2 ^ (n + 1) + k / 2 ^ (n + 1) : ℝ) := by
-      congr 1
-      · simp [pow_succ, ← div_div]
-      · ring
-    _ = (2 ^ n + k) / 2 ^ (n + 1) := by ring
-    _ = _ := by simp
-  rw [lemma_1a hf₁ hf₂]
-  swap
-  · rw [pow_succ]
-    linarith
-  simp  -- TODO
-  gcongr
-  · linarith
-  · exact lemma_1b hb hf₁ hf₂ n k hkn
+    _ = 2⁻¹ + (k : ℝ) / (2 ^ (n + 1)) := by simp [add_div, pow_succ, div_mul_cancel_left₀]
+    _ = _ := by ring
 
 theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     {b c : ℝ} (hb : b = (1 + c) / (2 + c)) (hc : 0 < c)
@@ -300,11 +308,11 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
   -- Use the result from the induction.
   intro n k hkn
   split_ands
-  · convert lemma_1c ⟨hb_half, hb_one⟩ hf₁ hf₂ n k hkn using 1
+  · convert lemma_2a ⟨hb_half, hb_one⟩ hf₁ hf₂ n k hkn.le using 1
     · ring
     · congr 1
       ring
-  · convert lemma_1d ⟨hb_half, hb_one⟩ hf₁ hf₂ n k hkn.le using 1
+  · convert lemma_2b ⟨hb_half, hb_one⟩ hf₁ hf₂ n k hkn.le using 1
     · ring
     · congr 1
       ring
