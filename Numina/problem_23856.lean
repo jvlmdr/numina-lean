@@ -70,6 +70,29 @@ lemma nonneg_of_continuousOn_of_binary {f : ℝ → ℝ} (hf : ContinuousOn f (S
     · simpa [dist_comm] using hq
   _ = 0 := by simp
 
+lemma lemma_0 {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x) :
+    f 0 = 0 := by
+  have : b * f 0 = f 0 := by simpa using hf₁ 0 (by simp)
+  exact eq_zero_of_mul_eq_self_left hb this
+
+lemma lemma_0a {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 0)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1)) :
+    f 1 = 1 := by
+  have : f 1 = b - b * f 1 + f 1 :=
+    calc _
+    _ = _ := hf₂ 1 (by norm_num)
+    _ = b + (1 - b) * f 1 := by norm_num
+    _ = _ := by ring
+  have : b = b * f 1 := by simpa [sub_eq_zero]
+  exact (mul_eq_left₀ hb).mp this.symm
+
+lemma lemma_0b {f : ℝ → ℝ} {b : ℝ} (hb_zero : b ≠ 0)
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1)) :
+    f 2⁻¹ = b := by
+  simpa [lemma_0a hb_zero hf₂] using (hf₁ 2⁻¹ (by simp)).symm
+
 -- Put the recursive definition in a form which is more suitable for induction.
 lemma lemma_1a {f : ℝ → ℝ} {b : ℝ}
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
@@ -105,15 +128,15 @@ lemma lemma_1b {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
     (n k : ℕ) (hkn : k ≤ 2 ^ n) :
     k / 2 ^ n ≤ f (k / 2 ^ n) := by
+  rw [Set.mem_Ioo] at hb
   induction n generalizing k with
   | zero =>
     interval_cases k
-    · simp
-      sorry  -- `0 ≤ f 0`
-    · simp
-      sorry  -- `1 ≤ f 1`
+    · suffices f 0 = 0 by simp [this]
+      exact lemma_0 (by linarith) hf₁
+    · suffices f 1 = 1 by simp [this]
+      exact lemma_0a (by linarith) hf₂
   | succ n IH =>
-    rw [Set.mem_Ioo] at hb
     rw [lemma_1a hf₁ hf₂ n k hkn]
     split_ifs with hk
     · calc (k / 2 ^ (n + 1) : ℝ)
@@ -205,9 +228,9 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     · simp [add_mul, hc]
   have hb_two : 1 < 2 * b := (div_lt_iff₀' two_pos).mp hb_half
 
-  have hf_zero : f 0 = 0 := by sorry
-  have hf_half : f 2⁻¹ = b := by sorry
-  have hf_one : f 1 = 1 := by sorry
+  have hf_zero : f 0 = 0 := lemma_0 (by linarith) hf₁
+  have hf_one : f 1 = 1 := lemma_0a (by linarith) hf₂
+  have hf_half : f 2⁻¹ = b := lemma_0b (by linarith) hf₁ hf₂
 
   -- Split into two separate goals.
   simp only [Set.mem_Ioo, forall_and]
