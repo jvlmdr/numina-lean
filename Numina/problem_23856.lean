@@ -179,8 +179,8 @@ lemma lemma_1b {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
 -- TODO: these might be better folded into the main proof?
 -- they are simple applications of lemma_1b, lemma_1a1, lemma_1a2
 
--- The function `f` lies above the line joining `(2⁻¹, b)` and `(1, 1)`
--- on all binary rationals in the interval `(2⁻¹, 1)`.
+-- The function `f` lies above the line joining `(0, 0)` and `(2⁻¹, b)`
+-- on all binary rationals in the interval `(0, 2⁻¹)`.
 lemma lemma_2a {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
