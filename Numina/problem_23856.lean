@@ -70,13 +70,129 @@ lemma nonneg_of_continuousOn_of_binary {f : ℝ → ℝ} (hf : ContinuousOn f (S
     · simpa [dist_comm] using hq
   _ = 0 := by simp
 
+-- Put the recursive definition in a form which is more suitable for induction.
+lemma lemma_1a {f : ℝ → ℝ} {b : ℝ}
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
+    (n k : ℕ) (hkn : k ≤ 2 ^ (n + 1)) :
+    f (k / 2 ^ (n + 1)) =
+      if k < 2 ^ n then b * f (k / 2 ^ n) else b + (1 - b) * f (↑(k - 2 ^ n) / 2 ^ n) := by
+  split_ifs with hk
+  · symm
+    convert hf₁ (k / 2 ^ (n + 1)) ?_ using 1
+    · congr
+      ring
+    · split_ands
+      · simp [div_nonneg]
+      · rw [div_le_div_iff₀ (by simp) two_pos]
+        suffices (k : ℝ) ≤ 2 ^ n by simpa [pow_succ]
+        simpa [← @Nat.cast_le ℝ] using hk.le
+  · rw [not_lt] at hk
+    convert hf₂ (k / 2 ^ (n + 1)) ?_ using 1
+    · congr
+      calc _
+      _ = (k / 2 ^ n - 1 : ℝ) := by simp [hk, sub_div]
+      _ = _ := by ring
+    · split_ands
+      · rw [div_le_div_iff₀ two_pos (by simp)]
+        suffices 2 ^ n ≤ (k : ℝ) by simpa [pow_succ]
+        simpa [← @Nat.cast_le ℝ] using hk
+      · rw [div_le_iff₀ (by simp)]
+        simpa [← @Nat.cast_le ℝ] using hkn
+
+lemma lemma_1b {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
+    (n k : ℕ) (hkn : k ≤ 2 ^ n) :
+    k / 2 ^ n ≤ f (k / 2 ^ n) := by
+  induction n generalizing k with
+  | zero =>
+    interval_cases k
+    · simp
+      sorry  -- `0 ≤ f 0`
+    · simp
+      sorry  -- `1 ≤ f 1`
+  | succ n IH =>
+    rw [Set.mem_Ioo] at hb
+    rw [lemma_1a hf₁ hf₂ n k hkn]
+    split_ifs with hk
+    · calc (k / 2 ^ (n + 1) : ℝ)
+      _ = (1 / 2) * (k / 2 ^ n) := by ring
+      _ ≤ b * (k / 2 ^ n) := by
+        gcongr
+        linarith
+      _ ≤ b * f (k / 2 ^ n) := by
+        gcongr
+        · linarith
+        · exact IH _ hk.le
+    · simp only [not_lt] at hk
+      calc _
+      _ ≤ b + (1 - b) * (↑(k - 2 ^ n) / 2 ^ n) := by
+        suffices k / 2 ^ (n + 1) ≤ b + (1 - b) * (k / 2 ^ n - 1) by simpa [hk, sub_div]
+        suffices 2⁻¹ * (k / 2 ^ n) ≤ (2 * b - 1) + (1 - b) * (k / 2 ^ n) by
+          convert this using 1 <;> ring
+        rw [← sub_le_iff_le_add]
+        suffices (b - 2⁻¹) * (k / 2 ^ n) ≤ (b - 2⁻¹) * 2 by convert this using 1 <;> ring
+        gcongr
+        · linarith
+        · refine div_le_of_le_mul₀ (by simp) two_pos.le ?_
+          simpa [← @Nat.cast_le ℝ, pow_succ'] using hkn
+      _ ≤ b + (1 - b) * f (↑(k - 2 ^ n) / 2 ^ n) := by
+        gcongr
+        · linarith
+        · refine IH _ ?_
+          simpa [pow_succ, mul_two] using hkn
+      _ ≤ _ := by simp [hk]
+
+lemma lemma_1c {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
+    (n k : ℕ) (hkn : k < 2 ^ n) :
+    b * (k / 2 ^ n) ≤ f (2⁻¹ * k / 2 ^ n) := by
+  rw [Set.mem_Ioo] at hb
+  suffices b * (k / 2 ^ n) ≤ f (k / 2 ^ (n + 1)) by
+    convert this using 2
+    ring
+  rw [lemma_1a hf₁ hf₂]
+  swap
+  · rw [pow_succ]
+    linarith
+  simp [hkn]  -- TODO
+  gcongr
+  · linarith
+  · exact lemma_1b hb hf₁ hf₂ n k hkn.le  -- TODO: weaken `hkn`?
+
+lemma lemma_1d {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
+    (n k : ℕ) (hkn : k ≤ 2 ^ n) :
+    b + (1 - b) * (k / 2 ^ n) ≤ f (2⁻¹ + 2⁻¹ * (k / 2 ^ n)) := by
+  rw [Set.mem_Ioo] at hb
+  suffices b + (1 - b) * (k / 2 ^ n) ≤ f (↑(2 ^ n + k) / 2 ^ (n + 1)) by
+    convert this using 2
+    calc _
+    _ = (2 ^ n / 2 ^ (n + 1) + k / 2 ^ (n + 1) : ℝ) := by
+      congr 1
+      · simp [pow_succ, ← div_div]
+      · ring
+    _ = (2 ^ n + k) / 2 ^ (n + 1) := by ring
+    _ = _ := by simp
+  rw [lemma_1a hf₁ hf₂]
+  swap
+  · rw [pow_succ]
+    linarith
+  simp  -- TODO
+  gcongr
+  · linarith
+  · exact lemma_1b hb hf₁ hf₂ n k hkn
+
 theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     {b c : ℝ} (hb : b = (1 + c) / (2 + c)) (hc : 0 < c)
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1)) :
     ∀ x ∈ Set.Ioo 0 1, f x - x ∈ Set.Ioo 0 c := by
 
-  have hb_lt : b < 1 := by
+  have hb_one : b < 1 := by
     rw [hb]
     refine (div_lt_one ?_).mpr ?_
     · simp [add_pos, hc]
@@ -148,7 +264,7 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
       refine nonneg_of_continuousOn_of_binary ?_ ?_ r hr_mem
         (f := fun r ↦ f ((1 - r) * 2⁻¹ + r) - ((1 - r) * b + r))
       · refine .sub (.comp hf ?_ ?_) ?_
-        -- TODO: finalize after proving the induction
+        -- wait until form of induction is finalized
         · sorry
         · intro x hx_mem
           simp at hr_mem hx_mem  -- TODO
@@ -158,5 +274,14 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
       rw [sub_nonneg]
       exact (this n k hk).2
 
-  -- This is what we can show by induction.
-  sorry
+  -- Use the result from the induction.
+  intro n k hkn
+  split_ands
+  · convert lemma_1c ⟨hb_half, hb_one⟩ hf₁ hf₂ n k hkn using 1
+    · ring
+    · congr 1
+      ring
+  · convert lemma_1d ⟨hb_half, hb_one⟩ hf₁ hf₂ n k hkn.le using 1
+    · ring
+    · congr 1
+      ring
