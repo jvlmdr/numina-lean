@@ -217,33 +217,12 @@ lemma lemma_2b {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
     _ = 2⁻¹ + (k : ℝ) / (2 ^ (n + 1)) := by simp [add_div, pow_succ, div_mul_cancel_left₀]
     _ = _ := by ring
 
-theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
-    {b c : ℝ} (hb : b = (1 + c) / (2 + c)) (hc : 0 < c)
+theorem lemma_3 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
+    {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1)) :
-    ∀ x ∈ Set.Ioo 0 1, f x - x ∈ Set.Ioo 0 c := by
-
-  have hb_one : b < 1 := by
-    rw [hb]
-    refine (div_lt_one ?_).mpr ?_
-    · simp [add_pos, hc]
-    · simp
-  -- TODO: keep one of these?
-  have hb_half : 1 / 2 < b := by
-    rw [hb]
-    refine (div_lt_div_iff₀ two_pos ?_).mpr ?_
-    · simp [add_pos, hc]
-    · simp [add_mul, hc]
-  have hb_two : 1 < 2 * b := (div_lt_iff₀' two_pos).mp hb_half
-
-  have hf_zero : f 0 = 0 := lemma_0 (by linarith) hf₁
-  have hf_one : f 1 = 1 := lemma_0a (by linarith) hf₂
-  have hf_half : f 2⁻¹ = b := lemma_0b (by linarith) hf₁ hf₂
-
-  -- Split into two separate goals.
-  simp only [Set.mem_Ioo, forall_and]
-
-  refine ⟨?_, sorry⟩
+    ∀ x ∈ Set.Ioo 0 1, 0 < f x - x := by
+  simp only [Set.mem_Ioo] at hb
 
   -- Rewrite using `≤`, which can be proved using density of binary rationals.
   suffices ∀ r : ℝ, r ∈ Set.Ico 0 1 →
@@ -251,12 +230,13 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
       -- (1 - r) * f 2⁻¹ + r * f 1 ≤ f ((1 - r) * 2⁻¹ + r * 1) by
       r * b ≤ f (r * 2⁻¹) ∧ (1 - r) * b + r ≤ f ((1 - r) * 2⁻¹ + r) by
     intro x hx_mem
+    simp only [Set.mem_Ioo] at hx_mem
     rw [sub_pos]
     cases lt_or_le x 2⁻¹ with
     | inl hx_half =>
       specialize this (x * 2) (by split_ands <;> linarith)
       calc _
-      _ < 2 * b * x := lt_mul_of_one_lt_left hx_mem.1 hb_two
+      _ < 2 * b * x := lt_mul_of_one_lt_left hx_mem.1 (by linarith)
       _ = _ := by ring
       _ ≤ _ := this.1  -- TODO: suffices?
       _ = _ := by simp
@@ -308,11 +288,41 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
   -- Use the result from the induction.
   intro n k hkn
   split_ands
-  · convert lemma_2a ⟨hb_half, hb_one⟩ hf₁ hf₂ n k hkn.le using 1
+  · convert lemma_2a hb hf₁ hf₂ n k hkn.le using 1
     · ring
     · congr 1
       ring
-  · convert lemma_2b ⟨hb_half, hb_one⟩ hf₁ hf₂ n k hkn.le using 1
+  · convert lemma_2b hb hf₁ hf₂ n k hkn.le using 1
     · ring
     · congr 1
       ring
+
+theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
+    {b c : ℝ} (hb : b = (1 + c) / (2 + c)) (hc : 0 < c)
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1)) :
+    ∀ x ∈ Set.Ioo 0 1, f x - x ∈ Set.Ioo 0 c := by
+
+  have hb_one : b < 1 := by
+    rw [hb]
+    refine (div_lt_one ?_).mpr ?_
+    · simp [add_pos, hc]
+    · simp
+  -- TODO: keep one of these?
+  have hb_half : 1 / 2 < b := by
+    rw [hb]
+    refine (div_lt_div_iff₀ two_pos ?_).mpr ?_
+    · simp [add_pos, hc]
+    · simp [add_mul, hc]
+  have hb_two : 1 < 2 * b := (div_lt_iff₀' two_pos).mp hb_half
+
+  have hf_zero : f 0 = 0 := lemma_0 (by linarith) hf₁
+  have hf_one : f 1 = 1 := lemma_0a (by linarith) hf₂
+  have hf_half : f 2⁻¹ = b := lemma_0b (by linarith) hf₁ hf₂
+
+  -- Split into two separate goals.
+  intro x hx
+  rw [Set.mem_Ioo]
+  refine ⟨?_, ?_⟩
+  · exact lemma_3 hf ⟨hb_half, hb_one⟩ hf₁ hf₂ x hx
+  · sorry
