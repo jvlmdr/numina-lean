@@ -303,109 +303,123 @@ lemma bool_toNat_ofNat_of_lt_two {x : ℕ} (hx : x < 2) : (Bool.ofNat x).toNat =
 lemma bool_toNat_ofNat_mod_two (x : ℕ) : (Bool.ofNat (x % 2)).toNat = x % 2 :=
   bool_toNat_ofNat_of_lt_two (x.mod_lt two_pos)
 
--- Any `x < b ^ n` can be expressed as a sum of powers of base `b`.
--- Unlike `Nat.digits`, this gives an explicit form for the digits `k ↦ x / b ^ k % b`.
-lemma sum_div_pow_mod_mul_pow (b : ℕ) (n : ℕ) :
-    ∀ x < b ^ n, ∑ k ∈ Finset.range n, x / b ^ k % b * b ^ k = x := by
-  induction n with
-  | zero => simp
-  | succ n IH =>
-    intro x hx
-    rw [Finset.sum_range_succ']
-    convert Nat.div_add_mod' x b using 2
-    · convert congrArg (· * b) (IH (x / b) ?_)
-      · rw [Finset.sum_mul]
-        refine Finset.sum_congr rfl fun i hi ↦ ?_
-        rw [Nat.div_div_eq_div_mul, pow_succ']
-        ring
-      · refine Nat.div_lt_of_lt_mul ?_
-        simpa [pow_succ'] using hx
-    · simp
-
--- lemma list_mapIdx_snd_eq_map {α β : Type*} {f : α → β} :
---     List.mapIdx (fun _ x ↦ f x) = List.map f := by
---   funext l
---   induction l with
---   | nil => simp
---   | cons x l IH => simpa using IH
-
--- lemma list_mapIdx_fst_range_eq_map_range {β : Type*} {f : ℕ → β} :
---     List.mapIdx (fun i _ ↦ f i) (List.range  = List.map f := by
---   funext l
---   induction l with
---   | nil => simp
---   | cons x l IH => simpa using IH
-
-
 -- -- Any `x < b ^ n` can be expressed as a sum of powers of base `b`.
 -- -- Unlike `Nat.digits`, this gives an explicit form for the digits `k ↦ x / b ^ k % b`.
--- lemma sum_div_pow_mod_mul_pow' (b : ℕ) (n : ℕ) :
+-- lemma sum_div_pow_mod_mul_pow (b : ℕ) (n : ℕ) :
 --     ∀ x < b ^ n, ∑ k ∈ Finset.range n, x / b ^ k % b * b ^ k = x := by
---   intro x hx
---   calc _
---   _ = ((List.range n).map fun k ↦ x / b ^ k % b * b ^ k).sum := rfl
---   -- _ = Nat.ofDigits b ((List.range n).mapIdx fun _ k ↦ (Nat.digits b x).getD k 0) := by
---   --   rw [Nat.ofDigits_eq_sum_mapIdx]
---   --   simp [-List.getD_eq_getElem?_getD, Function.comp_def]
---   --   sorry
---   _ = Nat.ofDigits b ((List.range n).map fun k ↦ (Nat.digits b x).getD k 0) := by
---     congr
---     rw [Nat.ofDigits_eq_sum_mapIdx]
---     congr
+--   induction n with
+--   | zero => simp
+--   | succ n IH =>
+--     intro x hx
+--     rw [Finset.sum_range_succ']
+--     convert Nat.div_add_mod' x b using 2
+--     · convert congrArg (· * b) (IH (x / b) ?_)
+--       · rw [Finset.sum_mul]
+--         refine Finset.sum_congr rfl fun i hi ↦ ?_
+--         rw [Nat.div_div_eq_div_mul, pow_succ']
+--         ring
+--       · refine Nat.div_lt_of_lt_mul ?_
+--         simpa [pow_succ'] using hx
+--     · simp
 
---     rw [← list_mapIdx_snd_eq_map]
---     rw [← list_mapIdx_snd_eq_map]
---     rw [List.mapIdx_mapIdx]
---     simp only [Function.comp_def]
+-- -- The approximation `⌊x * b ^ n⌋₊ / b ^ n` for `x ∈ [0, 1)` as a sum of fractional digits.
+-- lemma sum_mul_pow_inv_eq_floor_div_pow (b : ℕ) (hb : 1 < b) (n : ℕ) (x : ℝ) (hx : x ∈ Set.Ico 0 1) :
+--     ∑ i ∈ Finset.range n, (⌊x * b ^ (i + 1)⌋₊ % b : ℕ) * (b ^ (i + 1) : ℝ)⁻¹ =
+--       (⌊x * b ^ n⌋₊ / b ^ n : ℝ) := by
+--   rw [Set.mem_Ico] at hx
+--   have hb_pos : 0 < b := Nat.zero_lt_of_lt hb
+--   have hb_zero : b ≠ 0 := Nat.not_eq_zero_of_lt hb
+--   rw [eq_div_iff (by simp [hb_zero])]
+--   -- Move from `ℝ` back to `ℕ`.
+--   -- Replace `b ^ n * (b ^ (i + 1))⁻¹` with `b ^ (n - (i + 1))`.
+--   suffices ∑ i ∈ Finset.range n, ⌊x * b ^ (i + 1)⌋₊ % b * b ^ (n - (i + 1)) = ⌊x * b ^ n⌋₊ by
+--     convert congrArg (Nat.cast : ℕ → ℝ) this using 1
+--     simp only [Finset.sum_mul, Nat.cast_sum, Nat.cast_mul, Nat.cast_pow]
+--     refine Finset.sum_congr rfl fun i hi ↦ ?_
+--     rw [Finset.mem_range] at hi
+--     rw [pow_sub₀ _ (by simpa) (Nat.add_one_le_of_lt hi)]
+--     ring
+--   convert sum_div_pow_mod_mul_pow b n ⌊x * b ^ n⌋₊ ?_ using 1
+--   swap
+--   · rw [← @Nat.cast_lt ℝ]
+--     calc _
+--     _ ≤ x * b ^ n := by
+--       refine Nat.floor_le ?_
+--       simpa [hb_pos] using hx.1
+--     _ < _ := by
+--       simpa [hb_pos] using hx.2
+--   symm
+--   -- Flip the sum such that they both start with the most significant bit.
+--   rw [← Finset.sum_range_reflect]
+--   refine Finset.sum_congr rfl fun k hk ↦ ?_
+--   rw [Finset.mem_range] at hk
+--   -- Replace `n - 1 - k` with `n - (k + 1)`.
+--   rw [Nat.sub_sub, add_comm 1 k]
+--   congr
+--   -- Move the division (with truncation) inside the floor.
+--   rw [← Nat.floor_div_nat]
+--   congr
+--   simp only [Nat.cast_pow]
+--   -- Cancel the `b ^ n` terms.
+--   rw [pow_sub₀ _ (by simpa using hb_zero) (Nat.add_one_le_of_lt hk)]
+--   rw [div_mul_eq_div_div]
+--   simp [hb_zero]
 
---     sorry
---   _ = _ := by
---     sorry
+-- The explicit form for the `k`-th digit of `n` in base `b`.
+lemma digits_getD {b : ℕ} (hb : 1 < b) (n k : ℕ) : (Nat.digits b n).getD k 0 = n / b ^ k % b := by
+  induction k generalizing n with
+  | zero =>
+    cases n with
+    | zero => simp
+    | succ n => simp [Nat.digits_eq_cons_digits_div hb]
+  | succ k IH =>
+    cases lt_or_le n b with
+    | inl hn =>
+      cases n with
+      | zero => simp
+      | succ n =>
+        calc _
+        _ = 0 := by simp [Nat.digits_of_lt b _ _ hn]
+        _ = (n + 1) / b / b ^ k % b := by simp [Nat.div_eq_of_lt hn]
+        _ = _ := by rw [pow_succ', Nat.div_div_eq_div_mul]
+    | inr hn =>
+      calc _
+      _ = (b.digits (n % b + b * (n / b))).getD (k + 1) 0 := by
+        congr
+        convert (Nat.div_add_mod' n b).symm using 1
+        ring
+      _ = n / b / b ^ k % b := by
+        rw [Nat.digits_add _ hb]
+        rotate_left
+        · exact Nat.mod_lt n (Nat.zero_lt_of_lt hb)
+        · refine Or.inr (ne_of_gt ?_)
+          exact Nat.div_pos hn (Nat.zero_lt_of_lt hb)
+        rw [List.getD_cons_succ]
+        exact IH (n / b)
+      _ = _ := by simp [pow_succ', Nat.div_div_eq_div_mul]
 
-
--- The approximation `⌊x * b ^ n⌋₊ / b ^ n` for `x ∈ [0, 1)` as a sum of fractional digits.
-lemma sum_mul_pow_inv_eq_floor_div_pow (b : ℕ) (hb : 1 < b) (n : ℕ) (x : ℝ) (hx : x ∈ Set.Ico 0 1) :
-    ∑ i ∈ Finset.range n, (⌊x * b ^ (i + 1)⌋₊ % b : ℕ) * (b ^ (i + 1) : ℝ)⁻¹ =
-      (⌊x * b ^ n⌋₊ / b ^ n : ℝ) := by
-  rw [Set.mem_Ico] at hx
-  have hb_pos : 0 < b := Nat.zero_lt_of_lt hb
-  have hb_zero : b ≠ 0 := Nat.not_eq_zero_of_lt hb
-  rw [eq_div_iff (by simp [hb_zero])]
-  -- Move from `ℝ` back to `ℕ`.
-  -- Replace `b ^ n * (b ^ (i + 1))⁻¹` with `b ^ (n - (i + 1))`.
-  suffices ∑ i ∈ Finset.range n, ⌊x * b ^ (i + 1)⌋₊ % b * b ^ (n - (i + 1)) = ⌊x * b ^ n⌋₊ by
-    convert congrArg (Nat.cast : ℕ → ℝ) this using 1
-    simp only [Finset.sum_mul, Nat.cast_sum, Nat.cast_mul, Nat.cast_pow]
-    refine Finset.sum_congr rfl fun i hi ↦ ?_
-    rw [Finset.mem_range] at hi
-    rw [pow_sub₀ _ (by simpa) (Nat.add_one_le_of_lt hi)]
-    ring
-  convert sum_div_pow_mod_mul_pow b n ⌊x * b ^ n⌋₊ ?_ using 1
-  swap
-  · rw [← @Nat.cast_lt ℝ]
-    calc _
-    _ ≤ x * b ^ n := by
-      refine Nat.floor_le ?_
-      simpa [hb_pos] using hx.1
-    _ < _ := by
-      simpa [hb_pos] using hx.2
-  symm
-  -- Flip the sum such that they both start with the most significant bit.
-  rw [← Finset.sum_range_reflect]
-  refine Finset.sum_congr rfl fun k hk ↦ ?_
-  rw [Finset.mem_range] at hk
-  -- Replace `n - 1 - k` with `n - (k + 1)`.
-  rw [Nat.sub_sub, add_comm 1 k]
-  congr
-  -- Move the division (with truncation) inside the floor.
-  rw [← Nat.floor_div_nat]
-  congr
-  simp only [Nat.cast_pow]
-  -- Cancel the `b ^ n` terms.
-  rw [pow_sub₀ _ (by simpa using hb_zero) (Nat.add_one_le_of_lt hk)]
-  rw [div_mul_eq_div_div]
-  simp [hb_zero]
-
+lemma sum_digits_getD {b : ℕ} (hb : 1 < b) (x n : ℕ) (hn : x < b ^ n) :
+    ∑ k ∈ Finset.range n, (Nat.digits b x).getD k 0 * b ^ k = x := by
+  induction n generalizing x with
+  | zero =>
+    suffices x = 0 by simp [this]
+    simpa using hn
+  | succ n IH =>
+    cases eq_or_ne x 0 with
+    | inl hx => simp [hx]
+    | inr hx =>
+      calc _
+      _ = ∑ k ∈ Finset.range n, (b.digits (x / b)).getD k 0 * b ^ (k + 1) + x % b := by
+        rw [Nat.digits_eq_cons_digits_div hb hx]
+        simp [Finset.sum_range_succ']
+      _ = (∑ k ∈ Finset.range n, (b.digits (x / b)).getD k 0 * b ^ k) * b + x % b := by
+        simp only [pow_succ, mul_assoc, Finset.sum_mul]
+      _ = (x / b) * b + x % b := by
+        congr
+        refine IH (x / b) ?_
+        refine Nat.div_lt_of_lt_mul ?_
+        simpa [pow_succ'] using hn
+      _ = _ := Nat.div_add_mod' x b
 
 -- Any real in `[0, 1)` can be represented using an infinite binary expansion `f : ℕ → Bool`.
 -- Note: This could be generalized to arbitrary base `b` using `Fin b` instead of `Bool`.
@@ -416,56 +430,64 @@ lemma exists_binary_expansion {x : ℝ} (hx : x ∈ Set.Ico 0 1) :
   rw [hasSum_iff_tendsto_nat_of_nonneg (by simp), Metric.tendsto_atTop]
   intro ε hε
   -- We could use `exists_binary_fraction` here.
-  -- However, we also need to bound the sum of the subsequent digits for `n ≥ N`.
+  -- However, we also need to bound the sum of the subsequent digits for `n ≥ m`.
   let m := ⌈Real.logb 2 (ε⁻¹)⌉₊
   use m
   intro n hn
-  -- -- Replace `m = n + b` to represent the additional digits.
-  -- obtain ⟨b, rfl⟩ : ∃ b, m + b = n := Nat.le.dest hn
-  -- -- simp only [Finset.sum_range_add]
-  -- rw [← mul_lt_mul_left (a := 2 ^ m) (by simp)]
-  -- rw [dist_comm _ x, Real.dist_eq]
-  -- calc _
-  -- _ = 2 ^ m * x - ∑ i ∈ Finset.range m, (f i).toNat * (2 ^ m / 2 ^ (i + 1) : ℝ) := by
-  --   rw [abs_of_nonneg]
-  --   swap
-  --   · sorry
-  --   simp [mul_sub, Finset.mul_sum]
-  --   refine Finset.sum_congr rfl fun i hi ↦ ?_
-  --   ring
-  -- _ = 2 ^ m * x - ⌊2 ^ m * x⌋₊ := by sorry
-  -- _ < (1 : ℝ) := sub_left_lt_of_lt_add (Nat.lt_floor_add_one _)
-  -- _ ≤ _ := by
-  --   rw [← inv_le_iff_one_le_mul₀ hε]
-  --   suffices ε⁻¹ ≤ 2 ^ (m : ℝ) by simpa
-  --   rw [← Real.logb_le_iff_le_rpow one_lt_two (inv_pos_of_pos hε)]
-  --   simpa [m] using Nat.le_ceil _
+  rw [Set.mem_Ico] at hx
 
-  rw [dist_comm _ x, Real.dist_eq]
-  calc _
-  _ = |x - ⌊x * 2 ^ n⌋₊ / 2 ^ n| := by
-    congr
-    unfold f
-    -- Replace `toNat (ofNat (x % 2))` with `x % 2`.
-    simp only [bool_toNat_ofNat_mod_two]
-    simpa using sum_mul_pow_inv_eq_floor_div_pow 2 one_lt_two n x hx
-  _ = |(x * 2 ^ n - ⌊x * 2 ^ n⌋₊)| / 2 ^ n := by simp [sub_div', abs_div]
-  _ < 1 / 2 ^ n := by
-    -- Remove the constant factor of `1 / 2 ^ n` from both sides.
-    rw [div_lt_div_iff_of_pos_right (by simp)]
-    calc _
-    _ = |Int.fract (x * 2 ^ n)| := by
-      congr
-      refine natCast_floor_eq_intCast_floor ?_
-      rw [Set.mem_Ico] at hx
+  suffices ∑ i ∈ Finset.range n, ((f i).toNat : ℝ) * (2 ^ (i + 1))⁻¹ = (⌊x * 2 ^ n⌋₊ : ℝ) / 2 ^ n by
+    -- TODO: clean up
+    rw [this]
+    rw [dist_comm _ x, Real.dist_eq]
+    rw [abs_of_nonneg]
+    swap
+    · -- TODO: avoid duplication?
+      rw [sub_nonneg]
+      refine div_le_of_le_mul₀ (by simp) hx.1 ?_
+      refine Nat.floor_le ?_
       simpa using hx.1
-    _ = Int.fract (x * 2 ^ n) := by simp [abs_of_nonneg]
-    _ < 1 := Int.fract_lt_one _
-  _ ≤ ε := by
-    suffices ε⁻¹ ≤ 2 ^ (n : ℝ) by simpa [inv_le_comm₀, hε]
-    rw [← Real.logb_le_logb one_lt_two (by simpa) (by simp)]
-    rw [Real.logb_rpow two_pos (by simp)]
-    simpa [m] using hn
+    rw [← mul_lt_mul_right (a := 2 ^ n) (by simp)]
+    rw [sub_mul]
+    simp -- TODO
+
+    calc _
+    _ < (1 : ℝ) := by
+      suffices x * 2 ^ n < ⌊x * 2 ^ n⌋₊ + 1 from sub_left_lt_of_lt_add this
+      exact Nat.lt_floor_add_one (x * 2 ^ n)
+    _ ≤ _ := by
+      rw [← inv_le_iff_one_le_mul₀' hε]
+      rw [← Real.rpow_natCast]
+      rw [← Real.logb_le_iff_le_rpow one_lt_two (inv_pos_of_pos hε)]
+      simpa [m] using hn
+
+  -- TODO: move into above?
+  refine eq_div_of_mul_eq (by simp) ?_
+
+  calc _
+  _ = ∑ i ∈ Finset.range n, ((f i).toNat : ℝ) * (2 ^ n / 2 ^ (i + 1)) := by
+    simp only [Finset.sum_mul, mul_assoc, inv_mul_eq_div]
+  _ = ∑ k ∈ Finset.range n, ↑(⌊x * 2 ^ (k + 1)⌋₊ % 2) * (2 ^ n / 2 ^ (k + 1)) := by
+    simp only [f, bool_toNat_ofNat_mod_two]
+  _ = ∑ k ∈ Finset.range n, ↑(⌊x * (2 ^ n / 2 ^ k)⌋₊ % 2) * 2 ^ k := by
+    -- One of the sums needs to be flipped.
+    rw [← Finset.sum_range_reflect]
+    refine Finset.sum_congr rfl fun k hk ↦ ?_
+    simp only [← zpow_natCast, ← zpow_sub₀ (two_ne_zero (α := ℝ))]
+    simp only [tsub_tsub, add_comm 1]
+    rw [Finset.mem_range] at hk
+    simp only [← Nat.sub_add_comm hk]
+    simp [hk.le]
+  _ = ∑ k ∈ Finset.range n, ↑(⌊x * 2 ^ n⌋₊ / 2 ^ k % 2) * 2 ^ k := by
+    simp only [← Nat.floor_div_nat]
+    simp [mul_div_assoc]
+  _ = ↑(∑ k ∈ Finset.range n, (Nat.digits 2 ⌊x * 2 ^ n⌋₊).getD k 0 * 2 ^ k) := by
+    simp only [digits_getD one_lt_two]
+    simp
+  _ = (⌊x * 2 ^ n⌋₊ : ℝ) := by
+    refine congrArg Nat.cast (sum_digits_getD one_lt_two _ n ?_)
+    rw [Nat.floor_lt' (by simp)]
+    simpa using hx.2
 
 -- If `a` is the binary fraction of `x ≠ 0`, then some bit must be true.
 lemma exists_bit_true_of_ne_zero {x : ℝ} (a : ℕ → Bool)
@@ -474,8 +496,16 @@ lemma exists_bit_true_of_ne_zero {x : ℝ} (a : ℕ → Bool)
   contrapose! h
   simpa [h] using ha.tsum_eq.symm
 
+lemma lemma_4 {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
+    (n : ℕ) (a : Fin n → Bool) :
+    f (∑ j, (a j).toNat * (2 ^ (j + 1 : ℕ))⁻¹) =
+      ∑ i, (a i).toNat * (b * ∏ k ∈ Finset.Iio i, if a k then 1 - b else b) := by
+  sorry
+
 -- If `a` is the binary expansion of `x`, then we can express `f x` as a series of products.
-lemma lemma_4 {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
+lemma lemma_5 {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
     {b : ℝ} (hb : b ∈ Set.Ioo (2⁻¹) 1)
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
@@ -507,16 +537,32 @@ lemma lemma_4 {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
   specialize hN n hn
   convert h_cont (∑ i ∈ Finset.range n, (a i).toNat * (2 ^ (i + 1))⁻¹) ?_ hN
   · symm
-    -- TODO: use lemma_1a1, lemma_1a2?
-    cases n with
-    | zero =>
-      simp
-      sorry
-    | succ n =>
-      simp
-      sorry
+    -- cases n with
+    -- | zero =>
+    --   suffices f 0 = 0 by simpa
+    --   exact lemma_0 (by linarith) hf₁
+    -- | succ n =>
+    --   -- Extract the first bit from the sum.
+    --   simp [Finset.sum_range_succ']  -- TODO
+    --   cases a 0 with
+    --   | false =>
+    --     calc _
+    --     _ = f (∑ k ∈ Finset.range n, ((a (k + 1)).toNat : ℝ) / 2 ^ (k + 1 + 1)) := by
+    --       simp [← div_eq_mul_inv]
+    --     _ = f (↑(∑ k ∈ Finset.range n, (a (k + 1)).toNat * 2 ^ (n - (k + 1))) / 2 ^ (n + 1)) := by
+    --       sorry
+    --     _ = _ := by
+    --       rw [lemma_1a1 hf₁]
+    --       swap
+    --       · sorry
+    --       -- Needs induction...
+    --       simp
+    --       sorry
+    --   | true => sorry
 
-    -- convert eq_on_finite_binary hb.2.ne hf₁ hf₂ n (fun k ↦ a k.val) using 1
+    convert lemma_4 hb.2.ne hf₁ hf₂ n (fun k ↦ a k.val) using 1
+    · sorry
+    · sorry
     -- · rw [Finset.sum_range]
     -- · rw [Finset.sum_range]
     --   refine Finset.sum_congr rfl fun i hi ↦ ?_
@@ -582,7 +628,7 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
       simpa [one_add_one_eq_two] using hasSum_geometric_two
 
     obtain ⟨a, hx_sum⟩ := exists_binary_expansion (Set.mem_Ico_of_Ioo hx)
-    have hfx_sum := lemma_4 hf ⟨by simpa using hb_half, hb_one⟩ hf₁ hf₂ hx_sum  -- TODO
+    have hfx_sum := lemma_5 hf ⟨by simpa using hb_half, hb_one⟩ hf₁ hf₂ hx_sum  -- TODO
 
     -- Replace both sides with an infinite sum.
     rw [← (hfx_sum.sub hx_sum).tsum_eq]
