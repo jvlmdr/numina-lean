@@ -496,13 +496,71 @@ lemma exists_bit_true_of_ne_zero {x : ℝ} (a : ℕ → Bool)
   contrapose! h
   simpa [h] using ha.tsum_eq.symm
 
+lemma fin_prod_succ_bot (n : ℕ) (f : Fin (n + 1) → ℝ) (i : Fin n) :
+    ∏ j < i.succ, f j = f 0 * ∏ j < i, f j.succ := by
+  calc _
+  _ = ∏ j ∈ insert 0 ((Finset.Iio i).map (Fin.succEmb n)), f j := by
+    congr
+    -- TODO: should be a lemma?
+    ext j
+    cases j using Fin.cases with
+    | zero => simp
+    | succ j => simp [Fin.succ_ne_zero]
+  _ = f 0 * ∏ j ∈ (Finset.Iio i).map (Fin.succEmb n), f j := by
+    refine Finset.prod_insert ?_
+    simp [Fin.succ_ne_zero]
+  _ = _ := by
+    simp
+
+lemma fin_Iio_zero (n : ℕ) : Finset.Iio (0 : Fin (n + 1)) = ∅ := rfl
+
 lemma lemma_4 {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
     (n : ℕ) (a : Fin n → Bool) :
     f (∑ j, (a j).toNat * (2 ^ (j + 1 : ℕ))⁻¹) =
       ∑ i, (a i).toNat * (b * ∏ k ∈ Finset.Iio i, if a k then 1 - b else b) := by
-  sorry
+  induction n with
+  | zero =>
+    suffices f 0 = 0 by simpa
+    exact lemma_0 hb hf₁
+  | succ n IH =>
+    specialize IH (fun j ↦ a j.succ)
+    -- Extract the first bit of `a`.
+    simp only [Fin.sum_univ_succ, fin_prod_succ_bot]
+    cases a 0 with
+    | false =>
+      calc _
+      _ = f (∑ k : Fin n, (a k.succ).toNat * (2 ^ (k.val + 1 + 1))⁻¹) := by simp
+      _ = f (↑(∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - 1 - k.val)) / 2 ^ (n + 1)) := by
+        sorry
+      _ = b * f (↑(∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - 1 - k.val)) / 2 ^ n) := by
+        rw [lemma_1a1 hf₁ n]
+        sorry
+      _ = b * f (∑ k : Fin n, (a k.succ).toNat * (2 ^ (k.val + 1))⁻¹) := by
+        sorry
+      _ = ∑ i : Fin n, (a i.succ).toNat *
+          (b * (b * ((∏ k ∈ Finset.Iio i, if a k.succ then 1 - b else b)))) := by
+        rw [IH, Finset.mul_sum]
+        exact Finset.sum_congr rfl fun i hi ↦ by ring
+      _ = _ := by simp
+
+    | true =>
+      calc _
+      _ = f (2⁻¹ + ∑ k : Fin n, ((a k.succ).toNat : ℝ) * (2 ^ (k.val + 1 + 1))⁻¹) := by simp
+      _ = f (↑(2 ^ n + ∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - (k.val + 1))) / 2 ^ (n + 1)) := by
+        sorry
+      _ = b + (1 - b) * f (↑(∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - (k.val + 1))) / 2 ^ n) := by
+        rw [lemma_1a2 hf₂ n]
+        sorry
+      _ = b + (1 - b) * f (∑ k : Fin n, (a k.succ).toNat * (2 ^ (k.val + 1))⁻¹) := by
+        sorry
+      _ = b + ∑ k : Fin n, (a k.succ).toNat *
+          (b * ((1 - b) * ∏ j ∈ Finset.Iio k, if a j.succ then 1 - b else b)) := by
+        rw [IH, Finset.mul_sum]
+        congr 1
+        exact Finset.sum_congr rfl fun i hi ↦ by ring
+      _ = _ := by simp [fin_Iio_zero]
 
 -- If `a` is the binary expansion of `x`, then we can express `f x` as a series of products.
 lemma lemma_5 {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
@@ -537,45 +595,20 @@ lemma lemma_5 {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
   specialize hN n hn
   convert h_cont (∑ i ∈ Finset.range n, (a i).toNat * (2 ^ (i + 1))⁻¹) ?_ hN
   · symm
-    -- cases n with
-    -- | zero =>
-    --   suffices f 0 = 0 by simpa
-    --   exact lemma_0 (by linarith) hf₁
-    -- | succ n =>
-    --   -- Extract the first bit from the sum.
-    --   simp [Finset.sum_range_succ']  -- TODO
-    --   cases a 0 with
-    --   | false =>
-    --     calc _
-    --     _ = f (∑ k ∈ Finset.range n, ((a (k + 1)).toNat : ℝ) / 2 ^ (k + 1 + 1)) := by
-    --       simp [← div_eq_mul_inv]
-    --     _ = f (↑(∑ k ∈ Finset.range n, (a (k + 1)).toNat * 2 ^ (n - (k + 1))) / 2 ^ (n + 1)) := by
-    --       sorry
-    --     _ = _ := by
-    --       rw [lemma_1a1 hf₁]
-    --       swap
-    --       · sorry
-    --       -- Needs induction...
-    --       simp
-    --       sorry
-    --   | true => sorry
-
     convert lemma_4 hb.2.ne hf₁ hf₂ n (fun k ↦ a k.val) using 1
-    · sorry
-    · sorry
-    -- · rw [Finset.sum_range]
-    -- · rw [Finset.sum_range]
-    --   refine Finset.sum_congr rfl fun i hi ↦ ?_
-    --   congr 2
-    --   calc _
-    --   -- Rewrite product on `Fin n` as a product on `Finset.map`.
-    --   _ = ∏ k ∈ (Finset.Iio i).map Fin.valEmbedding, if a k then 1 - b else b := by
-    --     simp [Nat.Iio_eq_range]
-    --   _ = _ := by
-    --     rw [Finset.prod_map]
-    --     simp
+    · rw [Finset.sum_range]
+    · rw [Finset.sum_range]
+      refine Finset.sum_congr rfl fun i hi ↦ ?_
+      congr 2
+      calc _
+      _ = ∏ k ∈ (Finset.Iio i).map Fin.valEmbedding, if a k then 1 - b else b := by
+        simp [Nat.Iio_eq_range]
+      _ = _ := by
+        rw [Finset.prod_map]
+        simp
   · -- TODO: same lemma again? (but truncated)
     refine Set.mem_Icc_of_Ico ?_
+
     sorry
 
 theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
