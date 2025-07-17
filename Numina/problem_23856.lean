@@ -519,41 +519,49 @@ lemma lemma_4 {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
     (n : ℕ) (a : Fin n → Bool) :
     f (∑ j, (a j).toNat * (2 ^ (j + 1 : ℕ))⁻¹) =
-      ∑ i, (a i).toNat * (b * ∏ k ∈ Finset.Iio i, if a k then 1 - b else b) := by
+      ∑ j, (a j).toNat * (b * ∏ k ∈ Finset.Iio j, if a k then 1 - b else b) := by
+
+  -- TODO: standardize indices i, j, k, x
+
+  suffices f (↑(∑ j, (a j).toNat * 2 ^ (n - (j + 1))) / 2 ^ n) =
+      ∑ j, (a j).toNat * (b * ∏ k ∈ Finset.Iio j, if a k then 1 - b else b) by
+    convert this
+    simp only [Nat.cast_sum, Finset.sum_div]
+    refine Finset.sum_congr rfl fun j hj ↦ ?_
+    suffices (2 ^ (j + 1 : ℕ) : ℝ)⁻¹ = 2 ^ (n - (j + 1 : ℕ)) / 2 ^ n by simp [mul_div_assoc, this]
+    simp only [← zpow_natCast]
+    rw [← zpow_neg, ← zpow_sub₀ two_ne_zero]
+    congr
+    simp [Nat.cast_sub j.isLt]
+
   induction n with
   | zero =>
     suffices f 0 = 0 by simpa
     exact lemma_0 hb hf₁
   | succ n IH =>
     specialize IH (fun j ↦ a j.succ)
-    -- Extract the first bit of `a`.
+    -- Extract the terms dependent on `a 0` from the sum and product.
     simp only [Fin.sum_univ_succ, fin_prod_succ_bot]
     cases a 0 with
     | false =>
       calc _
-      _ = f (∑ k : Fin n, (a k.succ).toNat * (2 ^ (k.val + 1 + 1))⁻¹) := by simp
-      _ = f (↑(∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - 1 - k.val)) / 2 ^ (n + 1)) := by
-        sorry
-      _ = b * f (↑(∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - 1 - k.val)) / 2 ^ n) := by
+      _ = f (↑(∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - (k.val + 1))) / 2 ^ (n + 1)) := by simp
+      _ = b * f (↑(∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - (k.val + 1))) / 2 ^ n) := by
         rw [lemma_1a1 hf₁ n]
-        sorry
-      _ = b * f (∑ k : Fin n, (a k.succ).toNat * (2 ^ (k.val + 1))⁻¹) := by
+        -- TODO: extract as lemma?
         sorry
       _ = ∑ i : Fin n, (a i.succ).toNat *
-          (b * (b * ((∏ k ∈ Finset.Iio i, if a k.succ then 1 - b else b)))) := by
+          (b * (b * ∏ k ∈ Finset.Iio i, if a k.succ then 1 - b else b)) := by
         rw [IH, Finset.mul_sum]
         exact Finset.sum_congr rfl fun i hi ↦ by ring
       _ = _ := by simp
 
     | true =>
       calc _
-      _ = f (2⁻¹ + ∑ k : Fin n, ((a k.succ).toNat : ℝ) * (2 ^ (k.val + 1 + 1))⁻¹) := by simp
-      _ = f (↑(2 ^ n + ∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - (k.val + 1))) / 2 ^ (n + 1)) := by
-        sorry
-      _ = b + (1 - b) * f (↑(∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - (k.val + 1))) / 2 ^ n) := by
+      _ = f (↑(2 ^ n + ∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - (k + 1))) / 2 ^ (n + 1)) := by
+        simp
+      _ = b + (1 - b) * f (↑(∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - (k + 1))) / 2 ^ n) := by
         rw [lemma_1a2 hf₂ n]
-        sorry
-      _ = b + (1 - b) * f (∑ k : Fin n, (a k.succ).toNat * (2 ^ (k.val + 1))⁻¹) := by
         sorry
       _ = b + ∑ k : Fin n, (a k.succ).toNat *
           (b * ((1 - b) * ∏ j ∈ Finset.Iio k, if a j.succ then 1 - b else b)) := by
