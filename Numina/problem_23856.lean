@@ -12,9 +12,9 @@ $$
 where $b=\frac{1+c}{2+c}, c>0$.
 Show that $0 < f(x) - x < c$ for every $x, 0 < x < 1$. -/
 
--- For any `ε > 0`, there exist binary rationals `k / 2 ^ n` within `ε` of all `x ∈ [0, 1)`.
-lemma exists_binary_rational (ε : ℝ) (hε : 0 < ε) (x : ℝ) (hx : x ∈ Set.Ico 0 1) :
-    ∃ n k : ℕ, k < 2 ^ n ∧ dist x (k / 2 ^ n) < ε := by
+-- For any `ε > 0`, there exist binary fractions `k / 2 ^ n` within `ε` of all `x ∈ [0, 1)`.
+lemma exists_binary_fraction (ε : ℝ) (hε : 0 < ε) (x : ℝ) (hx : x ∈ Set.Ico 0 1) :
+    ∃ n k : ℕ, k < 2 ^ n ∧ dist (k / 2 ^ n : ℝ) x < ε := by
   simp only [Set.mem_Ico] at hx
   let n := ⌈Real.logb 2 (1 / ε)⌉₊
   let k := ⌊x * 2 ^ n⌋₊
@@ -27,6 +27,7 @@ lemma exists_binary_rational (ε : ℝ) (hε : 0 < ε) (x : ℝ) (hx : x ∈ Set
     _ < _ := by simpa using hx.2
   · calc _
     _ = x - k / 2 ^ n := by
+      rw [dist_comm _ x]
       suffices k / 2 ^ n ≤ x by simpa [Real.dist_eq]
       refine div_le_of_le_mul₀ (by simp) hx.1 ?_
       exact Nat.floor_le (by simpa using hx.1)
@@ -53,7 +54,7 @@ lemma nonneg_of_continuousOn_of_binary {f : ℝ → ℝ} (hf : ContinuousOn f (S
   rw [Metric.continuousOn_iff] at hf
   obtain ⟨δ, hδ_pos, hδ⟩ := hf x hx (-f x) (by simpa)
   -- Find a binary rational `q` within this radius.
-  obtain ⟨n, k, hk, hq⟩ := exists_binary_rational δ hδ_pos x hx
+  obtain ⟨n, k, hk, hq⟩ := exists_binary_fraction δ hδ_pos x hx
   use n, k, hk
   -- Use `f q ≤ f x + |f q - f x| < f x + (-f x) = 0`.
   calc _
@@ -296,32 +297,71 @@ theorem lemma_3 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     · congr 1
       ring
 
-lemma toNat_ofNat_of_lt_two {x : ℕ} (hx : x < 2) : (Bool.ofNat x).toNat = x := by
+lemma bool_toNat_ofNat_of_lt_two {x : ℕ} (hx : x < 2) : (Bool.ofNat x).toNat = x := by
   interval_cases x <;> rfl
 
-lemma toNat_ofNat_mod_two (x : ℕ) : (Bool.ofNat (x % 2)).toNat = x % 2 :=
-  toNat_ofNat_of_lt_two (x.mod_lt two_pos)
+lemma bool_toNat_ofNat_mod_two (x : ℕ) : (Bool.ofNat (x % 2)).toNat = x % 2 :=
+  bool_toNat_ofNat_of_lt_two (x.mod_lt two_pos)
 
--- For any `x < b ^ n`, we can TODO
--- TODO: Does this not exist somewhere in Mathlib? Not from Nat.digits? Maybe with List.getD?
+-- Any `x < b ^ n` can be expressed as a sum of powers of base `b`.
+-- Unlike `Nat.digits`, this gives an explicit form for the digits `k ↦ x / b ^ k % b`.
 lemma sum_div_pow_mod_mul_pow (b : ℕ) (n : ℕ) :
     ∀ x < b ^ n, ∑ k ∈ Finset.range n, x / b ^ k % b * b ^ k = x := by
   induction n with
   | zero => simp
   | succ n IH =>
     intro x hx
-    specialize IH (x / b) (by
-      refine Nat.div_lt_of_lt_mul ?_
-      simpa [Nat.pow_succ'] using hx)
     rw [Finset.sum_range_succ']
-    simp only [pow_zero, Nat.div_one, mul_one]  -- TODO?
     convert Nat.div_add_mod' x b using 2
-    convert congrArg (· * b) IH
-    rw [Finset.sum_mul]
-    refine Finset.sum_congr rfl fun i hi ↦ ?_
-    simp only [Nat.div_div_eq_div_mul, Nat.pow_succ, mul_assoc]
-    congr 3
-    ring
+    · convert congrArg (· * b) (IH (x / b) ?_)
+      · rw [Finset.sum_mul]
+        refine Finset.sum_congr rfl fun i hi ↦ ?_
+        rw [Nat.div_div_eq_div_mul, pow_succ']
+        ring
+      · refine Nat.div_lt_of_lt_mul ?_
+        simpa [pow_succ'] using hx
+    · simp
+
+-- lemma list_mapIdx_snd_eq_map {α β : Type*} {f : α → β} :
+--     List.mapIdx (fun _ x ↦ f x) = List.map f := by
+--   funext l
+--   induction l with
+--   | nil => simp
+--   | cons x l IH => simpa using IH
+
+-- lemma list_mapIdx_fst_range_eq_map_range {β : Type*} {f : ℕ → β} :
+--     List.mapIdx (fun i _ ↦ f i) (List.range  = List.map f := by
+--   funext l
+--   induction l with
+--   | nil => simp
+--   | cons x l IH => simpa using IH
+
+
+-- -- Any `x < b ^ n` can be expressed as a sum of powers of base `b`.
+-- -- Unlike `Nat.digits`, this gives an explicit form for the digits `k ↦ x / b ^ k % b`.
+-- lemma sum_div_pow_mod_mul_pow' (b : ℕ) (n : ℕ) :
+--     ∀ x < b ^ n, ∑ k ∈ Finset.range n, x / b ^ k % b * b ^ k = x := by
+--   intro x hx
+--   calc _
+--   _ = ((List.range n).map fun k ↦ x / b ^ k % b * b ^ k).sum := rfl
+--   -- _ = Nat.ofDigits b ((List.range n).mapIdx fun _ k ↦ (Nat.digits b x).getD k 0) := by
+--   --   rw [Nat.ofDigits_eq_sum_mapIdx]
+--   --   simp [-List.getD_eq_getElem?_getD, Function.comp_def]
+--   --   sorry
+--   _ = Nat.ofDigits b ((List.range n).map fun k ↦ (Nat.digits b x).getD k 0) := by
+--     congr
+--     rw [Nat.ofDigits_eq_sum_mapIdx]
+--     congr
+
+--     rw [← list_mapIdx_snd_eq_map]
+--     rw [← list_mapIdx_snd_eq_map]
+--     rw [List.mapIdx_mapIdx]
+--     simp only [Function.comp_def]
+
+--     sorry
+--   _ = _ := by
+--     sorry
+
 
 -- The approximation `⌊x * b ^ n⌋₊ / b ^ n` for `x ∈ [0, 1)` as a sum of fractional digits.
 lemma sum_mul_pow_inv_eq_floor_div_pow (b : ℕ) (hb : 1 < b) (n : ℕ) (x : ℝ) (hx : x ∈ Set.Ico 0 1) :
@@ -366,6 +406,7 @@ lemma sum_mul_pow_inv_eq_floor_div_pow (b : ℕ) (hb : 1 < b) (n : ℕ) (x : ℝ
   rw [div_mul_eq_div_div]
   simp [hb_zero]
 
+
 -- Any real in `[0, 1)` can be represented using an infinite binary expansion `f : ℕ → Bool`.
 -- Note: This could be generalized to arbitrary base `b` using `Fin b` instead of `Bool`.
 lemma exists_binary_expansion {x : ℝ} (hx : x ∈ Set.Ico 0 1) :
@@ -374,16 +415,39 @@ lemma exists_binary_expansion {x : ℝ} (hx : x ∈ Set.Ico 0 1) :
   use f
   rw [hasSum_iff_tendsto_nat_of_nonneg (by simp), Metric.tendsto_atTop]
   intro ε hε
-  -- Specify `n` based on `ε`.
-  use ⌈Real.logb 2 (ε⁻¹)⌉₊
+  -- We could use `exists_binary_fraction` here.
+  -- However, we also need to bound the sum of the subsequent digits for `n ≥ N`.
+  let m := ⌈Real.logb 2 (ε⁻¹)⌉₊
+  use m
   intro n hn
-  rw [dist_comm, Real.dist_eq]
+  -- -- Replace `m = n + b` to represent the additional digits.
+  -- obtain ⟨b, rfl⟩ : ∃ b, m + b = n := Nat.le.dest hn
+  -- -- simp only [Finset.sum_range_add]
+  -- rw [← mul_lt_mul_left (a := 2 ^ m) (by simp)]
+  -- rw [dist_comm _ x, Real.dist_eq]
+  -- calc _
+  -- _ = 2 ^ m * x - ∑ i ∈ Finset.range m, (f i).toNat * (2 ^ m / 2 ^ (i + 1) : ℝ) := by
+  --   rw [abs_of_nonneg]
+  --   swap
+  --   · sorry
+  --   simp [mul_sub, Finset.mul_sum]
+  --   refine Finset.sum_congr rfl fun i hi ↦ ?_
+  --   ring
+  -- _ = 2 ^ m * x - ⌊2 ^ m * x⌋₊ := by sorry
+  -- _ < (1 : ℝ) := sub_left_lt_of_lt_add (Nat.lt_floor_add_one _)
+  -- _ ≤ _ := by
+  --   rw [← inv_le_iff_one_le_mul₀ hε]
+  --   suffices ε⁻¹ ≤ 2 ^ (m : ℝ) by simpa
+  --   rw [← Real.logb_le_iff_le_rpow one_lt_two (inv_pos_of_pos hε)]
+  --   simpa [m] using Nat.le_ceil _
+
+  rw [dist_comm _ x, Real.dist_eq]
   calc _
   _ = |x - ⌊x * 2 ^ n⌋₊ / 2 ^ n| := by
     congr
     unfold f
     -- Replace `toNat (ofNat (x % 2))` with `x % 2`.
-    simp only [toNat_ofNat_mod_two]
+    simp only [bool_toNat_ofNat_mod_two]
     simpa using sum_mul_pow_inv_eq_floor_div_pow 2 one_lt_two n x hx
   _ = |(x * 2 ^ n - ⌊x * 2 ^ n⌋₊)| / 2 ^ n := by simp [sub_div', abs_div]
   _ < 1 / 2 ^ n := by
@@ -401,7 +465,7 @@ lemma exists_binary_expansion {x : ℝ} (hx : x ∈ Set.Ico 0 1) :
     suffices ε⁻¹ ≤ 2 ^ (n : ℝ) by simpa [inv_le_comm₀, hε]
     rw [← Real.logb_le_logb one_lt_two (by simpa) (by simp)]
     rw [Real.logb_rpow two_pos (by simp)]
-    simpa using hn
+    simpa [m] using hn
 
 -- If `a` is the binary fraction of `x ≠ 0`, then some bit must be true.
 lemma exists_bit_true_of_ne_zero {x : ℝ} (a : ℕ → Bool)
@@ -444,7 +508,14 @@ lemma lemma_4 {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
   convert h_cont (∑ i ∈ Finset.range n, (a i).toNat * (2 ^ (i + 1))⁻¹) ?_ hN
   · symm
     -- TODO: use lemma_1a1, lemma_1a2?
-    sorry
+    cases n with
+    | zero =>
+      simp
+      sorry
+    | succ n =>
+      simp
+      sorry
+
     -- convert eq_on_finite_binary hb.2.ne hf₁ hf₂ n (fun k ↦ a k.val) using 1
     -- · rw [Finset.sum_range]
     -- · rw [Finset.sum_range]
@@ -487,12 +558,14 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
   intro x hx
   rw [Set.mem_Ioo]
   refine ⟨?_, ?_⟩
-  · exact lemma_3 hf ⟨hb_half, hb_one⟩ hf₁ hf₂ x hx
-  · -- For the right side, rewrite as infinite sum.
+  · -- For the left side, show that `f x` is greater than or equal to the piecewise linear function
+    -- `(0, 0), (2⁻¹, b), (1, 1)`, which is strictly greater than `x`, for all binary rationals `x`.
+    -- This extends to real `x` by continuity of `f` and density of binary rationals.
+    exact lemma_3 hf ⟨hb_half, hb_one⟩ hf₁ hf₂ x hx
+  · -- For the right side, rewrite `x` as an infinite binary expansion and use this to obtain `f x`
+    -- as an infinite sum. Compare to `c = b / (1 - b) - 1`, which is a geometric series.
+    -- Show that *strict* inequality holds by the existence of a non-zero bit for `x ≠ 0`.
 
-    -- Need to write as a `≤` condition to use density of binary fractions.
-    -- However, the strictness comes from the fact that one of the `a j` is not zero since `x ≠ 0`?
-    -- Not sure how to express this.
     -- Observe from the definition of `b` that `c = b / (1 - b) - 1`, and these are equal to the
     -- infinite geometric series `∑ n ≥ 1, b ^ n` and `∑ n ≥ 1, (1/2) ^ n`.
     have hc : c = b / (1 - b) - 1 := by
