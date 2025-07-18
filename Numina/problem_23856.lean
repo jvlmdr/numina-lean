@@ -275,12 +275,13 @@ theorem lemma_3 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
       refine nonneg_of_continuousOn_of_binary ?_ ?_ r hr_mem
         (f := fun r ↦ f ((1 - r) * 2⁻¹ + r) - ((1 - r) * b + r))
       · refine .sub (.comp hf ?_ ?_) ?_
-        -- wait until form of induction is finalized
-        · sorry
+        · refine Continuous.continuousOn ?_
+          exact .add (.mul (continuous_sub_left 1) continuous_const) continuous_id
         · intro x hx_mem
           simp at hr_mem hx_mem  -- TODO
           split_ands <;> linarith
-        · sorry
+        · refine Continuous.continuousOn ?_
+          exact .add (.mul (continuous_sub_left 1) continuous_const) continuous_id
       intro n k hk
       rw [sub_nonneg]
       exact (this n k hk).2
