@@ -189,10 +189,11 @@ theorem lemma_6 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1)) :
     ∀ x ∈ Set.Ioo 0 1, 0 < f x - x := by
   rw [Set.mem_Ioo] at hb
-  -- To prove that `f x` is *strictly* greater than `x`, we prove that `f x` lies is greater than
+  -- To prove that `f x` is *strictly* greater than `x`, we prove that `f x` is greater than
   -- or equal to the piecewise linear function joining `(0, 0), (2⁻¹, b), (1, 1)`.
   -- To prove the weak inequality, it will suffice to prove it for binary fractions and
   -- extend this to all reals in `[0, 1)` using density and the fact that `f` is continuous.
+
   -- First, rewrite in terms of the piecewise linear function.
   suffices ∀ r : ℝ, r ∈ Set.Ico 0 1 →
       r * b ≤ f (r * 2⁻¹) ∧ (1 - r) * b + r ≤ f ((1 - r) * 2⁻¹ + r) by
@@ -366,35 +367,25 @@ lemma exists_binary_expansion {x : ℝ} (hx : x ∈ Set.Ico 0 1) :
   intro ε hε
   use ⌈Real.logb 2 (ε⁻¹)⌉₊
   intro n hn
-
+  -- Replace the truncated binary expansion with `⌊x * 2 ^ n⌋₊ / 2 ^ n`.
   suffices ∑ i ∈ Finset.range n, ((f i).toNat : ℝ) * (2 ^ (i + 1))⁻¹ = (⌊x * 2 ^ n⌋₊ : ℝ) / 2 ^ n by
-    -- TODO: clean up
-    rw [this]
-    rw [dist_comm _ x, Real.dist_eq]
-    rw [abs_of_nonneg]
-    swap
-    · -- TODO: avoid duplication?
-      rw [sub_nonneg]
-      refine div_le_of_le_mul₀ (by simp) hx.1 ?_
-      refine Nat.floor_le ?_
-      simpa using hx.1
-    rw [← mul_lt_mul_right (a := 2 ^ n) (by simp)]
-    rw [sub_mul]
-    simp -- TODO
-
+    rw [this, dist_comm _ x, Real.dist_eq]
+    suffices |(x - ⌊x * 2 ^ n⌋₊ / 2 ^ n) * 2 ^ n| < ε * 2 ^ n by simpa [abs_mul]
+    rw [sub_mul, div_mul_cancel₀ _ (by simp)]
     calc _
+    _ = x * 2 ^ n - ⌊x * 2 ^ n⌋₊ := by
+      refine abs_of_nonneg ?_
+      rw [sub_nonneg]
+      refine Nat.floor_le ?_
+      simp [hx.1]
     _ < (1 : ℝ) := by
       suffices x * 2 ^ n < ⌊x * 2 ^ n⌋₊ + 1 from sub_left_lt_of_lt_add this
       exact Nat.lt_floor_add_one (x * 2 ^ n)
     _ ≤ _ := by
       rw [← inv_le_iff_one_le_mul₀' hε]
-      rw [← Real.rpow_natCast]
-      rw [← Real.logb_le_iff_le_rpow one_lt_two (inv_pos_of_pos hε)]
+      rw [← Real.rpow_natCast, ← Real.logb_le_iff_le_rpow one_lt_two (inv_pos_of_pos hε)]
       simpa using hn
-
-  -- TODO: move into above?
   refine eq_div_of_mul_eq (by simp) ?_
-
   calc _
   _ = ∑ i ∈ Finset.range n, ((f i).toNat : ℝ) * (2 ^ n / 2 ^ (i + 1)) := by
     simp only [Finset.sum_mul, mul_assoc, inv_mul_eq_div]
@@ -431,7 +422,7 @@ lemma summable_binary_expansion (a : ℕ → Bool) :
   _ = (a i).toNat * (2 ^ i : ℝ)⁻¹ := by ring
   _ ≤ _ := by simp [Bool.toNat_le]
 
--- Infinite binary expansions are less than one.
+-- Infinite binary expansions do not exceed one.
 lemma binary_expansion_le_one (a : ℕ → Bool) :
     ∑' i, (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹ ≤ 1 := by
   rw [← mul_le_iff_le_one_left two_pos]
@@ -482,9 +473,7 @@ lemma lemma_7 {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
     (n : ℕ) (a : Fin n → Bool) :
     f (∑ j, (a j).toNat * (2 ^ (j + 1 : ℕ))⁻¹) =
       ∑ j, (a j).toNat * (b * ∏ k ∈ Finset.Iio j, if a k then 1 - b else b) := by
-
-  -- TODO: standardize indices i, j, k, x
-
+  -- Before applying induction, rewrite fnite expansion as a binary fraction `k / 2 ^ n`.
   suffices f (↑(∑ j, (a j).toNat * 2 ^ (n - (j + 1))) / 2 ^ n) =
       ∑ j, (a j).toNat * (b * ∏ k ∈ Finset.Iio j, if a k then 1 - b else b) by
     convert this
@@ -531,8 +520,8 @@ lemma lemma_7 {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
       _ = _ := by simp [← Fin.bot_eq_zero]
 
 -- The *infinite* binary expansion of `f x` given the infinite binary expansion of `x`.
-lemma lemma_8 {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
-    {b : ℝ} (hb : b ∈ Set.Ioo (2⁻¹) 1)
+lemma lemma_8 {f : ℝ → ℝ} (hf_cont : ContinuousOn f (Set.Icc 0 1))
+    {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
     {x : ℝ} {a : ℕ → Bool} (ha : HasSum (fun n ↦ (a n).toNat * (2 ^ (n + 1) : ℝ)⁻¹) x) :
@@ -545,40 +534,40 @@ lemma lemma_8 {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
     · linarith
     · refine Finset.prod_nonneg fun k hk ↦ ?_
       split_ifs <;> linarith
-
   rw [Metric.tendsto_atTop]
   intro ε hε
+  -- Given `ε`, find radius `δ` within which `f y` is close to `f x`.
+  rw [Metric.continuousOn_iff] at hf_cont
   have hx_mem : x ∈ Set.Icc 0 1 := by
     rw [Set.mem_Icc]
     refine ⟨?_, ?_⟩
     · exact ha.nonneg (by simp)
     · rw [← ha.tsum_eq]
       exact binary_expansion_le_one a
-
+  specialize hf_cont x hx_mem ε hε
+  obtain ⟨δ, hδ, hf_cont⟩ := hf_cont
+  -- Find `N` such that the truncated expansion is within `δ` of `x`.
   rw [hasSum_iff_tendsto_nat_of_nonneg (by simp), Metric.tendsto_atTop] at ha
-  -- We need to obtain `N` such that `∑ n < N, v n = f (∑ n < N, u n)` is close to `f x`.
-  rw [Metric.continuousOn_iff] at h_cont
-  specialize h_cont x hx_mem ε hε
-  obtain ⟨δ, hδ, h_cont⟩ := h_cont
   obtain ⟨N, hN⟩ := ha δ hδ
   use N
   intro n hn
-  specialize hN n hn
-  convert h_cont (∑ i ∈ Finset.range n, (a i).toNat * (2 ^ (i + 1))⁻¹) ?_ hN
+  -- Show that `f` evaluated at the truncated expansion satisfies the distance condition.
+  convert hf_cont (∑ i ∈ Finset.range n, (a i).toNat * (2 ^ (i + 1))⁻¹) ?_ (hN n hn)
   · symm
     convert lemma_7 hb.2.ne hf₁ hf₂ n (fun k ↦ a k.val) using 1
     · rw [Finset.sum_range]
     · rw [Finset.sum_range]
       refine Finset.sum_congr rfl fun i hi ↦ ?_
       congr 2
-      -- TODO: use Iio lemma here?
       calc _
       _ = ∏ k ∈ (Finset.Iio i).map Fin.valEmbedding, if a k then 1 - b else b := by
         simp [Nat.Iio_eq_range]
       _ = _ := by
         rw [Finset.prod_map]
         simp
-  · refine ⟨?_, ?_⟩
+  · -- Show that the truncated expansion belongs to `[0, 1]`.
+    rw [Set.mem_Icc]
+    split_ands
     · exact Finset.sum_nonneg (by simp)
     · refine le_trans ?_ (binary_expansion_le_one a)
       refine sum_le_tsum _ (by simp) ?_
@@ -592,26 +581,17 @@ lemma exists_bit_true_of_ne_zero {x : ℝ} (a : ℕ → Bool)
   rw [← ha.tsum_eq]
   simp [h]
 
+-- Represent each term in the inequality as an infinite sum.
+-- Use the infinite binary expansion of `x` and the infinite sum above for `f x`.
+-- Prove *strict* inequality using the fact that at least one bit in `x` must be non-zero.
 lemma lemma_9 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
-    {b c : ℝ} (hb : b = (1 + c) / (2 + c)) (hc : 0 < c)
+    {b c : ℝ} (hb : b = (1 + c) / (2 + c)) (hc_pos : 0 < c)
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
     (x : ℝ) (hx : x ∈ Set.Ioo 0 1) :
     f x - x < c := by
-  -- TODO: avoid repetition
-  have hb_one : b < 1 := by
-    rw [hb]
-    refine (div_lt_one ?_).mpr ?_
-    · simp [add_pos, hc]
-    · simp
-  -- TODO: keep one of these?
-  have hb_half : 1 / 2 < b := by
-    rw [hb]
-    refine (div_lt_div_iff₀ two_pos ?_).mpr ?_
-    · simp [add_pos, hc]
-    · simp [add_mul, hc]
-  have hb_two : 1 < 2 * b := (div_lt_iff₀' two_pos).mp hb_half
-
+  have hb_one : b < 1 := by rw [hb, div_lt_one] <;> linarith
+  have hb_half : 1 / 2 < b := by rw [hb, div_lt_div_iff₀] <;> linarith
   -- Observe from the definition of `b` that `c = b / (1 - b) - 1`, and these are equal to the
   -- infinite geometric series `∑ n ≥ 1, b ^ n` and `∑ n ≥ 1, (1/2) ^ n`.
   have hc : c = b / (1 - b) - 1 := by
@@ -623,18 +603,16 @@ lemma lemma_9 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     rw [div_add' _ _ _ (by linarith)]
     simp
   have h_sum_half : HasSum (fun n ↦ (2⁻¹ : ℝ) ^ (n + 1)) 1 := by
-    -- suffices HasSum (fun n ↦ (2⁻¹ : ℝ) ^ (n + 1)) 1 by simpa
     rw [hasSum_nat_add_iff (f := fun n ↦ 2⁻¹ ^ n)]
     simpa [one_add_one_eq_two] using hasSum_geometric_two
-
+  -- Obtain infinite sums equal to `x` and `f x`.
   obtain ⟨a, hx_sum⟩ := exists_binary_expansion (Set.mem_Ico_of_Ioo hx)
-  have hfx_sum := lemma_8 hf ⟨by simpa using hb_half, hb_one⟩ hf₁ hf₂ hx_sum  -- TODO
-
+  have hfx_sum := lemma_8 hf ⟨hb_half, hb_one⟩ hf₁ hf₂ hx_sum
   -- Replace both sides with an infinite sum.
   rw [← (hfx_sum.sub hx_sum).tsum_eq]
   rw [hc, ← (h_sum_b.sub h_sum_half).tsum_eq]
 
-  -- It remains to prove that the left sum is strictly less that the right.
+  -- It remains to prove that the left sum is (strictly) less that the right.
   -- It suffices to give some `i` such that
   -- `(a i) * (b * (∏ k ∈ Finset.range i, if a k then 1 - b else b) - 2 ^ (i + 1))`
   -- is strictly less than `b ^ (i + 1) - (1 / 2) ^ (i + 1)`.
@@ -663,10 +641,9 @@ lemma lemma_9 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     _ ≤ _ := by
       refine mul_le_of_le_one_left ?_ (by simp [Bool.toNat_le])
       suffices (2⁻¹ : ℝ) ^ (n + 1) ≤ b ^ (n + 1) by simpa
-      refine pow_le_pow_left₀ (by norm_num) ?_ (n + 1)
-      linarith  -- TODO: `hb_gt`
-  · -- TODO (and where to put `b`)
-    simp only [inv_pow]
+      gcongr
+      linarith
+  · simp only [inv_pow]
     cases a (k + 1) with
     | false =>
       -- The left side is zero. This case is trivial, it suffices to know that `2⁻¹ < b`.
@@ -681,7 +658,6 @@ lemma lemma_9 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
       · linarith
       · calc _
         _ ≤ ∏ _ ∈ .range k, b := by
-          -- TODO: avoid duplication?
           refine Finset.prod_le_prod (fun i hi ↦ ?_) (fun i hi ↦ ?_) <;> split_ifs <;> linarith
         _ = _ := by simp
 
@@ -690,31 +666,18 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1)) :
     ∀ x ∈ Set.Ioo 0 1, f x - x ∈ Set.Ioo 0 c := by
-
-  have hb_one : b < 1 := by
-    rw [hb]
-    refine (div_lt_one ?_).mpr ?_
-    · simp [add_pos, hc]
-    · simp
-  -- TODO: keep one of these?
-  have hb_half : 1 / 2 < b := by
-    rw [hb]
-    refine (div_lt_div_iff₀ two_pos ?_).mpr ?_
-    · simp [add_pos, hc]
-    · simp [add_mul, hc]
-  have hb_two : 1 < 2 * b := (div_lt_iff₀' two_pos).mp hb_half
-
-  have hf_zero : f 0 = 0 := lemma_0 (by linarith) hf₁
-  have hf_one : f 1 = 1 := lemma_1 (by linarith) hf₂
-  have hf_half : f 2⁻¹ = b := lemma_2 (by linarith) hf₁ hf₂
-
   intro x hx
   rw [Set.mem_Ioo]
   refine ⟨?_, ?_⟩
   · -- For the left side, show that `f x` is greater than or equal to the piecewise linear function
     -- `(0, 0), (2⁻¹, b), (1, 1)`, which is strictly greater than `x`, for all binary rationals `x`.
     -- This extends to real `x` by continuity of `f` and density of binary rationals.
-    exact lemma_6 hf ⟨hb_half, hb_one⟩ hf₁ hf₂ x hx
+    rcases hb with rfl
+    refine lemma_6 hf ?_ hf₁ hf₂ x hx
+    rw [Set.mem_Ioo]
+    split_ands
+    · rw [div_lt_div_iff₀] <;> linarith
+    · rw [div_lt_one] <;> linarith
   · -- For the right side, rewrite `x` as an infinite binary expansion and use this to obtain `f x`
     -- as an infinite sum. Compare to `c = b / (1 - b) - 1`, which is a geometric series.
     -- Show that *strict* inequality holds by the existence of a non-zero bit for `x ≠ 0`.
