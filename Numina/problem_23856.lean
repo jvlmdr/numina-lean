@@ -129,11 +129,8 @@ lemma lemma_4 {f : ℝ → ℝ} {b : ℝ}
   · split_ands
     · gcongr
       simp [div_nonneg]
-    · refine div_le_one_of_le₀ ?_ two_pos.le
-      -- This feels like it should be easier...
-      -- TODO: maybe use `2 ^ n ≤ k ≤ 2 ^ (n + 1)` with subtraction?
-      suffices 1 + (k / 2 ^ n : ℝ) ≤ 1 + 1 by simpa [one_add_one_eq_two]
-      rw [add_le_add_iff_left]
+    · refine div_le_one_of_le₀ ?_ zero_le_two
+      suffices (k : ℝ) / 2 ^ n ≤ 1 by linarith
       refine div_le_one_of_le₀ ?_ (by simp)
       simpa [← @Nat.cast_le ℝ] using hkn
 
@@ -185,47 +182,6 @@ lemma lemma_5 {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
         · linarith
         · exact IH j hkn
 
--- TODO: these might be better folded into the main proof?
--- they are simple applications of lemma_3, lemma_4, lemma_5
-
--- The function `f` lies above the line joining `(0, 0)` and `(2⁻¹, b)`
--- on all binary rationals in the interval `[0, 2⁻¹]`.
-lemma lemma_5a {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
-    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
-    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
-    (n k : ℕ) (hkn : k ≤ 2 ^ n) :
-    b * (k / 2 ^ n) ≤ f (2⁻¹ * k / 2 ^ n) := by
-  rw [Set.mem_Ioo] at hb
-  calc b * (k / 2 ^ n)
-  _ ≤ b * f (k / 2 ^ n) := by
-    gcongr
-    · linarith
-    · exact lemma_5 hb hf₁ hf₂ n k hkn
-  _ = f (k / 2 ^ (n + 1)) := (lemma_3 hf₁ n k hkn).symm
-  _ = f (2⁻¹ * k / 2 ^ n) := by
-    congr 1
-    ring
-
--- The function `f` lies above the line joining `(2⁻¹, b)` and `(1, 1)`
--- on all binary rationals in the interval `[2⁻¹, 1]`.
-lemma lemma_5b {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
-    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
-    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
-    (n k : ℕ) (hkn : k ≤ 2 ^ n) :
-    b + (1 - b) * (k / 2 ^ n) ≤ f (2⁻¹ + 2⁻¹ * (k / 2 ^ n)) := by
-  rw [Set.mem_Ioo] at hb
-  calc _
-  _ ≤ b + (1 - b) * f (k / 2 ^ n) := by
-    gcongr
-    · linarith
-    · exact lemma_5 hb hf₁ hf₂ n k hkn
-  _ = f (↑(2 ^ n + k) / 2 ^ (n + 1)) := (lemma_4 hf₂ n k hkn).symm
-  _ = f (2⁻¹ + 2⁻¹ * (k / 2 ^ n)) := by
-    congr
-    calc _
-    _ = 2⁻¹ + (k : ℝ) / (2 ^ (n + 1)) := by simp [add_div, pow_succ, div_mul_cancel_left₀]
-    _ = _ := by ring
-
 -- The left side of the main result, `0 < f x - x`.
 theorem lemma_6 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
@@ -233,7 +189,6 @@ theorem lemma_6 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1)) :
     ∀ x ∈ Set.Ioo 0 1, 0 < f x - x := by
   rw [Set.mem_Ioo] at hb
-
   -- To prove that `f x` is *strictly* greater than `x`, we prove that `f x` lies is greater than
   -- or equal to the piecewise linear function joining `(0, 0), (2⁻¹, b), (1, 1)`.
   -- To prove the weak inequality, it will suffice to prove it for binary fractions and
@@ -250,21 +205,19 @@ theorem lemma_6 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
       calc _
       _ < 2 * b * x := lt_mul_of_one_lt_left hx_mem.1 (by linarith)
       _ = _ := by ring
-      _ ≤ _ := this.1  -- TODO: suffices?
+      _ ≤ _ := this.1
       _ = _ := by simp
     | inr hx_half =>
       specialize this (x * 2 - 1) (by split_ands <;> linarith)
       calc _
-      _ = 1 - (1 - x) := by ring  -- TODO: suffices?
+      _ = 1 - (1 - x) := by ring
       _ < 1 - 2 * (1 - b) * (1 - x) := by
         refine sub_lt_sub_left ?_ _
         refine mul_lt_of_lt_one_left ?_ ?_ <;> linarith
       _ = _ := by ring
-      _ ≤ _ := this.2  -- TODO: suffices?
+      _ ≤ _ := this.2
       _ = _ := congrArg f (by ring)
 
-  -- TODO: put this in a form which is optimal for the next step?
-  -- or use the most convenient here and worry about it later
   -- Now reduce the problem to binary fractions.
   suffices ∀ n k : ℕ, k < 2 ^ n →
       k / 2 ^ n * b ≤ f (k / 2 ^ n * 2⁻¹) ∧
@@ -276,7 +229,7 @@ theorem lemma_6 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
       · refine .sub (.comp hf ?_ ?_) ?_
         · exact (continuous_mul_right _).continuousOn
         · intro x hx_mem
-          simp at hr_mem hx_mem  -- TODO
+          rw [Set.mem_Ico] at hx_mem
           split_ands <;> linarith
         · exact (continuous_mul_right b).continuousOn
       intro n k hk
@@ -290,7 +243,7 @@ theorem lemma_6 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
         · refine Continuous.continuousOn ?_
           exact .add (.mul (continuous_sub_left 1) continuous_const) continuous_id
         · intro x hx_mem
-          simp at hr_mem hx_mem  -- TODO
+          rw [Set.mem_Ico] at hx_mem
           split_ands <;> linarith
         · refine Continuous.continuousOn ?_
           exact .add (.mul (continuous_sub_left 1) continuous_const) continuous_id
@@ -298,7 +251,7 @@ theorem lemma_6 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
       rw [sub_nonneg]
       exact (this n k hk).2
 
-  -- Use the result from the induction.
+  -- Combine `x ≤ f x` and the recursive specification applied to binary fractions.
   intro n k hkn
   split_ands
   · suffices b * (k / 2 ^ n) ≤ f (2⁻¹ * k / 2 ^ n) by
@@ -306,14 +259,31 @@ theorem lemma_6 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
       · ring
       · congr 1
         ring
-    exact lemma_5a hb hf₁ hf₂ n k hkn.le
-
+    calc _
+    _ ≤ b * f (k / 2 ^ n) := by
+      gcongr
+      · linarith
+      · exact lemma_5 hb hf₁ hf₂ n k hkn.le
+    _ = f (k / 2 ^ (n + 1)) := (lemma_3 hf₁ n k hkn.le).symm
+    _ = _ := by
+      congr 1
+      ring
   · suffices b + (1 - b) * (k / 2 ^ n) ≤ f (2⁻¹ + 2⁻¹ * (k / 2 ^ n)) by
       convert this using 1
       · ring
       · congr 1
         ring
-    exact lemma_5b hb hf₁ hf₂ n k hkn.le
+    calc _
+    _ ≤ b + (1 - b) * f (k / 2 ^ n) := by
+      gcongr
+      · linarith
+      · exact lemma_5 hb hf₁ hf₂ n k hkn.le
+    _ = f (↑(2 ^ n + k) / 2 ^ (n + 1)) := (lemma_4 hf₂ n k hkn.le).symm
+    _ = _ := by
+      congr
+      calc _
+      _ = 2⁻¹ + (k : ℝ) / (2 ^ (n + 1)) := by simp [add_div, pow_succ, div_mul_cancel_left₀]
+      _ = _ := by ring
 
 -- For the second part, we represent the numbers in `[0, 1)` as infinite binary expansions.
 -- That is, we write `x = ∑' i, (f i).toNat * (2 ^ (i + 1) : ℝ)⁻¹`
