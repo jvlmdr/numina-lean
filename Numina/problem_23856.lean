@@ -303,68 +303,6 @@ lemma bool_toNat_ofNat_of_lt_two {x : ℕ} (hx : x < 2) : (Bool.ofNat x).toNat =
 lemma bool_toNat_ofNat_mod_two (x : ℕ) : (Bool.ofNat (x % 2)).toNat = x % 2 :=
   bool_toNat_ofNat_of_lt_two (x.mod_lt two_pos)
 
--- -- Any `x < b ^ n` can be expressed as a sum of powers of base `b`.
--- -- Unlike `Nat.digits`, this gives an explicit form for the digits `k ↦ x / b ^ k % b`.
--- lemma sum_div_pow_mod_mul_pow (b : ℕ) (n : ℕ) :
---     ∀ x < b ^ n, ∑ k ∈ Finset.range n, x / b ^ k % b * b ^ k = x := by
---   induction n with
---   | zero => simp
---   | succ n IH =>
---     intro x hx
---     rw [Finset.sum_range_succ']
---     convert Nat.div_add_mod' x b using 2
---     · convert congrArg (· * b) (IH (x / b) ?_)
---       · rw [Finset.sum_mul]
---         refine Finset.sum_congr rfl fun i hi ↦ ?_
---         rw [Nat.div_div_eq_div_mul, pow_succ']
---         ring
---       · refine Nat.div_lt_of_lt_mul ?_
---         simpa [pow_succ'] using hx
---     · simp
-
--- -- The approximation `⌊x * b ^ n⌋₊ / b ^ n` for `x ∈ [0, 1)` as a sum of fractional digits.
--- lemma sum_mul_pow_inv_eq_floor_div_pow (b : ℕ) (hb : 1 < b) (n : ℕ) (x : ℝ) (hx : x ∈ Set.Ico 0 1) :
---     ∑ i ∈ Finset.range n, (⌊x * b ^ (i + 1)⌋₊ % b : ℕ) * (b ^ (i + 1) : ℝ)⁻¹ =
---       (⌊x * b ^ n⌋₊ / b ^ n : ℝ) := by
---   rw [Set.mem_Ico] at hx
---   have hb_pos : 0 < b := Nat.zero_lt_of_lt hb
---   have hb_zero : b ≠ 0 := Nat.not_eq_zero_of_lt hb
---   rw [eq_div_iff (by simp [hb_zero])]
---   -- Move from `ℝ` back to `ℕ`.
---   -- Replace `b ^ n * (b ^ (i + 1))⁻¹` with `b ^ (n - (i + 1))`.
---   suffices ∑ i ∈ Finset.range n, ⌊x * b ^ (i + 1)⌋₊ % b * b ^ (n - (i + 1)) = ⌊x * b ^ n⌋₊ by
---     convert congrArg (Nat.cast : ℕ → ℝ) this using 1
---     simp only [Finset.sum_mul, Nat.cast_sum, Nat.cast_mul, Nat.cast_pow]
---     refine Finset.sum_congr rfl fun i hi ↦ ?_
---     rw [Finset.mem_range] at hi
---     rw [pow_sub₀ _ (by simpa) (Nat.add_one_le_of_lt hi)]
---     ring
---   convert sum_div_pow_mod_mul_pow b n ⌊x * b ^ n⌋₊ ?_ using 1
---   swap
---   · rw [← @Nat.cast_lt ℝ]
---     calc _
---     _ ≤ x * b ^ n := by
---       refine Nat.floor_le ?_
---       simpa [hb_pos] using hx.1
---     _ < _ := by
---       simpa [hb_pos] using hx.2
---   symm
---   -- Flip the sum such that they both start with the most significant bit.
---   rw [← Finset.sum_range_reflect]
---   refine Finset.sum_congr rfl fun k hk ↦ ?_
---   rw [Finset.mem_range] at hk
---   -- Replace `n - 1 - k` with `n - (k + 1)`.
---   rw [Nat.sub_sub, add_comm 1 k]
---   congr
---   -- Move the division (with truncation) inside the floor.
---   rw [← Nat.floor_div_nat]
---   congr
---   simp only [Nat.cast_pow]
---   -- Cancel the `b ^ n` terms.
---   rw [pow_sub₀ _ (by simpa using hb_zero) (Nat.add_one_le_of_lt hk)]
---   rw [div_mul_eq_div_div]
---   simp [hb_zero]
-
 -- The explicit form for the `k`-th digit of `n` in base `b`.
 lemma digits_getD {b : ℕ} (hb : 1 < b) (n k : ℕ) : (Nat.digits b n).getD k 0 = n / b ^ k % b := by
   induction k generalizing n with
@@ -489,30 +427,23 @@ lemma exists_binary_expansion {x : ℝ} (hx : x ∈ Set.Ico 0 1) :
     rw [Nat.floor_lt' (by simp)]
     simpa using hx.2
 
--- If `a` is the binary fraction of `x ≠ 0`, then some bit must be true.
-lemma exists_bit_true_of_ne_zero {x : ℝ} (a : ℕ → Bool)
-    (ha : HasSum (fun i ↦ (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹) x) (h : x ≠ 0) :
-    ∃ n, a n := by
-  contrapose! h
-  simpa [h] using ha.tsum_eq.symm
-
-lemma fin_prod_succ_bot (n : ℕ) (f : Fin (n + 1) → ℝ) (i : Fin n) :
+-- The first term can be separated from a product over `j ∈ Finset.Iio i.succ`.
+-- Defined in analogy to `Finset.prod_range_succ'`.
+lemma fin_prod_Iio_succ_bot (n : ℕ) (f : Fin (n + 1) → ℝ) (i : Fin n) :
     ∏ j < i.succ, f j = f 0 * ∏ j < i, f j.succ := by
-  calc _
-  _ = ∏ j ∈ insert 0 ((Finset.Iio i).map (Fin.succEmb n)), f j := by
-    congr
-    -- TODO: should be a lemma?
-    ext j
-    cases j using Fin.cases with
-    | zero => simp
-    | succ j => simp [Fin.succ_ne_zero]
-  _ = f 0 * ∏ j ∈ (Finset.Iio i).map (Fin.succEmb n), f j := by
-    refine Finset.prod_insert ?_
-    simp [Fin.succ_ne_zero]
-  _ = _ := by
-    simp
-
-lemma fin_Iio_zero (n : ℕ) : Finset.Iio (0 : Fin (n + 1)) = ∅ := rfl
+  have : ∏ j < i.val + 1, f j = f 0 * ∏ j < i.val, f (j + 1) := by
+    simp [Nat.Iio_eq_range, Finset.prod_range_succ', mul_comm (f 0)]
+  convert this
+  · calc _
+    _ = ∏ j ∈ (Finset.Iio i.succ).map Fin.valEmbedding, f j := by
+      rw [Finset.prod_map]
+      simp
+    _ = _ := by simp
+  · calc _
+    _ = ∏ j ∈ (Finset.Iio i).map Fin.valEmbedding, f (j + 1) := by
+      rw [Finset.prod_map]
+      simp
+    _ = _ := by simp
 
 lemma lemma_4 {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
@@ -541,7 +472,7 @@ lemma lemma_4 {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
   | succ n IH =>
     specialize IH (fun j ↦ a j.succ)
     -- Extract the terms dependent on `a 0` from the sum and product.
-    simp only [Fin.sum_univ_succ, fin_prod_succ_bot]
+    simp only [Fin.sum_univ_succ, fin_prod_Iio_succ_bot]
     cases a 0 with
     | false =>
       calc _
@@ -568,7 +499,31 @@ lemma lemma_4 {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
         rw [IH, Finset.mul_sum]
         congr 1
         exact Finset.sum_congr rfl fun i hi ↦ by ring
-      _ = _ := by simp [fin_Iio_zero]
+      _ = _ := by simp [← Fin.bot_eq_zero]
+
+lemma summable_binary_expansion (a : ℕ → Bool) :
+    Summable (fun i ↦ (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹) := by
+  rw [← summable_mul_right_iff two_ne_zero]
+  refine summable_geometric_two.of_nonneg_of_le (by simp) ?_
+  intro i
+  calc _
+  _ = (a i).toNat * (2 ^ i : ℝ)⁻¹ := by ring
+  _ ≤ _ := by simp [Bool.toNat_le]
+
+lemma binary_expansion_le_one (a : ℕ → Bool) :
+    ∑' i, (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹ ≤ 1 := by
+  rw [← mul_le_iff_le_one_left two_pos]
+  calc _
+  _ = ∑' (i : ℕ), (a i).toNat * (2 ^ i : ℝ)⁻¹ := by
+    rw [← tsum_mul_right]
+    exact tsum_congr fun i ↦ by ring
+  _ ≤ ∑' (i : ℕ), (1 / 2 : ℝ) ^ i := by
+    suffices ∀ i, (a i).toNat * (2 ^ i : ℝ)⁻¹ ≤ (1 / 2 : ℝ) ^ i by
+      refine tsum_le_tsum this ?_ summable_geometric_two
+      refine summable_geometric_two.of_nonneg_of_le ?_ this
+      simp
+    simp [Bool.toNat_le]
+  _ = (2 : ℝ) := tsum_geometric_two
 
 -- If `a` is the binary expansion of `x`, then we can express `f x` as a series of products.
 lemma lemma_5 {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
@@ -588,16 +543,19 @@ lemma lemma_5 {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
 
   rw [Metric.tendsto_atTop]
   intro ε hε
-  -- Given the `ε` for `f x`, we need to determine `ε'` for x. This will provide `N`.
-  -- TODO: lemma for this; should it be `Icc 0 1`?
-  have hx_mem : x ∈ Set.Ico 0 1 := by sorry
+  have hx_mem : x ∈ Set.Icc 0 1 := by
+    rw [Set.mem_Icc]
+    refine ⟨?_, ?_⟩
+    · exact ha.nonneg (by simp)
+    · rw [← ha.tsum_eq]
+      exact binary_expansion_le_one a
+
   rw [hasSum_iff_tendsto_nat_of_nonneg (by simp), Metric.tendsto_atTop] at ha
   -- We need to obtain `N` such that `∑ n < N, v n = f (∑ n < N, u n)` is close to `f x`.
   rw [Metric.continuousOn_iff] at h_cont
-  specialize h_cont x (Set.mem_Icc_of_Ico hx_mem) ε hε
+  specialize h_cont x hx_mem ε hε
   obtain ⟨δ, hδ, h_cont⟩ := h_cont
-  specialize ha δ hδ
-  obtain ⟨N, hN⟩ := ha
+  obtain ⟨N, hN⟩ := ha δ hδ
   use N
   intro n hn
   specialize hN n hn
@@ -608,16 +566,38 @@ lemma lemma_5 {f : ℝ → ℝ} (h_cont : ContinuousOn f (Set.Icc 0 1))
     · rw [Finset.sum_range]
       refine Finset.sum_congr rfl fun i hi ↦ ?_
       congr 2
+      -- TODO: use Iio lemma here?
       calc _
       _ = ∏ k ∈ (Finset.Iio i).map Fin.valEmbedding, if a k then 1 - b else b := by
         simp [Nat.Iio_eq_range]
       _ = _ := by
         rw [Finset.prod_map]
         simp
-  · -- TODO: same lemma again? (but truncated)
-    refine Set.mem_Icc_of_Ico ?_
+  · refine ⟨?_, ?_⟩
+    · exact Finset.sum_nonneg (by simp)
+    · refine le_trans ?_ (binary_expansion_le_one a)
+      refine sum_le_tsum _ (by simp) ?_
+      exact summable_binary_expansion a
 
-    sorry
+-- If `a` is the binary fraction of `x ≠ 0`, then some bit must be true.
+lemma exists_bit_true_of_ne_zero {x : ℝ} (a : ℕ → Bool)
+    (ha : HasSum (fun i ↦ (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹) x) (h : x ≠ 0) :
+    ∃ n, a n = true := by
+  contrapose! h
+  simpa [h] using ha.tsum_eq.symm
+
+-- TODO: not used?
+-- If `a` is the binary fraction of `x ≠ 1`, then some bit must be false.
+lemma exists_bit_false_of_ne_one {x : ℝ} (a : ℕ → Bool)
+    (ha : HasSum (fun i ↦ (a i).toNat * (2 ^ (i + 1) : ℝ)⁻¹) x) (h : x ≠ 1) :
+    ∃ n, a n = false := by
+  contrapose! h
+  rw [← ha.tsum_eq]
+  rw [← add_right_inj 1]
+  convert sum_add_tsum_nat_add 1 summable_geometric_two using 1
+  · simp [h]
+  · rw [tsum_geometric_two]
+    norm_num
 
 theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     {b c : ℝ} (hb : b = (1 + c) / (2 + c)) (hc : 0 < c)
