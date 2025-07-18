@@ -445,6 +445,16 @@ lemma fin_prod_Iio_succ_bot (n : ℕ) (f : Fin (n + 1) → ℝ) (i : Fin n) :
       simp
     _ = _ := by simp
 
+-- The binary expansion of a natural number using `n` bits is less than `2 ^ n`.
+lemma lemma_4a (n : ℕ) (a : Fin n → Bool) :
+    ∑ k, (a k).toNat * 2 ^ (n - (k.val + 1)) < 2 ^ n := by
+  calc _
+  _ ≤ ∑ k : Fin n, 2 ^ (n - (k.val + 1)) := Finset.sum_le_sum (by simp [Bool.toNat_le])
+  _ = ∑ k ∈ Finset.range n, 2 ^ (n - (k + 1)) := by rw [Finset.sum_range]
+  _ = ∑ k ∈ Finset.range n, 2 ^ (n - 1 - k) := by simp only [Nat.add_comm _ 1, Nat.sub_add_eq]
+  _ = ∑ k ∈ Finset.range n, 2 ^ k := Finset.sum_range_reflect _ n
+  _ < 2 ^ n := Nat.geomSum_lt (le_refl 2) (by simp)
+
 lemma lemma_4 {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1))
@@ -479,21 +489,19 @@ lemma lemma_4 {f : ℝ → ℝ} {b : ℝ} (hb : b ≠ 1)
       _ = f (↑(∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - (k.val + 1))) / 2 ^ (n + 1)) := by simp
       _ = b * f (↑(∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - (k.val + 1))) / 2 ^ n) := by
         rw [lemma_1a1 hf₁ n]
-        -- TODO: extract as lemma?
-        sorry
+        exact (lemma_4a n (a ∘ Fin.succ)).le
       _ = ∑ i : Fin n, (a i.succ).toNat *
           (b * (b * ∏ k ∈ Finset.Iio i, if a k.succ then 1 - b else b)) := by
         rw [IH, Finset.mul_sum]
         exact Finset.sum_congr rfl fun i hi ↦ by ring
       _ = _ := by simp
-
     | true =>
       calc _
       _ = f (↑(2 ^ n + ∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - (k + 1))) / 2 ^ (n + 1)) := by
         simp
       _ = b + (1 - b) * f (↑(∑ k : Fin n, (a k.succ).toNat * 2 ^ (n - (k + 1))) / 2 ^ n) := by
         rw [lemma_1a2 hf₂ n]
-        sorry
+        exact (lemma_4a n (a ∘ Fin.succ)).le
       _ = b + ∑ k : Fin n, (a k.succ).toNat *
           (b * ((1 - b) * ∏ j ∈ Finset.Iio k, if a j.succ then 1 - b else b)) := by
         rw [IH, Finset.mul_sum]
