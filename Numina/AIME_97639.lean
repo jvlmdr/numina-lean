@@ -2,8 +2,8 @@
 
 import Mathlib
 
-/- Find the sum of all positive integers b < 1000 such that the base-b integer 36_b
-is a perfect square and the base-b integer 27_b is a perfect cube. -/
+/- Find the sum of all positive integers $b < 1000$ such that the base-$b$ integer $36_b$
+is a perfect square and the base-$b$ integer $27_b$ is a perfect cube. -/
 
 theorem number_theory_97639 :
     ∑ᶠ b ∈ {b : ℕ | 0 < b ∧ b < 1000 ∧ (∃ k, Nat.digits b (k ^ 2) = [6, 3]) ∧

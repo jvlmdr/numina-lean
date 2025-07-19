@@ -3,8 +3,8 @@
 
 import Mathlib
 
-/- How many positive integers n satisfy (n + 1000) / 70 = ⌊sqrt n⌋?
-(Recall that ⌊x⌋ is the greatest integer not exceeding x.)
+/- How many positive integers n satisfy $(n + 1000) / 70 = \lfloor \sqrt{n} \rfloor$?
+(Recall that $\lfloor x \rfloor$ is the greatest integer not exceeding $x$.)
 (A) 2
 (B) 4
 (C) 6

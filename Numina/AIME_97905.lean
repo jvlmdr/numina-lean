@@ -6,12 +6,15 @@ import Mathlib
 open Pointwise
 
 /- Given that
+$$
 \begin{eqnarray*}
 &(1)& x\text{ and }y\text{ are both integers between 100 and 999, inclusive;} \\
 &(2)& y\text{ is the number formed by reversing the digits of }x\text{; and} \\
 &(3)& z=|x-y|.
 \end{eqnarray*}
+$$
 How many distinct values of z are possible? -/
+
 theorem number_theory_97905 :
     Set.ncard {z : ℤ | ∃ x y : ℕ, x ∈ Set.Ico 100 1000 ∧ y ∈ Set.Ico 100 1000 ∧
       z = |(x - y : ℤ)| ∧ Nat.digits 10 y = (Nat.digits 10 x).reverse} = 9 := by

@@ -1,6 +1,41 @@
-# Problems
+# Batch 3
 
 ## AIME
+
+### `AIME_97905`
+
+Given that
+$$
+\begin{eqnarray*}
+&(1)& x\text{ and }y\text{ are both integers between 100 and 999, inclusive;} \\
+&(2)& y\text{ is the number formed by reversing the digits of }x\text{; and} \\
+&(3)& z=|x-y|.
+\end{eqnarray*}
+$$
+How many distinct values of z are possible?
+
+<https://artofproblemsolving.com/wiki/index.php/2002_AIME_II_Problems/Problem_1>
+
+[`Numina/AIME_97905.lean`](Numina/AIME_97905.lean)
+
+```lean
+theorem number_theory_97905 :
+    Set.ncard {z : ℤ | ∃ x y : ℕ, x ∈ Set.Ico 100 1000 ∧ y ∈ Set.Ico 100 1000 ∧
+      z = |(x - y : ℤ)| ∧ Nat.digits 10 y = (Nat.digits 10 x).reverse} = 9 := by
+```
+
+### `AIME_97639`
+
+Find the sum of all positive integers $b < 1000$ such that the base-$b$ integer $36_b$
+is a perfect square and the base-$b$ integer $27_b$ is a perfect cube.
+
+[`Numina/AIME_97639.lean`](Numina/AIME_97639.lean)
+
+```lean
+theorem number_theory_97639 :
+    ∑ᶠ b ∈ {b : ℕ | 0 < b ∧ b < 1000 ∧ (∃ k, Nat.digits b (k ^ 2) = [6, 3]) ∧
+      ∃ m, Nat.digits b (m ^ 3) = [7, 2]}, b = 371 := by
+```
 
 ### `AIME_97068`
 
@@ -34,14 +69,57 @@ m and n are relatively prime positive integers. What is m + n?
 
 [`Numina/AIME_98439.lean`](Numina/AIME_98439.lean)
 
-## AMC
-
 ```lean
 theorem algebra_98439 :
     IsGreatest ((fun (a, b, _) ↦ a + b) '' {(a, b, q) : ℕ × ℕ × ℕ |
       a ∈ Set.Ioc 0 q ∧ b ∈ Set.Ioc 0 (500 - q) ∧
       (a / q : ℝ) < 160 / 300 ∧ (b / (500 - q) : ℝ) < 140 / 200}) 349 ∧
     Nat.Coprime 349 500 ∧ 349 + 500 = 849 := by
+```
+
+
+## AMC
+
+### `AMC_97963`
+
+Let A be the set of positive integers that have no prime factors other than 2, 3, or 5.
+The infinite sum
+1/1 + 1/2 + 1/3 + 1/4 + 1/5 + 1/6 + 1/8 + 1/9 + 1/10 + 1/12 + 1/15 + 1/16 + 1/18 + 1/20 + ⋯
+of the reciprocals of the elements of A can be expressed as m / n,
+where m and n are relatively prime positive integers. What is m + n?
+(A) 16
+(B) 17
+(C) 19
+(D) 23
+(E) 36
+
+<https://artofproblemsolving.com/wiki/index.php/2018_AMC_12A_Problems/Problem_19>
+
+[`Numina/AMC_97963.lean`](Numina/AMC_97963.lean)
+
+```lean
+theorem number_theory_97963 : ∃ m n : ℕ,
+    ∑' k : Nat.factoredNumbers {2, 3, 5}, (k : ℝ)⁻¹ = m / n ∧
+    Nat.Coprime m n ∧ m + n = 19 := by
+```
+
+### `AMC_93855`
+
+How many positive integers n satisfy $(n + 1000) / 70 = \lfloor \sqrt{n} \rfloor$?
+(Recall that $\lfloor x \rfloor$ is the greatest integer not exceeding $x$.)
+(A) 2
+(B) 4
+(C) 6
+(D) 30
+(E) 32
+
+<https://artofproblemsolving.com/wiki/index.php/2020_AMC_12B_Problems/Problem_21>
+
+[`Numina/AMC_93855.lean`](Numina/AMC_93855.lean)
+
+```lean
+theorem number_theory_93855 :
+    Set.ncard {n : ℕ | 0 < n ∧ (n + 1000 : ℝ) / 70 = ⌊√n⌋₊} = 6 := by
 ```
 
 ### `AMC_94341`
