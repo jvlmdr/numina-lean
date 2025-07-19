@@ -143,6 +143,23 @@ theorem number_theory_97068 {a b c d : ℕ}
     a * 100 + b * 10 + c = 321 := by
 ```
 
+### `AIME_93450`
+
+The formula for converting Fahrenheit temperature F to the corresponding
+Celsius temperature C is C = 5 / 9 * (F - 32).
+An integer Fahrenheit temperature is converted to Celsius, rounded to the nearest integer,
+converted back to Fahrenheit, and again rounded to the nearest integer.
+For how many integer Fahrenheit temperatures between 32 and 1000 inclusive does
+the original temperature equal the final temperature?
+
+[`Numina/AIME_93450.lean`](Numina/AIME_93450.lean)
+
+```lean
+theorem algebra_93450 {toC toF : ℝ → ℝ} (h_toC : ∀ x, toC x = 5 / 9 * (x - 32))
+    (h_toF : ∀ x, toF x = 9 / 5 * x + 32) :
+    {x : ℤ | 32 ≤ x ∧ x ≤ 1000 ∧ round (toF (round (toC x))) = x}.ncard = 539 := by
+```
+
 ### `AIME_98439`
 
 Alpha and Beta both took part in a two-day problem-solving competition.
