@@ -1,5 +1,29 @@
 # Problems
 
+### `AIME_98439`
+
+Alpha and Beta both took part in a two-day problem-solving competition.
+At the end of the second day, each had attempted questions worth a total of 500 points.
+Alpha scored 160 points out of 300 points attempted on the first day,
+and scored 140 points out of 200 points attempted on the second day.
+Beta who did not attempt 300 points on the first day,
+had a positive integer score on each of the two days,
+and Beta's daily success rate (points scored divided by points attempted)
+on each day was less than Alpha's on that day.
+Alpha's two-day success ratio was 300/500 = 3/5.
+The largest possible two-day success ratio that Beta could achieve is m / n, where
+m and n are relatively prime positive integers. What is m + n?
+
+[`Numina/AIME_98439.lean`](Numina/AIME_98439.lean)
+
+```lean
+theorem algebra_98439 :
+    IsGreatest ((fun (a, b, _) ↦ a + b) '' {(a, b, q) : ℕ × ℕ × ℕ |
+      a ∈ Set.Ioc 0 q ∧ b ∈ Set.Ioc 0 (500 - q) ∧
+      (a / q : ℝ) < 160 / 300 ∧ (b / (500 - q) : ℝ) < 140 / 200}) 349 ∧
+    Nat.Coprime 349 500 ∧ 349 + 500 = 849 := by
+```
+
 ### `AMC_94341`
 
 A geometric sequence $(a_n)$ has $a_1 = \sin(x)$, $a_2 = \cos(x)$, $a_3 = \tan(x)$ for some
