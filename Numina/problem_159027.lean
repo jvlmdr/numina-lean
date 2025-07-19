@@ -3,8 +3,13 @@
 import Mathlib
 
 /- Solve the system of equations
-10 x^{2} + 5 y^{2} - 2 x y - 38 x - 6 y + 41 = 0
-3 x^{2} - 2 y^{2} + 5 x y - 17 x - 6 y + 20 = 0 -/
+$$
+\begin{align}
+10 x^{2} + 5 y^{2} - 2 x y - 38 x - 6 y + 41 & = 0 \\
+3 x^{2} - 2 y^{2} + 5 x y - 17 x - 6 y + 20 & = 0
+\end{align}
+$$
+-/
 
 theorem algebra_159027 {x y : ℝ}
     (h₁ : 10 * x ^ 2 + 5 * y ^ 2 - 2 * x * y - 38 * x - 6 * y + 41 = 0)

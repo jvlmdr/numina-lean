@@ -5,7 +5,7 @@ import Mathlib
 open Real
 
 /- For any real numbers $a, b, c$, prove that there exists a real number $x$ such that
-$a \cos x + b \cos 3 x + c \cos 9 x \ge \frac{1}{2}(|a| + |b| + |c|)$. -/
+$a \cos(x) + b \cos(3 x) + c \cos(9 x) \ge \frac{1}{2}(|a| + |b| + |c|)$. -/
 
 theorem inequalities_129966 (a b c : ℝ) :
     ∃ x, a * cos x + b * cos (3 * x) + c * cos (9 * x) ≥ (|a| + |b| + |c|) / 2 := by

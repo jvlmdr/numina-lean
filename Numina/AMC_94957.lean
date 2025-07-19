@@ -7,7 +7,7 @@ open scoped Real
 open Complex
 
 /- For real numbers $x$, let
-$$ P(x) = 1 + \cos(x) + i \sin(x) - \cos(2 x) - i \ sin(2 x) + \cos(3 x) + i \sin(3 x) $$
+$$ P(x) = 1 + \cos(x) + i \sin(x) - \cos(2 x) - i \sin(2 x) + \cos(3 x) + i \sin(3 x) $$
 where $i = \sqrt{-1}$. For how many values of $x$ with $0 \leq x < 2 \pi$ does $P(x) = 0$?
 (A) 0, (B) 1, (C) 2, (D) 3, (E) 4 -/
 

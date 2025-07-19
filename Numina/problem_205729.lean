@@ -7,6 +7,7 @@ open Real
 /- Prove the following inequality:
 $$ \log _{5} 6 + \log _{6} 7 + \log _{7} 8 + \log _{8} 5 > 4 $$
 -/
+
 theorem inequalities_205729 : logb 5 6 + logb 6 7 + logb 7 8 + logb 8 5 > 4 := by
   suffices logb 5 6 + logb 6 7 + logb 7 8 + logb 8 5 - 4 > 0 by simpa using this
   calc _
