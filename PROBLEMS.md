@@ -14,7 +14,7 @@ Which of the following equals $a + b + c + d + e + f$?
 (D) $2 h$
 (E) $2 k$
 
-```lean4
+```lean
 theorem algebra_95071 {a b c d e f k : ℝ} {p q : ℝ → ℝ}
     (hp : ∀ x, p x = a * x ^ 2 + b * x + c) (hq : ∀ x, q x = d * x ^ 2 + e * x + f)
     (hpq : ∀ x, q x - k = -(p x - k)) :
@@ -35,7 +35,7 @@ What is $k$?
 (D) 4
 (E) 5
 
-```lean4
+```lean
 theorem algebra_94615 (a b c : ℤ) (f : ℤ → ℤ) (hf : ∀ x, f x = a * x ^ 2 + b * x + c)
     (h1 : f 1 = 0) (h2 : f 7 ∈ Set.Ioo 50 60) (h3 : f 8 ∈ Set.Ioo 70 80)
     {k : ℤ} (h4 : f 100 ∈ Set.Ioo (5000 * k) (5000 * (k + 1))) :
