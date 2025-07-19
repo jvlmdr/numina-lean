@@ -34,8 +34,9 @@ abbrev mathlibLeanOptions := #[
 
 package «numina» where
 
-@[default_target]
-lean_lib «Numina» where
-  leanOptions := mathlibLeanOptions
-  -- Mathlib also enforces these linter options, which are not active by default.
-  moreServerOptions := mathlibOnlyLinters
+  @[default_target]
+  lean_lib «Numina» where
+
+    leanOptions := mathlibLeanOptions
+    -- Mathlib also enforces these linter options, which are not active by default.
+    moreServerOptions := mathlibOnlyLinters
