@@ -4,7 +4,7 @@ import Mathlib
 
 open scoped Finset
 
-/- The formula for converting toC Fahrenheit temperature F to the corresponding
+/- The formula for converting Fahrenheit temperature F to the corresponding
 Celsius temperature C is C = 5 / 9 * (F - 32).
 An integer Fahrenheit temperature is converted to Celsius, rounded to the nearest integer,
 converted back to Fahrenheit, and again rounded to the nearest integer.
