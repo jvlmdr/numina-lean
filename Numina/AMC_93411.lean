@@ -16,11 +16,8 @@ What was the last score Mrs. Walters entered?
 (D) 82
 (E) 91 -/
 
-theorem number_theory_93411 (a b c d e : ℕ)
-    (h : [a, b, c, d, e] ~ [71, 76, 80, 82, 91])
-    (h2 : 2 ∣ d + e)
-    (h3 : 3 ∣ c + d + e)
-    (h4 : 4 ∣ b + c + d + e) : a = 80 := by
+theorem number_theory_93411 (a b c d e : ℕ) (h : [a, b, c, d, e] ~ [71, 76, 80, 82, 91])
+    (h2 : 2 ∣ d + e) (h3 : 3 ∣ c + d + e) (h4 : 4 ∣ b + c + d + e) : a = 80 := by
   -- The sum of all scores is 400.
   -- The sum excluding the last score must be divisible by 4.
   have ha_dvd : 4 ∣ 400 - a := by
