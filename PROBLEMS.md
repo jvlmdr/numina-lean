@@ -1,5 +1,26 @@
 # Problems
 
+### `AMC_94615`
+
+[`Numina/AMC_94615.lean`](Numina/AMC_94615.lean)
+
+Let $f(x) = a * x^2 + b * x + c$ where $a, b, c$ are integers.
+Suppose that $f(1) = 0$, $50 < f(7) < 60$, $70 < f(8) < 80$,
+and $5000 k < f(100) < 5000 (k + 1)$ for some integer $k$.
+What is $k$?
+(A) 1
+(B) 2
+(C) 3
+(D) 4
+(E) 5
+
+```lean4
+theorem algebra_94615 (a b c : ℤ) (f : ℤ → ℤ) (hf : ∀ x, f x = a * x ^ 2 + b * x + c)
+    (h1 : f 1 = 0) (h2 : f 7 ∈ Set.Ioo 50 60) (h3 : f 8 ∈ Set.Ioo 70 80)
+    {k : ℤ} (h4 : f 100 ∈ Set.Ioo (5000 * k) (5000 * (k + 1))) :
+    k = 3 := by
+```
+
 ### `AMC_93411`
 
 [`Numina/AMC_93411.lean`](Numina/AMC_93411.lean)
@@ -39,6 +60,5 @@ How many miles from City A will they be when they meet?
 ```lean
 theorem algebra_65302 {d v1 v2 : ℝ} (hd : d = 45) (hv1 : v1 = 18) (hv2 : v2 = 12) {x t : ℝ}
     (h1 : x = v1 * t) (h2 : x = d - v2 * t) : x = 27 := by
-  sorry
 ```
 
