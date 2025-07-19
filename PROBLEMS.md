@@ -25,7 +25,7 @@ theorem algebra_95071 {a b c d e f k : ℝ} {p q : ℝ → ℝ}
 
 [`Numina/AMC_94615.lean`](Numina/AMC_94615.lean)
 
-Let $f(x) = a * x^2 + b * x + c$ where $a, b, c$ are integers.
+Let $f(x) = a x^2 + b x + c$ where $a, b, c$ are integers.
 Suppose that $f(1) = 0$, $50 < f(7) < 60$, $70 < f(8) < 80$,
 and $5000 k < f(100) < 5000 (k + 1)$ for some integer $k$.
 What is $k$?
