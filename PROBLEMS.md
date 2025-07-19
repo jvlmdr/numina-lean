@@ -2,6 +2,59 @@
 
 ## AIME
 
+### `AIME_bBeautiful`
+
+Let $b\ge 2$ be an integer.
+Call a positive integer $n$ $b$-eautiful if it has exactly two digits
+when expressed in base $b$ and these two digits sum to $\sqrt n$.
+For example, $81$ is $13$-eautiful because $81 = 63_{13}$ and $6 + 3 = \sqrt{81}$.
+Find the least integer $b \ge 2$ for which there are more than ten $b$-eautiful integers.
+
+<https://artofproblemsolving.com/wiki/index.php/2024_AIME_II_Problems/Problem_14>
+
+[`Numina/AIME_bBeautiful.lean`](Numina/AIME_bBeautiful.lean)
+
+```lean
+theorem number_theory_93241 :
+    IsLeast {b | 2 ≤ b ∧
+      {n | (Nat.digits b n).length = 2 ∧ (Nat.digits b n).sum = sqrt n}.encard > 10} 211 := by
+```
+
+### `AIME_67739`
+
+Let $S$ be the number of ordered pairs of integers $(a,b)$ with $1 \leq a \leq 100$ and
+$b \geq 0$ such that the polynomial $x^2 + a x + b$ can be factored into the product of two
+(not necessarily distinct) linear factors with integer coefficients.
+Find the remainder when $S$ is divided by $1000$.
+
+<https://artofproblemsolving.com/wiki/index.php/2018_AIME_I_Problems/Problem_1>
+
+[`Numina/AIME_67739.lean`](Numina/AIME_67739.lean)
+
+```lean
+theorem algebra_67739 : Set.ncard {(a, b) : ℤ × ℤ | a ∈ Finset.Icc 1 100 ∧ 0 ≤ b ∧
+    ∃ u v : ℤ, X ^ 2 + C a * X + C b = (X + C u) * (X + C v)} % 1000 = 600 := by
+```
+
+### `AIME_96952`
+
+Let $z_1 = 18 + 83i$, $z_2 = 18 + 39i$ and $z_3 = 78 + 99i$, where $i = \sqrt{-1}$.
+Let $z$ be the unique complex number with the properties that
+$\frac{z_3 - z_1}{z_2 - z_1} \frac{z - z_2}{z - z_3}$ is a real number and
+the imaginary part of $z$ is the greatest possible. Find the real part of $z$.
+
+<https://artofproblemsolving.com/wiki/index.php/2017_AIME_I_Problems/Problem_10>
+
+[`Numina/AIME_96952.lean`](Numina/AIME_96952.lean)
+
+```lean
+theorem algebra_96952 {z₁ z₂ z₃ : ℂ}
+    (hz₁ : z₁ = 18 + 83 * I) (hz₂ : z₂ = 18 + 39 * I) (hz₃ : z₃ = 78 + 99 * I) :
+    ∃ z, ((z₃ - z₁) / (z₂ - z₁) * ((z - z₂) / (z - z₃))).im = 0 ∧
+      z.re = 56 ∧
+      ∀ x, ((z₃ - z₁) / (z₂ - z₁) * ((x - z₂) / (x - z₃))).im = 0 → z.im ≥ x.im := by
+```
+
 ### `AIME_30933`
 
 Let S be the set of all perfect squares whose rightmost three digits in base 10 are 256.
@@ -116,6 +169,41 @@ theorem algebra_98439 :
 
 
 ## AMC
+
+### `AMC_94957`
+
+For real numbers $x$, let
+
+$$ P(x) = 1 + \cos(x) + i \sin(x) - \cos(2 x) - i \ sin(2 x) + \cos(3 x) + i \sin(3 x) $$
+
+where $i = \sqrt{-1}$. For how many values of $x$ with $0 \leq x < 2 \pi$ does $P(x) = 0$?
+(A) 0, (B) 1, (C) 2, (D) 3, (E) 4
+
+<https://artofproblemsolving.com/wiki/index.php/2021_Fall_AMC_12B_Problems/Problem_21>
+
+[`Numina/AMC_94957.lean`](Numina/AMC_94957.lean)
+
+```lean
+theorem algebra_94957 {p : ℝ → ℂ}
+    (hp : ∀ x, p x = 1 + cos x + I * sin x - cos (2 * x) - I * sin (2 * x) +
+      cos (3 * x) + I * sin (3 * x)) :
+    {x | 0 ≤ x ∧ x < 2 * π ∧ p x = 0}.encard = 0 := by
+```
+
+### `AMC_94998`
+
+For $n$ a positive integer, let $R(n)$ be the sum of the remainders when $n$ is divided by
+$2$, $3$, $4$, $5$, $6$, $7$, $8$, $9$, and $10$.
+For example, $R(15) = 1 + 0 + 3 + 0 + 3 + 1 + 7 + 6 + 5 = 26$.
+How many two-digit positive integers $n$ satisfy $R(n) = R(n+1)$?
+(A) 0, (B) 1, (C) 2, (D) 3, (E) 4
+
+[`Numina/AMC_94998.lean`](Numina/AMC_94998.lean)
+
+```lean
+theorem number_theory_94998 (r : ℕ → ℕ) (hr : ∀ n, r n = ∑ k in .Icc 2 10, n % k) :
+    Finset.card {n ∈ .Ico 10 100 | r n = r (n + 1)} = 2 := by
+```
 
 ### `AMC_97963`
 
@@ -299,6 +387,19 @@ theorem algebra_65302 {d v1 v2 : ℝ} (hd : d = 45) (hv1 : v1 = 18) (hv2 : v2 = 
 
 
 ## Other
+
+### `problem_295444`
+
+Positive real numbers $a$, $b$, $c$ satisfy $a^3 + b^3 = c^3$.
+Prove: $a^2 + b^2 - c^2 > 6 (c - a) (c - b)$.
+
+[`Numina/problem_295444.lean`](Numina/problem_295444.lean)
+
+```lean
+theorem inequalities_295444 (a b c : ℝ) (ha : 0 < a) (hb : 0 < b) (hc : 0 < c)
+    (h : a ^ 3 + b ^ 3 = c ^ 3) :
+    a ^ 2 + b ^ 2 - c ^ 2 > 6 * (c - a) * (c - b) := by
+```
 
 ### `problem_198296`
 

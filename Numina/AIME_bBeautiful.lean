@@ -8,7 +8,7 @@ open Real
 /- Let $b\ge 2$ be an integer.
 Call a positive integer $n$ $b$-eautiful if it has exactly two digits
 when expressed in base $b$ and these two digits sum to $\sqrt n$.
-For example, $81$ is $13$-eatiful because $81 = 63_{13}$ and $6 + 3 = \sqrt{81}$.
+For example, $81$ is $13$-eautiful because $81 = 63_{13}$ and $6 + 3 = \sqrt{81}$.
 Find the least integer $b \ge 2$ for which there are more than ten $b$-eautiful integers. -/
 
 theorem number_theory_93241 :

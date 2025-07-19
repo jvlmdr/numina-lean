@@ -1,5 +1,3 @@
-
-
 import Mathlib
 
 /- For $n$ a positive integer, let $R(n)$ be the sum of the remainders when $n$ is divided by
