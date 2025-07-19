@@ -7,7 +7,10 @@ open Real
 /- Given $f(x) = \cos (2 x) + p |\cos (x)| + p, x \in \mathbb{R}$.
 Let the maximum value of $f(x)$ be $h(p)$, then the expression for $h(p)$ is
 $$
-h(p) = \begin{cases} p - 1, & p < -2 \\ 2 p + 1, & p \ge 2. \end{cases}
+h(p) = \begin{cases}
+  p - 1, & p < -2 \\
+  2 p + 1, & p \ge 2.
+\end{cases}
 $$
 -/
 
