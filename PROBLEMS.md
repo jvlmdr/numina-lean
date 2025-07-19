@@ -49,11 +49,11 @@ theorem algebra_265535 (f : ℕ → ℕ) (h_mono : StrictMono f) (hf : ∀ k, f 
 Given the natural numbers
 
 $$
-\begin{align}
+\begin{aligned}
 a & = 2 (1 + 2 + 3 + \cdots + 2016) - 2016 \\
-b & = 1 + 1 \times 2 + 1 \times 2 \times 3 + 1 \times 2 \times 3 \times 4 + … +
-  1 * 2 \times 3 \times \cdots \times 2016 
-\end{align}
+b & = 1 + 1 \cdot 2 + 1 \cdot 2 \cdot 3 + 1 \cdot 2 \cdot 3 \cdot 4 + \cdots +
+  1 \cdot 2 \cdot 3 \cdots 2016 
+\end{aligned}
 $$
 
 Show that:
