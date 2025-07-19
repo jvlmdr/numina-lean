@@ -2,6 +2,25 @@
 
 ## AIME
 
+### `AIME_30933`
+
+Let S be the set of all perfect squares whose rightmost three digits in base 10 are 256.
+Let T be the set of all numbers of the form $\frac{x - 256}{1000}$, where $x$ is in S.
+In other words, T is the set of numbers that result when the last three digits
+of each number in S are truncated.
+Find the remainder when the tenth smallest element of T is divided by 1000.
+
+<https://artofproblemsolving.com/wiki/index.php/2012_AIME_I_Problems/Problem_10>
+
+[`Numina/AIME_30933.lean`](Numina/AIME_30933.lean)
+
+```lean
+theorem number_theory_30933 (s t : Set ℕ)
+    (hs : s = {m : ℕ | m % 1000 = 256 ∧ ∃ k, m = k ^ 2})
+    (ht : t = {n : ℕ | ∃ m ∈ s, n = m / 1000}) :
+    Nat.nth (· ∈ t) 9 % 1000 = 170 := by
+```
+
 ### `AIME_96580`
 
 Let $P$ be the product of the roots of $z^6 + z^4 + z^3 + z^2 + 1 = 0$
@@ -276,5 +295,104 @@ How many miles from City A will they be when they meet?
 ```lean
 theorem algebra_65302 {d v1 v2 : ℝ} (hd : d = 45) (hv1 : v1 = 18) (hv2 : v2 = 12) {x t : ℝ}
     (h1 : x = v1 * t) (h2 : x = d - v2 * t) : x = 27 := by
+```
+
+
+## Other
+
+### `problem_198296`
+
+The reduced quadratic trinomial $f(x)$ has two distinct roots.
+Can it happen that the equation $f(f(x)) = 0$ has three distinct roots,
+and the equation $f(f(f(x))) = 0$ has seven distinct roots?
+
+[`Numina/problem_198296.lean`](Numina/problem_198296.lean)
+
+```lean
+theorem algebra_198296 {f : ℝ → ℝ} (hf : ∃ b c, f = fun x ↦ x ^ 2 + b * x + c)
+    (h1_card : {x | f x = 0}.encard = 2) :
+    ¬({x | f (f x) = 0}.encard = 3 ∧ {x | f (f (f x)) = 0}.encard = 7) := by
+```
+
+### `problem_159432`
+
+Given $x, y, z > 0$, and $x + y + z = 1$.
+Prove $(1/x^2 + x) (1/y^2 + y) * (1/z^2 + z) ≥ (28/3)^3$.
+
+[`Numina/problem_159432.lean`](Numina/problem_159432.lean)
+
+```lean
+theorem inequalities_159432 (x y z : ℝ) (hx : 0 < x) (hy : 0 < y) (hz : 0 < z)
+    (hsum : x + y + z = 1) :
+    ((1 / x ^ 2 + x) * (1 / y ^ 2 + y) * (1 / z ^ 2 + z)) ≥ (28 / 3) ^ 3 := by
+```
+
+### `problem_209992`
+
+Prove that there are infinitely many natural numbers that cannot be represented
+as the sum of the square of an integer and a prime number.
+
+[`Numina/problem_209992.lean`](Numina/problem_209992.lean)
+
+```lean
+theorem number_theory_209992 :
+    ∀ a : ℕ, ∃ x > a, ¬∃ n p : ℕ, p.Prime ∧ x = n ^ 2 + p := by
+```
+
+### `problem_180196`
+
+Show $\frac{1}{2} + \log_{9} x - \log_{3}(5 x) > \log_{\frac{1}{3}}(x+3)$.
+
+[`Numina/problem_180196.lean`](Numina/problem_180196.lean)
+
+```lean
+theorem algebra_180196 {x : ℝ} (hx : 0 < x) :
+    1/2 + logb 9 x - logb 3 (5 * x) > logb (1/3) (x + 3) := by
+```
+
+### `problem_200534`
+
+Prove: For any real numbers $a_{1}, a_{2}, \cdots, a_{1987}$ and any positive numbers
+$b_{1}, b_{2}, \cdots, b_{1987}$, we have
+
+$$
+\frac{\left(a_{1}+a_{2}+\cdots+a_{1987}\right)^{2}}{b_{1}+b_{2}+\cdots+b_{1987}} \leqslant
+  \frac{a_{1}^{2}}{b_{1}}+\frac{a_{2}^{2}}{b_{2}}+\cdots+\frac{a_{1987}^{2}}{b_{1987}} .
+$$
+
+[`Numina/problem_200534.lean`](Numina/problem_200534.lean)
+
+```lean
+theorem inequalities_200534 (a b : Fin 1987 → ℝ) (hb : ∀ i, 0 < b i) :
+    (∑ i, a i) ^ 2 / ∑ i, b i ≤ ∑ i, a i ^ 2 / b i := by
+```
+
+### `problem_138682`
+
+For any integers $x$ and $y$, the algebraic expression
+$x^5 + 3 x^4 y - 5 x^3 y^2 - 15 x^2 y^3 + 4 x y^4 + 12 y^5$ cannot equal 33.
+
+[`Numina/problem_138682.lean`](Numina/problem_138682.lean)
+
+```lean
+theorem algebra_138682 : ∀ x y : ℤ,
+    x^5 + 3 * x^4 * y - 5 * x^3 * y^2 - 15 * x^2 * y^3 + 4 * x * y^4 + 12 * y^5 ≠ 33 := by
+```
+
+### `problem_def`
+
+Given $f(x) = \cos (2 x) + p |\cos (x)| + p, x \in \mathbb{R}$.
+Let the maximum value of $f(x)$ be $h(p)$, then the expression for $h(p)$ is
+
+$$
+h(p) = \begin{cases} p - 1, & p < -2 \\ 2 p + 1, & p \ge 2. \end{cases}
+$$
+
+[`Numina/problem_def.lean`](Numina/problem_def.lean)
+
+```lean
+theorem algebra_114412 {f : ℝ → ℝ → ℝ} (hf : ∀ p x, f p x = cos (2 * x) + p * |cos x| + p)
+    (g : ℝ → ℝ) (hg : ∀ p, g p = ⨆ x, f p x) :
+    ∀ p, g p = if p < -2 then p - 1 else 2 * p + 1 := by
 ```
 

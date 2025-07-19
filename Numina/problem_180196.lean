@@ -5,6 +5,7 @@ import Mathlib
 open Real
 
 /- Show $\frac{1}{2} + \log_{9} x - \log_{3}(5 x) > \log_{\frac{1}{3}}(x+3)$. -/
+
 theorem algebra_180196 {x : ℝ} (hx : 0 < x) :
     1/2 + logb 9 x - logb 3 (5 * x) > logb (1/3) (x + 3) := by
   simp only [one_div, gt_iff_lt]

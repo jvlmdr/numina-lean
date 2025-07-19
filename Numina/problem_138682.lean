@@ -6,6 +6,7 @@ open scoped List
 
 /- For any integers $x$ and $y$, the algebraic expression
 $x^5 + 3 x^4 y - 5 x^3 y^2 - 15 x^2 y^3 + 4 x y^4 + 12 y^5$ cannot equal 33. -/
+
 theorem algebra_138682 : ∀ x y : ℤ,
     x^5 + 3 * x^4 * y - 5 * x^3 * y^2 - 15 * x^2 * y^3 + 4 * x * y^4 + 12 * y^5 ≠ 33 := by
   intro x y

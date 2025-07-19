@@ -4,10 +4,13 @@ import Mathlib
 
 open Real
 
-/- Given $f(x) = \cos 2 x + p |\cos x| + p, x \in \mathbb{R}$.
+/- Given $f(x) = \cos (2 x) + p |\cos (x)| + p, x \in \mathbb{R}$.
 Let the maximum value of $f(x)$ be $h(p)$, then the expression for $h(p)$ is
-$$ h(p) = \begin{cases} p - 1, & p < -2 \\ 2 p + 1, & p \ge 2. \end{cases} $$
+$$
+h(p) = \begin{cases} p - 1, & p < -2 \\ 2 p + 1, & p \ge 2. \end{cases}
+$$
 -/
+
 theorem algebra_114412 {f : ℝ → ℝ → ℝ} (hf : ∀ p x, f p x = cos (2 * x) + p * |cos x| + p)
     (g : ℝ → ℝ) (hg : ∀ p, g p = ⨆ x, f p x) :
     ∀ p, g p = if p < -2 then p - 1 else 2 * p + 1 := by

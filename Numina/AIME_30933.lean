@@ -7,7 +7,7 @@ import Mathlib
 Let T be the set of all numbers of the form $\frac{x - 256}{1000}$, where $x$ is in S.
 In other words, T is the set of numbers that result when the last three digits
 of each number in S are truncated.
-Find the remainder when the tenth smallest element of T is divided by $1000$. -/
+Find the remainder when the tenth smallest element of T is divided by 1000. -/
 
 theorem number_theory_30933 (s t : Set ℕ)
     (hs : s = {m : ℕ | m % 1000 = 256 ∧ ∃ k, m = k ^ 2})

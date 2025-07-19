@@ -4,8 +4,8 @@ import Mathlib
 
 open Real
 
-/- Given x, y, z > 0$, and x + y + z = 1.
-Prove (1/x^2 + x) * (1/y^2 + y) * (1/z^2 + z) ≥ (28/3)^3. -/
+/- Given $x, y, z > 0$, and $x + y + z = 1$.
+Prove $(1/x^2 + x) (1/y^2 + y) * (1/z^2 + z) ≥ (28/3)^3$. -/
 
 theorem inequalities_159432 (x y z : ℝ) (hx : 0 < x) (hy : 0 < y) (hz : 0 < z)
     (hsum : x + y + z = 1) :
