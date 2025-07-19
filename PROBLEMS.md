@@ -5,6 +5,7 @@
 ### `AIME_97905`
 
 Given that
+
 $$
 \begin{eqnarray*}
 &(1)& x\text{ and }y\text{ are both integers between 100 and 999, inclusive;} \\
@@ -12,6 +13,7 @@ $$
 &(3)& z=|x-y|.
 \end{eqnarray*}
 $$
+
 How many distinct values of z are possible?
 
 <https://artofproblemsolving.com/wiki/index.php/2002_AIME_II_Problems/Problem_1>
