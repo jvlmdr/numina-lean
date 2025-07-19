@@ -2,6 +2,22 @@
 
 ## AIME
 
+### `AIME_96580`
+
+Let $P$ be the product of the roots of $z^6 + z^4 + z^3 + z^2 + 1 = 0$
+that have a positive imaginary part, and suppose that $P = r (\cos(θ∘) + i \sin(θ∘))$,
+where $0 < r$ and $0 ≤ θ < 360$. Find $θ$.
+
+<https://artofproblemsolving.com/wiki/index.php/1996_AIME_Problems/Problem_11>
+
+[`Numina/AIME_96580.lean`](Numina/AIME_96580.lean)
+
+```lean
+theorem algebra_96580 :
+    ∃ (h : Set.Finite {z : ℂ | z ^ 6 + z ^ 4 + z ^ 3 + z ^ 2 + 1 = 0 ∧ 0 < z.im}),
+      toIcoMod Real.two_pi_pos 0 (∏ z in h.toFinset, z).arg = 2 * π * (276 / 360) := by
+```
+
 ### `AIME_97905`
 
 Given that

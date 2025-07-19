@@ -6,10 +6,9 @@ import Mathlib
 open Complex
 open scoped Real
 
-/- Let P be the product of the roots of
-z^6 + z^4 + z^3 + z^2 + 1 = 0
-that have a positive imaginary part, and suppose that
-P = r(cos θ ∘ + i sin θ ∘), where 0 < r and 0 ≤ θ < 360. Find θ. -/
+/- Let $P$ be the product of the roots of $z^6 + z^4 + z^3 + z^2 + 1 = 0$
+that have a positive imaginary part, and suppose that $P = r (\cos(θ∘) + i \sin(θ∘))$,
+where $0 < r$ and $0 ≤ θ < 360$. Find $θ$. -/
 
 theorem algebra_96580 :
     ∃ (h : Set.Finite {z : ℂ | z ^ 6 + z ^ 4 + z ^ 3 + z ^ 2 + 1 = 0 ∧ 0 < z.im}),
