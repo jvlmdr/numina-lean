@@ -2,21 +2,20 @@
 
 ## AIME
 
-### `AIME_93450`
+### `AIME_97068`
 
-The formula for converting Fahrenheit temperature F to the corresponding
-Celsius temperature C is C = 5 / 9 * (F - 32).
-An integer Fahrenheit temperature is converted to Celsius, rounded to the nearest integer,
-converted back to Fahrenheit, and again rounded to the nearest integer.
-For how many integer Fahrenheit temperatures between 32 and 1000 inclusive does
-the original temperature equal the final temperature?
+A rational number written in base eight is $ab.cd$, where all digits are nonzero.
+The same number in base twelve is $bb.ba$.
+Find the base-ten number $abc$. 
 
-[`Numina/AIME_93450.lean`](Numina/AIME_93450.lean)
+[`Numina/AIME_97068.lean`](Numina/AIME_97068.lean)
 
 ```lean
-theorem algebra_93450 {toC toF : ℝ → ℝ} (h_toC : ∀ x, toC x = 5 / 9 * (x - 32))
-    (h_toF : ∀ x, toF x = 9 / 5 * x + 32) :
-    {x : ℤ | 32 ≤ x ∧ x ≤ 1000 ∧ round (toF (round (toC x))) = x}.ncard = 539 := by
+theorem number_theory_97068 {a b c d : ℕ}
+    (ha0 : a ≠ 0) (hb0 : b ≠ 0) (hc0 : c ≠ 0) (hd0 : d ≠ 0)
+    (ha_lt : a < 8) (hb_lt : b < 8) (hc_lt : c < 8) (hd_lt : d < 8)
+    (h : (a * 8 + b + c / 8 + d / 8^2 : ℝ) = b * 12 + b + b / 12 + a / 12^2) :
+    a * 100 + b * 10 + c = 321 := by
 ```
 
 ### `AIME_98439`
