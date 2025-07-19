@@ -4,8 +4,8 @@ import Mathlib
 
 open Real
 
-/- A geometric sequence $(a_n)$ has $a_1 = \sin x$, $a_2 = \cos x$, $a_3 = \tan x$ for some
-real number $x$. For what value of $n$ does $a_n = 1 + \cos x$?
+/- A geometric sequence $(a_n)$ has $a_1 = \sin(x)$, $a_2 = \cos(x)$, $a_3 = \tan(x)$ for some
+real number $x$. For what value of $n$ does $a_n = 1 + \cos(x)$??
 (A) 4
 (B) 5
 (C) 6
@@ -13,7 +13,8 @@ real number $x$. For what value of $n$ does $a_n = 1 + \cos x$?
 (E) 8 -/
 
 theorem algebra_94341 {x : ℝ} (a : ℕ → ℝ) {r : ℝ} (ha : ∀ n, a n = a 0 * r ^ n)
-    (ha0 : a 0 = sin x) (ha1 : a 1 = cos x) (ha2 : a 2 = tan x) (h_cos : cos x ≠ 0) :
+    (ha0 : a 0 = sin x) (ha1 : a 1 = cos x) (ha2 : a 2 = tan x)
+    (h_cos : cos x ≠ 0) :
     a 7 = 1 + cos x := by
   -- Note: Include additional assumption that `cos x ≠ 0`.
   -- Normally we would be able to deduce this from `a 2 = tan x`, since `cos x = 0`
