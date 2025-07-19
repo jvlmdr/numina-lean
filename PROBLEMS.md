@@ -1,5 +1,60 @@
 # Problems
 
+### `AMC_94341`
+
+[`Numina/AMC_94341.lean`](Numina/AMC_94341.lean)
+
+A geometric sequence $(a_n)$ has $a_1 = \sin x$, $a_2 = \cos x$, $a_3 = \tan x$ for some
+real number $x$. For what value of $n$ does $a_n = 1 + \cos x$?
+(A) 4
+(B) 5
+(C) 6
+(D) 7
+(E) 8
+
+```lean
+theorem algebra_94341 {x : ℝ} (a : ℕ → ℝ) {r : ℝ} (ha : ∀ n, a n = a 0 * r ^ n)
+    (ha0 : a 0 = sin x) (ha1 : a 1 = cos x) (ha2 : a 2 = tan x)
+    (h_cos : cos x ≠ 0) :
+    a 7 = 1 + cos x := by
+```
+
+### `AMC_95577`
+
+[`Numina/AMC_95577.lean`](Numina/AMC_95577.lean)
+
+How many complex numbers satisfy the equation $z^5 = z'$
+where $z'$ is the conjugate of the complex number $z$?
+(A) 2
+(B) 3
+(C) 5
+(D) 6
+(E) 7
+
+```lean
+theorem algebra_95577 : {z : ℂ | z ^ 5 = starRingEnd ℂ z}.ncard = 7 := by
+```
+
+### `AMC_95209`
+
+[`Numina/AMC_95209.lean`](Numina/AMC_95209.lean)
+
+Consider sequences of positive real numbers of the form x, 2000, y, … in which
+every term after the first is 1 less than the product of its two immediate neighbors.
+For how many different values of x does the term 2001 appear somewhere in the sequence?
+(A) 1
+(B) 2
+(C) 3
+(D) 4
+(E) more than 4
+
+```lean
+theorem algebra_95209 (a : ℝ → ℕ → ℝ) (h_pos : ∀ x n, 0 < a x n)
+    (ha0 : ∀ x, a x 0 = x) (ha1 : ∀ x, a x 1 = 2000)
+    (ha : ∀ x n, a x (n + 1) = a x n * a x (n + 2) - 1) :
+    ∃ s : Finset ℝ, {x > 0 | 2001 ∈ Set.range (a x)} = s ∧ s.card = 4 := by
+```
+
 ### `AMC_95071`
 
 [`Numina/AMC_95071.lean`](Numina/AMC_95071.lean)

@@ -4,8 +4,8 @@ import Mathlib
 
 open Complex
 
-/- How many complex numbers satisfy the equation z^5 = z'
-where z' is the conjugate of the complex number z?
+/- How many complex numbers satisfy the equation $z^5 = z'$
+where $z'$ is the conjugate of the complex number $z$?
 (A) 2
 (B) 3
 (C) 5
