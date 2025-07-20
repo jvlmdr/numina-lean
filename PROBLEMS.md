@@ -137,10 +137,10 @@ theorem number_theory_226583 {n : ℕ} :
 Solve the system of equations:
 
 $$
-\left\{\begin{array}{l}
+\begin{aligned}
 \frac{1}{\sqrt{1 + 2 x^2}}+\frac{1}{\sqrt{1 + 2 y^2}} = \frac{2}{\sqrt{1 + 2 x y}}, \\
 \sqrt{x (1 - 2 x)} + \sqrt{y (1 - 2 y)} = \frac{2}{9}
-\end{array} .\right.
+\end{aligned}
 $$
 
 [`Numina/problem_101699.lean`](Numina/problem_101699.lean)
