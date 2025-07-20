@@ -183,7 +183,7 @@ lemma lemma_5 {f : ℝ → ℝ} {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
         · exact IH j hkn
 
 -- The left side of the main result, `0 < f x - x`.
-theorem lemma_6 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
+lemma lemma_6 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
     {b : ℝ} (hb : b ∈ Set.Ioo (1 / 2) 1)
     (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
     (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1)) :

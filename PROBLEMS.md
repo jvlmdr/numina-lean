@@ -1,3 +1,64 @@
+# IMO
+
+### `IMO_23856`
+
+Let $f : [0, 1] \rightarrow \mathbb{R}$ be continuous and satisfy:
+
+$$
+\begin{aligned}
+b f(2 x) & = f(x), & & 0 \leq x \leq 1 / 2 \\
+f(x) & = b + (1-b) f(2 x - 1), & & 1 / 2 \leq x \leq 1
+\end{aligned}
+$$
+
+where $b=\frac{1+c}{2+c}, c>0$.
+Show that $0 < f(x) - x < c$ for every $x, 0 < x < 1$.
+
+[`Numina/IMO_23856.lean`](Numina/IMO_23856.lean)
+
+```lean
+theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
+    {b c : ℝ} (hb : b = (1 + c) / (2 + c)) (hc : 0 < c)
+    (hf₁ : ∀ x ∈ Set.Icc 0 (1 / 2), b * f (2 * x) = f x)
+    (hf₂ : ∀ x ∈ Set.Icc (1 / 2) 1, f x = b + (1 - b) * f (2 * x - 1)) :
+    ∀ x ∈ Set.Ioo 0 1, f x - x ∈ Set.Ioo 0 c := by
+```
+
+### `IMO_25148`
+
+Each positive integer $a$ undergoes the following procedure in order to obtain
+the number $d = d(a)$:
+1. move the last digit of $a$ to the first position to obtain the number $b$;
+2. square $b$ to obtain the number $c$;
+3. move the first digit of $c$ to the end to obtain the number $d$.
+(All the numbers in the problem are considered to be represented in base 10.)
+For example, for $a=2003$, we have $b=3200, c=10240000$, and $d = 02400001 = 2400001 = d(2003)$.
+Find all numbers $a$ for which $d(a) = a^{2}$.
+
+[`Numina/IMO_25148.lean`](Numina/IMO_25148.lean)
+
+```lean
+def d (a : ℕ) : ℕ :=
+  ofDigits 10 <| rotateRight <| digits 10 <|
+  (ofDigits 10 <| rotate (n := 1) <| digits 10 a) ^ 2
+
+theorem number_theory_25148 {a : ℕ} (ha : a ≠ 0) :
+    d a = a ^ 2 ↔ a ∈ {1, 2, 3} ∪ Set.range (fun n ↦ ofDigits 10 (1 :: replicate (n + 1) 2)) := by
+```
+
+### `IMO_23602`
+
+Evaluate $S = \sum_{k=1}^{n} k (k+1) \cdots (k+p)$, where $n$ and $p$ are positive integers.
+
+[`Numina/IMO_23602.lean`](Numina/IMO_23602.lean)
+
+```lean
+theorem algebra_23602 {n p : ℕ} :
+    ∑ k ∈ Icc 1 n, ∏ i ∈ range (p + 1), (k + i) =
+    (∏ i ∈ range (p + 2), (n + i)) / (p + 2) := by
+```
+
+
 # Batch 6
 
 ### `problem_221351`
