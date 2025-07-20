@@ -52,7 +52,7 @@ $$
 \begin{aligned}
 a & = 2 (1 + 2 + 3 + \cdots + 2016) - 2016 \\
 b & = 1 + 1 \cdot 2 + 1 \cdot 2 \cdot 3 + 1 \cdot 2 \cdot 3 \cdot 4 + \cdots +
-  1 \cdot 2 \cdot 3 \cdots 2016 
+  1 \cdot 2 \cdot 3 \cdots 2016
 \end{aligned}
 $$
 
@@ -535,6 +535,8 @@ theorem number_theory_97905 :
 Find the sum of all positive integers $b < 1000$ such that the base-$b$ integer $36_b$
 is a perfect square and the base-$b$ integer $27_b$ is a perfect cube.
 
+<https://artofproblemsolving.com/wiki/index.php/2018_AIME_II_Problems/Problem_3>
+
 [`Numina/AIME_97639.lean`](Numina/AIME_97639.lean)
 
 ```lean
@@ -547,7 +549,9 @@ theorem number_theory_97639 :
 
 A rational number written in base eight is $ab.cd$, where all digits are nonzero.
 The same number in base twelve is $bb.ba$.
-Find the base-ten number $abc$. 
+Find the base-ten number $abc$.
+
+<https://artofproblemsolving.com/wiki/index.php/2017_AIME_I_Problems/Problem_5>
 
 [`Numina/AIME_97068.lean`](Numina/AIME_97068.lean)
 
@@ -567,6 +571,8 @@ An integer Fahrenheit temperature is converted to Celsius, rounded to the neares
 converted back to Fahrenheit, and again rounded to the nearest integer.
 For how many integer Fahrenheit temperatures between 32 and 1000 inclusive does
 the original temperature equal the final temperature?
+
+<https://artofproblemsolving.com/wiki/index.php/2007_AIME_I_Problems/Problem_5>
 
 [`Numina/AIME_93450.lean`](Numina/AIME_93450.lean)
 
@@ -589,6 +595,8 @@ on each day was less than Alpha's on that day.
 Alpha's two-day success ratio was 300/500 = 3/5.
 The largest possible two-day success ratio that Beta could achieve is m / n, where
 m and n are relatively prime positive integers. What is m + n?
+
+<https://artofproblemsolving.com/wiki/index.php/2004_AIME_I_Problems/Problem_5>
 
 [`Numina/AIME_98439.lean`](Numina/AIME_98439.lean)
 
@@ -630,6 +638,8 @@ $2$, $3$, $4$, $5$, $6$, $7$, $8$, $9$, and $10$.
 For example, $R(15) = 1 + 0 + 3 + 0 + 3 + 1 + 7 + 6 + 5 = 26$.
 How many two-digit positive integers $n$ satisfy $R(n) = R(n+1)$?
 (A) 0, (B) 1, (C) 2, (D) 3, (E) 4
+
+<https://artofproblemsolving.com/wiki/index.php/2021_Fall_AMC_12B_Problems/Problem_25>
 
 [`Numina/AMC_94998.lean`](Numina/AMC_94998.lean)
 
@@ -690,6 +700,8 @@ real number $x$. For what value of $n$ does $a_n = 1 + \cos(x)$?
 (D) 7
 (E) 8
 
+<https://artofproblemsolving.com/wiki/index.php/2010_AMC_12B_Problems/Problem_20>
+
 [`Numina/AMC_94341.lean`](Numina/AMC_94341.lean)
 
 ```lean
@@ -709,6 +721,8 @@ where $z'$ is the conjugate of the complex number $z$?
 (D) 6
 (E) 7
 
+<https://artofproblemsolving.com/wiki/index.php/2023_AMC_12A_Problems/Problem_14>
+
 [`Numina/AMC_95577.lean`](Numina/AMC_95577.lean)
 
 ```lean
@@ -725,6 +739,8 @@ For how many different values of x does the term 2001 appear somewhere in the se
 (C) 3
 (D) 4
 (E) more than 4
+
+<https://artofproblemsolving.com/wiki/index.php/2001_AMC_12_Problems/Problem_25>
 
 [`Numina/AMC_95209.lean`](Numina/AMC_95209.lean)
 
@@ -747,6 +763,8 @@ Which of the following equals $a + b + c + d + e + f$?
 (D) $2 h$
 (E) $2 k$
 
+<https://artofproblemsolving.com/wiki/index.php/2001_AMC_12_Problems/Problem_13>
+
 [`Numina/AMC_95071.lean`](Numina/AMC_95071.lean)
 
 ```lean
@@ -767,6 +785,8 @@ What is $k$?
 (C) 3
 (D) 4
 (E) 5
+
+<https://artofproblemsolving.com/wiki/index.php/2011_AMC_12A_Problems/Problem_20>
 
 [`Numina/AMC_94615.lean`](Numina/AMC_94615.lean)
 
@@ -791,6 +811,8 @@ What was the last score Mrs. Walters entered?
 (D) 82
 (E) 91
 
+<https://artofproblemsolving.com/wiki/index.php/2000_AMC_12_Problems/Problem_9>
+
 [`Numina/AMC_93411.lean`](Numina/AMC_93411.lean)
 
 ```lean
@@ -810,6 +832,8 @@ How many miles from City A will they be when they meet?
 (C) 25
 (D) 26
 (E) 27
+
+<https://artofproblemsolving.com/wiki/index.php/2023_AMC_12A_Problems/Problem_1>
 
 [`Numina/AMC_65302.lean`](Numina/AMC_65302.lean)
 

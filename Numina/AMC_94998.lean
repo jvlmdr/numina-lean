@@ -1,3 +1,6 @@
+-- https://cloud.kili-technology.com/label/projects/review/cm84mq01l023piev5wi622bae
+-- https://artofproblemsolving.com/wiki/index.php/2021_Fall_AMC_12B_Problems/Problem_25
+
 import Mathlib
 
 /- For $n$ a positive integer, let $R(n)$ be the sum of the remainders when $n$ is divided by

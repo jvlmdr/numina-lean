@@ -1,4 +1,5 @@
 -- https://cloud.kili-technology.com/label/projects/label/cm7eniblv00c1zz87qufu8iw8
+-- https://artofproblemsolving.com/wiki/index.php/2000_AMC_12_Problems/Problem_9
 
 import Mathlib
 
