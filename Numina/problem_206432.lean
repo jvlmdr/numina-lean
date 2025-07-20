@@ -62,7 +62,7 @@ lemma repeatedDigitSum_lt (b : ℕ) (hb : 1 < b) (n : ℕ) :
 
 theorem number_theory_206432 :
     Nat.count (repeatedDigitSum 10 (Nat.one_lt_succ_succ _) · = 1) (10 ^ 9 + 1) >
-      Nat.count (repeatedDigitSum 10 (Nat.one_lt_succ_succ _) · = 2) (10 ^ 9 + 1) := by
+    Nat.count (repeatedDigitSum 10 (Nat.one_lt_succ_succ _) · = 2) (10 ^ 9 + 1) := by
   -- Replace `repeatedDigitSum 10 ⋯ n = r` with `n ≡ r [MOD 10]`.
   suffices ∀ (b : ℕ) (hb : 0 < b) (n r : ℕ), r ≠ 0 → r < b →
       (repeatedDigitSum (b + 1) (lt_add_of_pos_left 1 hb) n = r ↔ n ≡ r [MOD b]) by

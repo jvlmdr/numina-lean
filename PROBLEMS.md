@@ -1,3 +1,375 @@
+# Batch 6
+
+### `problem_221351`
+
+Given a natural number $x = 9^{n} - 1$, where $n$ is a natural number. It is known that
+$x$ has exactly three distinct prime divisors, one of which is 13. Find $x$.
+
+[`Numina/problem_221351.lean`](Numina/problem_221351.lean)
+
+```lean
+theorem number_theory_221351 (x : ℕ) (n : ℕ) (hx : x = 9 ^ n - 1)
+    (h_card : x.primeFactors.card = 3) (h13 : 13 ∣ x) :
+    x = 728 := by
+```
+
+### `problem_247029`
+
+If $n$ is a natural number greater than 1, such that
+
+$$
+\left[\frac{n}{1}\right] + \left[\frac{n}{2}\right] + \ldots + \left[\frac{n}{n}\right] =
+2 + \left[\frac{n-1}{1}\right] + \left[\frac{n-1}{2}\right] + \ldots + \left[\frac{n-1}{n-1}\right]
+$$
+
+then $n$ is a prime number. Prove it!
+
+[`Numina/problem_247029.lean`](Numina/problem_247029.lean)
+
+```lean
+theorem number_theory_247029 (n : ℕ) :
+    ∑ k ∈ Icc 1 n, n / k = 2 + ∑ k ∈ Icc 1 (n - 1), (n - 1) / k → n.Prime := by
+```
+
+### `problem_152180`
+
+Simplify:
+
+$$ C_{n}^{0} \sin (\alpha) - C_{n}^{1} \sin (\alpha + \theta) + \cdots +
+  (-1)^{n} C_{n}^{n} \sin (\alpha+n \theta) $$
+
+[`Numina/problem_152180.lean`](Numina/problem_152180.lean)
+
+```lean
+theorem algebra_152180 {n : ℕ} (α θ : ℝ) :
+    ∑ k ∈ range (n + 1), (-1) ^ k * n.choose k * Real.sin (α + k * θ) =
+    2 ^ n * Real.sin (θ / 2) ^ n * Real.sin (α + n * (θ - π) / 2 ) := by
+```
+
+### `problem_122932`
+
+How many integers $m$ satisfy both the following properties:
+
+(i) $1 \leq m \leq 5000$;
+
+(ii) $[\sqrt{m}]=[\sqrt{m+125}]$ ?
+
+(Here $[x]$ denotes the largest integer not exceeding $x$, for any real number $x$.)
+
+[`Numina/problem_122932.lean`](Numina/problem_122932.lean)
+
+```lean
+theorem number_theory_122932 :
+    {m : ℕ | m ∈ Set.Icc 1 5000 ∧ ⌊√m⌋₊ = ⌊√(m + 125)⌋₊}.ncard = 72 := by
+```
+
+### `problem_234330`
+
+Let $\frac{r}{u}$ and $\frac{s}{v}$ be fractions with positive denominators such that
+$s u - r v = 1$. It is to be proven:
+
+1) that every fraction whose value lies between $\frac{r}{u}$ and $\frac{s}{v}$
+can be written in the form
+
+$$ \frac{l r + m s}{l u + m v} $$
+
+where $l$ and $m$ are positive integers, and
+
+2) that conversely, the values of fractions of the said form lie between
+$\frac{r}{u}$ and $\frac{s}{v}$.
+
+[`Numina/problem_234330.lean`](Numina/problem_234330.lean)
+
+```lean
+theorem number_theory_234330 (r s : ℤ) (u v : ℕ) (hu : u ≠ 0) (hv : v ≠ 0)
+    (h : s * u - r * v = 1) :
+    (∀ x : ℚ, x ∈ (.uIoo (r / u) (s / v) : Set ℚ) →
+      ∃ l m : ℕ, l ≠ 0 ∧ m ≠ 0 ∧ (l * r + m * s) / (l * u + m * v) = x) ∧
+    ∀ l m : ℕ, l ≠ 0 → m ≠ 0 →
+      ((l * r + m * s) / (l * u + m * v) : ℚ) ∈ (.uIoo (r / u) (s / v) : Set ℚ) := by
+```
+
+### `problem_213467`
+
+$n$ is a positive integer. Try to determine how many real numbers $x$ satisfy
+$1 \le x < n$ and $x^{3} - [x^{3}] = (x - [x])^{3}$.
+
+[`Numina/problem_213467.lean`](Numina/problem_213467.lean)
+
+```lean
+theorem algebra_213467 (n : ℕ) (hn : 0 < n) :
+    {x : ℝ | x ∈ Set.Ico 1 ↑n ∧ x^3 - ⌊x^3⌋ = (x - ⌊x⌋)^3}.ncard = n^3 - n := by
+```
+
+### `problem_242129`
+
+Let $f(x) = a_{0} + a_{1} x + a_{2} x^{2} + \ldots + a_{n} x^{n}$, $a_{i} \ge 0$
+($i = 0, 1, 2, \ldots n$), and in the interval $[-1, +1]$, $|f(x)| \le 1$.
+Show that in this interval $\left|f^{\prime}(x)\right| \le n$;
+the equality holds only when $f(x) = x^{n}$.
+
+[`Numina/problem_242129.lean`](Numina/problem_242129.lean)
+
+```lean
+theorem algebra_242129 (n : ℕ) (a : Fin (n + 1) → ℝ) (ha : ∀ i, 0 ≤ a i)
+    (f : ℝ[X]) (hf : f = ∑ i, C (a i) * X ^ i.val)
+    (hf_abs : ∀ x ∈ Set.Icc (-1) 1, |f.eval x| ≤ 1) :
+    (∀ x ∈ Set.Icc (-1) 1, |f.derivative.eval x| ≤ n) ∧
+    (0 < n → ((∃ x ∈ Set.Icc (-1) 1, |f.derivative.eval x| = n) ↔ f = X ^ n)) := by
+```
+
+### `problem_226583`
+
+Prove that any natural number $n$ can be uniquely represented in the form
+$n = F_{k_{1}} + F_{k_{2}} + \ldots + F_{k_{m}}$, where
+$k_{1} > k_{2} + 1, k_{2} > k_{3} + 1, \ldots, k_{m-1} > k_{m} + 1, k_{m} > 1$.
+
+[`Numina/problem_226583.lean`](Numina/problem_226583.lean)
+
+```lean
+theorem number_theory_226583 {n : ℕ} :
+    ∃! l : List ℕ, (l.Chain' fun i j ↦ j + 1 < i) ∧ (∀ h : l ≠ [], 1 < l.getLast h) ∧
+      (l.map Nat.fib).sum = n := by
+```
+
+### `problem_101699`
+
+Solve the system of equations:
+
+$$
+\left\{\begin{array}{l}
+\frac{1}{\sqrt{1 + 2 x^2}}+\frac{1}{\sqrt{1 + 2 y^2}} = \frac{2}{\sqrt{1 + 2 x y}}, \\
+\sqrt{x (1 - 2 x)} + \sqrt{y (1 - 2 y)} = \frac{2}{9}
+\end{array} .\right.
+$$
+
+[`Numina/problem_101699.lean`](Numina/problem_101699.lean)
+
+```lean
+theorem algebra_101699 {x y : ℝ} (hx : 0 ≤ x) (hy : 0 ≤ y)
+    (hx' : 0 ≤ x * (1 - 2 * x)) (hy' : 0 ≤ y * (1 - 2 * y))
+    (h₁ : 1 / √(1 + 2 * x ^ 2) + 1 / √(1 + 2 * y ^ 2) = 2 / √(1 + 2 * x * y))
+    (h₂ : √(x * (1 - 2 * x)) + √(y * (1 - 2 * y)) = 2 / 9) :
+    x = y ∧ (x = 1 / 4 + √73 / 36 ∨ x = 1 / 4 - √73 / 36) := by
+```
+
+### `problem_122492`
+
+Let $b \geqslant 2$ be an integer. Prove, using a generating series, that every
+natural number has a unique decomposition in base $b$.
+
+[`Numina/problem_122492.lean`](Numina/problem_122492.lean)
+
+```lean
+theorem number_theory_122492 (b : ℕ) (hb : 2 ≤ b) (n : ℕ) :
+    ∃! l : List ℕ, (∀ x ∈ l, x < b) ∧ (∀ (h : l ≠ []), l.getLast h ≠ 0) ∧
+      Nat.ofDigits b l = n := by
+```
+
+### `problem_127824`
+
+Prove that for any positive numbers $a_1, a_2, \cdots, a_n$, the inequality
+
+$$ \frac{1}{a_1} + \frac{2}{a_1 + a_2} + \cdots + \frac{n}{a_1 + \cdots + a_n} <
+  4 \left(\frac{1}{a_1} + \cdots + \frac{1}{a_n}\right) $$
+
+holds.
+
+[`Numina/problem_127824.lean`](Numina/problem_127824.lean)
+
+```lean
+theorem inequalities_127824 {n : ℕ} (hn_pos : 0 < n) (a : Fin n → ℝ) (ha_pos : ∀ i, 0 < a i) :
+    ∑ i : Fin n, (i + 1 : ℕ) / (∑ j ≤ i, a j) < 4 * ∑ i, (a i)⁻¹ := by
+```
+
+### `problem_286896`
+
+Let $x, y, z \in \mathbf{R}^{+}, x^{2}+y^{2}+z^{2}=1$. Find
+
+$$ \frac{x^{5}}{y^{2}+z^{2}-y z}+\frac{y^{5}}{z^{2}+x^{2}-z x}+\frac{z^{5}}{x^{2}+y^{2}-x y} $$
+
+the minimum value.
+
+[`Numina/problem_286896.lean`](Numina/problem_286896.lean)
+
+```lean
+theorem inequalities_286896 :
+  IsLeast
+    {t | ∃ x y z, 0 < x ∧ 0 < y ∧ 0 < z ∧ x^2 + y^2 + z^2 = 1 ∧
+      t = x^5 / (y^2 + z^2 - y * z) + y^5 / (z^2 + x^2 - z * x) + z^5 / (x^2 + y^2 - x * y)}
+    (√3 / 3) := by
+```
+
+### `problem_295394`
+
+Find all positive integers $N$, such that it equals the sum of the digits of $N^{3}$.
+
+[`Numina/problem_295394.lean`](Numina/problem_295394.lean)
+
+```lean
+theorem number_theory_295394 (n : ℕ) :
+    n ≠ 0 ∧ n = (Nat.digits 10 (n ^ 3)).sum ↔
+    n = 1 ∨ n = 8 ∨ n = 17 ∨ n = 18 ∨ n = 26 ∨ n = 27 := by
+```
+
+### `problem_175773`
+
+Let $n$ be an integer of the form $a^2 + b^2$ where $a$ and $b$ are relatively prime integers
+and such that if $p$ is a prime, $p \leq \sqrt{n}$, then $p$ divides $a b$.
+Determine all such $n$.
+
+[`Numina/problem_175773.lean`](Numina/problem_175773.lean)
+
+```lean
+theorem number_theory_175773 (n : ℕ) :
+    (∃ a b, a.Coprime b ∧ n = a^2 + b^2 ∧ ∀ p : ℕ, p ≤ √n → p.Prime → p ∣ a * b) ↔
+    n = 1 ∨ n = 2 ∨ n = 5 ∨ n = 13 := by
+```
+
+### `problem_214659`
+
+For which real parameters $a$ does there exist a complex number $z$ such that
+
+$$ |z + \sqrt{2}| = \sqrt{a^{2} - 3 a + 2} \quad \text { and } \quad |z + i \sqrt{2}| < a ? $$
+
+[`Numina/problem_214659.lean`](Numina/problem_214659.lean)
+
+```lean
+theorem algebra_214659 (a : ℝ) :
+    (0 ≤ a^2 - 3 * a + 2 ∧ ∃ z : ℂ, abs (z + √2) = √(a^2 - 3 * a + 2) ∧ abs (z + I * √2) < a) ↔
+      2 < a := by
+```
+
+### `problem_141351`
+
+Let $x_i > 0$ ($i = 1, 2, \ldots, n$), $a \in \mathbf{R}^{+}$ and
+$\sum_{i=1}^{n} x_i = s \leqslant a$. Prove that:
+
+$$ \prod_{i=1}^{n} \frac{a + x_i}{a - x_i} \geqslant \left(\frac{n a + s}{n a - s}\right)^n . $$
+
+[`Numina/problem_141351.lean`](Numina/problem_141351.lean)
+
+```lean
+theorem inequalities_141351 {n : ℕ} (x : Fin n → ℝ) (hx : ∀ i, 0 < x i)
+    (a : ℝ) (ha : 0 < a) (s : ℝ) (hs : s = ∑ i, x i) (hsa : s ≤ a) :
+    ((n * a + s) / (n * a - s)) ^ n ≤ ∏ i, (a + x i) / (a - x i) := by
+```
+
+### `problem_102449`
+
+Let $a, b, c \in [0,1]$. Show that:
+
+$$ \frac{a}{b+c+1} + \frac{b}{c+a+1} + \frac{c}{a+b+1} + (1-a)(1-b)(1-c) \leqslant 1 $$
+
+[`Numina/problem_102449.lean`](Numina/problem_102449.lean)
+
+```lean
+theorem inequalities_102449 (a b c : ℝ)
+    (ha : a ∈ Set.Icc 0 1) (hb : b ∈ Set.Icc 0 1) (hc : c ∈ Set.Icc 0 1) :
+    a / (b + c + 1) + b / (c + a + 1) + c / (a + b + 1) + (1 - a) * (1 - b) * (1 - c) ≤ 1 := by
+```
+
+### `problem_244639`
+
+$A = \{a, b, c\}$ is a set containing three positive integers. Prove that we can find a set
+$B = \{x, y\} \subset A$ such that for all odd positive integers $m, n$ we have
+
+$$ 10 \mid x^{m} y^{n} - x^{n} y^{m} $$
+
+[`Numina/problem_244639.lean`](Numina/problem_244639.lean)
+
+```lean
+theorem number_theory_244639 (a : Finset ℕ) (ha_pos : ∀ x ∈ a, 0 < x) (ha_card : #a = 3) :
+    ∃ x y, x ≠ y ∧ {x, y} ⊆ a ∧ ∀ m n, Odd m → Odd n → (10 : ℤ) ∣ x^m * y^n - x^n * y^m := by
+```
+
+### `problem_206432`
+
+Reduce each of the first billion natural numbers (billion $=10^{9}$) to a single digit by
+taking its digit sum repeatedly. Do we get more 1s than 2s ?
+
+[`Numina/problem_206432.lean`](Numina/problem_206432.lean)
+
+```lean
+theorem number_theory_206432 :
+    Nat.count (repeatedDigitSum 10 (Nat.one_lt_succ_succ _) · = 1) (10 ^ 9 + 1) >
+    Nat.count (repeatedDigitSum 10 (Nat.one_lt_succ_succ _) · = 2) (10 ^ 9 + 1) := by
+```
+
+### `problem_229436`
+
+Prove that if $x > -1$ and $x \neq 0$, then
+
+$$ \frac{2 |x|}{2 + x} < |\ln (1+x)| < \frac{|x|}{\sqrt{1 + x}} $$
+
+
+[`Numina/problem_229436.lean`](Numina/problem_229436.lean)
+
+```lean
+theorem inequalities_229436 {x : ℝ} (hx_gt : x > -1) (hx_ne : x ≠ 0) :
+    2 * |x| / (2 + x) < |log (1 + x)| ∧ |log (1 + x)| < |x| / √(1 + x) := by
+```
+
+### `problem_149462`
+
+Let $x_{1}, \ldots, x_{n} > 0$ with $x_{1} \dots x_{n} = 1$. Show that
+
+$$
+x_{1}^{n-1} + x_{2}^{n-1} + \cdots + x_{n}^{n-1} \geqslant \frac{1}{x_{1}} + \ldots \frac{1}{x_{n}}
+$$
+
+[`Numina/problem_149462.lean`](Numina/problem_149462.lean)
+
+```lean
+theorem inequalities_149462 (n : ℕ) (x : Fin n → ℝ) (hx : ∀ i, 0 < x i) (hx_prod : ∏ i, x i = 1) :
+    ∑ i, (x i)⁻¹ ≤ ∑ i, (x i) ^ (n - 1) := by
+```
+
+### `problem_270990`
+
+Show that the equation
+
+$$ 1 + x + \frac{x^{2}}{2!} + \frac{x^{3}}{3!} + \cdots + \frac{x^{2 n}}{(2 n)!} = 0 $$
+
+has no real roots.
+
+[`Numina/problem_270990.lean`](Numina/problem_270990.lean)
+
+```lean
+theorem algebra_270990 (n : ℕ) :
+    ¬∃ x : ℝ, ∑ i ∈ Finset.range (2 * n + 1), x ^ i / (Nat.factorial i) = 0 := by
+```
+
+### `problem_245605`
+
+Represent the number 100 as the sum of the maximum possible number of pairwise coprime natural
+numbers. Explanation: the condition means that the greatest common divisor of any two numbers used
+in the sum is 1.
+
+[`Numina/problem_245605.lean`](Numina/problem_245605.lean)
+
+```lean
+theorem number_theory_245605 :
+    {2, 3, 5, 7, 11, 13, 17, 19, 23} ∈ {s : Finset ℕ | Set.Pairwise s Coprime ∧ ∑ x ∈ s, x = 100} ∧
+    IsMaxOn Finset.card {s : Finset ℕ | Set.Pairwise s Coprime ∧ ∑ x ∈ s, x = 100}
+      {2, 3, 5, 7, 11, 13, 17, 19, 23} := by
+```
+
+### `problem_159991`
+
+Let $0 < x_{i} < π$ ($i = 1, 2, \ldots, n$), prove that:
+
+$$ \prod_{i=1}^{n} \sin(x_{i}) \leqslant
+  \left[\sin\left(\frac{1}{n} \sum_{i=1}^{n} x_{i}\right)\right]^{n} . $$
+
+[`Numina/problem_159991.lean`](Numina/problem_159991.lean)
+
+```lean
+theorem inequalities_159991 {n : ℕ} (hn : 0 < n) (x : Fin n → ℝ) (hx : ∀ i, x i ∈ Ioo 0 π) :
+    ∏ i, sin (x i) ≤ (sin (1 / n * ∑ i, x i)) ^ n := by
+```
+
+
 # Batch 5
 
 ### `problem_125818`

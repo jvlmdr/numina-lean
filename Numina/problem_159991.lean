@@ -4,8 +4,11 @@ import Mathlib
 
 open Real Set
 
-/- Let $0 < x_{i} < π$ ($i = 1, 2, \cdots, n$), prove that:
-$\prod_{i=1}^{n} \sin x_{i} \leqslant [\sin (\frac{1}{n} \sum_{i=1}^{n} x_{i})]^{n}$. -/
+/- Let $0 < x_{i} < π$ ($i = 1, 2, \ldots, n$), prove that:
+$$
+\prod_{i=1}^{n} \sin(x_{i}) \leqslant
+  \left[\sin\left(\frac{1}{n} \sum_{i=1}^{n} x_{i}\right)\right]^{n} .
+$$ -/
 
 -- The image of `(0, π)` under `sin` is `(0, 1]`.
 lemma image_sin_Ioo_zero_pi : Set.image sin (Ioo 0 π) = Ioc 0 1 := by

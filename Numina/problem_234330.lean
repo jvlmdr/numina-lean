@@ -5,8 +5,8 @@ import Mathlib
 /- Let $\frac{r}{u}$ and $\frac{s}{v}$ be fractions with positive denominators such that
 $s u - r v = 1$. It is to be proven:
 
-1) that every fraction whose value lies between $\frac{r}{u}$ and $\frac{s}{v}$ can be written
-in the form
+1) that every fraction whose value lies between $\frac{r}{u}$ and $\frac{s}{v}$
+can be written in the form
 $$
 \frac{l r + m s}{l u + m v}
 $$

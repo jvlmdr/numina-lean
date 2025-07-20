@@ -4,7 +4,7 @@ import Mathlib
 
 open Real
 
-/- Let $x_i > 0$ ($i = 1, 2, \cdots, n$), $a \in \mathbf{R}^{+}$ and
+/- Let $x_i > 0$ ($i = 1, 2, \ldots, n$), $a \in \mathbf{R}^{+}$ and
 $\sum_{i=1}^{n} x_i = s \leqslant a$. Prove that:
 $\prod_{i=1}^{n} \frac{a + x_i}{a - x_i} \geqslant \left(\frac{n a + s}{n a - s}\right)^n$. -/
 
