@@ -28,9 +28,11 @@ theorem algebra_23856 {f : ℝ → ℝ} (hf : ContinuousOn f (Set.Icc 0 1))
 
 Each positive integer $a$ undergoes the following procedure in order to obtain
 the number $d = d(a)$:
+
 1. move the last digit of $a$ to the first position to obtain the number $b$;
 2. square $b$ to obtain the number $c$;
 3. move the first digit of $c$ to the end to obtain the number $d$.
+
 (All the numbers in the problem are considered to be represented in base 10.)
 For example, for $a=2003$, we have $b=3200, c=10240000$, and $d = 02400001 = 2400001 = d(2003)$.
 Find all numbers $a$ for which $d(a) = a^{2}$.
