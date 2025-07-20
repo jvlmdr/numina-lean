@@ -259,7 +259,7 @@ theorem number_theory_188980 (a b c d e f : ℕ) (h_nodup : [a, b, c, d, e, f].N
 ### `problem_128360`
 
 $p(x)$ is a polynomial of degree $n$ with real coefficients and is non-negative for all $x$.
-Show that $p(x) + p'(x) + p''(x) + \cdots \text{(n+1 terms)} ≥ 0$ for all $x$.
+Show that $p(x) + p'(x) + p''(x) + \cdots \text{($n + 1$ terms)} ≥ 0$ for all $x$.
 
 [`Numina/problem_128360.lean`](Numina/problem_128360.lean)
 
@@ -377,7 +377,7 @@ $$ \begin{align}
 a x + b y & = 3 , \\
 a x^{2} + b y^{2} & = 7 , \\
 a x^{3} + b y^{3} & = 16 , \\
-a x^{4} + b y^{4} = 42 ,
+a x^{4} + b y^{4} & = 42 ,
 \end{align} $$
 
 find the value of $a x^{5}+b y^{5}$.
