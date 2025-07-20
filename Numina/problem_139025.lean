@@ -1,15 +1,16 @@
 -- https://cloud.kili-technology.com/label/projects/label/cma3ygf29006bahaymp62cx4r
+-- https://prase.cz/kalva/putnam/psoln/psol5113.html
 
 import Mathlib
 
 open Real Polynomial
 
-/- The real polynomial p(x) ≡ x 3 + ax 2 + bx + c has three real roots α < β < γ.
-Show that √(a 2 - 3b) < (γ - α) ≤ 2 √(a 2 /3 - b). -/
+/- The real polynomial $p(x) ≡ x^3 + a x^2 + b x + c$ has three real roots $α < β < γ$.
+Show that $\sqrt{a^2 - 3 b} < (γ - α) ≤ 2 \sqrt{a^2 / 3 - b}$. -/
 
 theorem algebra_139025 {a b c α β γ : ℝ}
     (h : (X ^ 3 + C a * X ^ 2 + C b * X + C c).roots = {α, β, γ}) (hαβ : α < β) (hβγ : β < γ) :
-    √(a ^ 2 - 3 * b) < (γ - α) ∧ (γ - α) ≤ 2 * √(a ^ 2 / 3 - b) := by
+    √(a ^ 2 - 3 * b) < γ - α ∧ γ - α ≤ 2 * √(a ^ 2 / 3 - b) := by
   -- Re-write polynomial as product of roots and expand.
   have h : X ^ 3 + C a * X ^ 2 + C b * X + C c =
       X ^ 3 - C (α + β + γ) * X ^ 2 + C (α * β + β * γ + γ * α) * X - C (α * β * γ) :=

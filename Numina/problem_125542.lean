@@ -42,7 +42,6 @@ lemma sq_mod_four (n : ℕ) : n ^ 2 % 4 = if 2 ∣ n then 0 else 1 := by
     simp [add_sq, mul_pow, ← mul_assoc, Nat.add_mod]
 
 theorem number_theory_125542 :
-    -- (∀ k, k = 3 ∨ k = 6 → ¬∃ n m, ∑ i ∈ Finset.range k, (n + i) ^ 2 = m ^ 2) ∧
     (¬∃ n m, ∑ i ∈ Finset.range 3, (n + i) ^ 2 = m ^ 2) ∧
     (¬∃ n m, ∑ i ∈ Finset.range 6, (n + i) ^ 2 = m ^ 2) ∧
     ∑ i ∈ Finset.range 11, (18 + i) ^ 2 = 77^2 := by

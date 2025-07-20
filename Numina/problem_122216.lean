@@ -6,7 +6,7 @@ namespace problem_122216
 
 open Finset Nat
 
-/- For any positive integer $n  >1$, let $P(n)$ denote the largest prime not exceeding $n$.
+/- For any positive integer $n > 1$, let $P(n)$ denote the largest prime not exceeding $n$.
 Let $N(n)$ denote the next prime larger than $P(n)$. (For example $P(10) = 7$ and $N(10) = 11$,
 while $P(11) = 11$ and $N(11) = 13$.) If $n+1$ is a prime number, prove that the value of the sum
 $$

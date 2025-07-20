@@ -5,7 +5,7 @@ import Mathlib
 open Real
 
 /- Let $k_{1} < k_{2} < k_{3} < \cdots$ be positive integers, and no two of them are consecutive,
-and for $m = 1, 2, 3, \cdots$, $S_{m} = k_{1} + k_{2} + \cdots + k_{m}$. Prove that for every
+and for $m = 1, 2, 3, \ldots$, $S_{m} = k_{1} + k_{2} + \cdots + k_{m}$. Prove that for every
 positive integer $n$, the interval $[S_{n}, S_{n+1})$ contains at least one perfect square. -/
 
 -- There is a square between two integers iff there is an integer between their square roots.

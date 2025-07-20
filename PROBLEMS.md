@@ -1,3 +1,420 @@
+# Batch 5
+
+### `problem_125818`
+
+Find all integers $k > 1$ such that for some distinct positive integers $a, b$, the number
+$k^a + 1$ can be obtained from $k^b + 1$ by reversing the order of its (decimal) digits.
+
+<https://web.archive.org/web/20041210123510/http://www.kalva.demon.co.uk/soviet/ssoln/ssol9220.html>
+
+[`Numina/problem_125818.lean`](Numina/problem_125818.lean)
+
+```lean
+theorem number_theory_125818 (k : ℕ) (hk_gt : 1 < k) :
+    (∃ a b, 0 < a ∧ 0 < b ∧ a ≠ b ∧
+      Nat.digits 10 (k ^ a + 1) = (Nat.digits 10 (k ^ b + 1)).reverse) ↔
+    k = 3 := by
+```
+
+### `problem_179469`
+
+Determine the number of all pairs $(a, b)$ of single-digit natural numbers $a$ and $b$ for which
+$a < \overline{a, b} < b$ holds! Here, 0 is considered a single-digit number, and $\overline{a, b}$
+denotes the decimal number that has the digit $a$ before the decimal point and the digit $b$ after
+the decimal point.
+
+[`Numina/problem_179469.lean`](Numina/problem_179469.lean)
+
+```lean
+theorem number_theory_179469 :
+    {(a, b) : ℕ × ℕ | a < 10 ∧ b < 10 ∧
+      a < a + (b / 10 : ℚ) ∧ a + (b / 10 : ℚ) < b}.ncard = 45 := by
+```
+
+### `problem_230328`
+
+Let $k_{1} < k_{2} < k_{3} < \cdots$ be positive integers, and no two of them are consecutive,
+and for $m = 1, 2, 3, \ldots$, $S_{m} = k_{1} + k_{2} + \cdots + k_{m}$. Prove that for every
+positive integer $n$, the interval $[S_{n}, S_{n+1})$ contains at least one perfect square.
+
+[`Numina/problem_230328.lean`](Numina/problem_230328.lean)
+
+```lean
+theorem number_theory_230328 (k : ℕ → ℕ) (hk : StrictMono k)
+    (hk_pos : ∀ n, 0 < k n) (hk_consec : ∀ n, k (n + 1) ≠ k n + 1)
+    (S : ℕ → ℕ) (hS : ∀ m, S m = ∑ i in Finset.range (m + 1), k i) (n : ℕ) :
+    ∃ m, m ^ 2 ∈ Set.Ico (S n) (S (n + 1)) := by
+```
+
+### `problem_291009`
+
+Let $n$ be a natural number. Prove that the binary representation of the integer
+$n (2^{n} - 1)$ contains exactly $n$ occurrences of the digit 1.
+
+[`Numina/problem_291009.lean`](Numina/problem_291009.lean)
+
+```lean
+theorem number_theory_291009 (n : ℕ) :
+    (Nat.digits 2 (n * (2 ^ n - 1))).count 1 = n := by
+```
+
+### `problem_262514`
+
+Let $p > 3$ be a prime number. Show that $p^{2}$ is a divisor of
+
+$$ \sum_{k=1}^{p-1} k^{2 p + 1} $$
+
+[`Numina/problem_262514.lean`](Numina/problem_262514.lean)
+
+```lean
+theorem number_theory_262514 (p : ℕ) (hp : p.Prime) (h : 3 < p) :
+    p ^ 2 ∣ ∑ k ∈ Ico 1 p, k ^ (2 * p + 1) := by
+```
+
+### `problem_219484`
+
+Let's find all positive integers $n$ for which $2^{n} - 1$ and $2^{n+2} - 1$ are both prime,
+and $2^{n+1}-1$ is not divisible by 7.
+
+[`Numina/problem_219484.lean`](Numina/problem_219484.lean)
+
+```lean
+theorem number_theory_219484 (n : ℕ) (hn : 0 < n) :
+    Nat.Prime (2 ^ n - 1) ∧ Nat.Prime (2 ^ (n + 2) - 1) ∧ ¬7 ∣ 2 ^ (n + 1) - 1 ↔ n = 3 := by
+```
+
+### `problem_111609`
+
+Let the temperature $T$ of an object be a function of time $t$:
+$T(t) = a t^3 + b t^2  + c t + d$ ($a \neq 0$)$, where the temperature is in
+${ }^{\circ} \mathrm{C}$ and the time is in hours, with $t = 0$ representing 12:00, and
+positive $t$ values representing times after 12:00.
+If the temperature of the object is measured to be $8^{\circ} \mathrm{C}$ at 8:00,
+$60^{\circ} \mathrm{C}$ at 12:00, and $58^{\circ} \mathrm{C}$ at 13:00, and it is known that the
+rate of change of the object's temperature at 8:00 and 16:00 is the same.
+(1) Write the function relating the object's temperature $T$ to time $t$;
+(2) At what time between 10:00 and 14:00 (inclusive) is the temperature of the object the highest?
+And find the highest temperature.
+
+[`Numina/problem_111609.lean`](Numina/problem_111609.lean)
+
+```lean
+theorem algebra_111609 {a b c d : ℝ} (ha : a ≠ 0)
+    (f : ℝ[X]) (hf : f = C a * X ^ 3 + C b * X ^ 2 + C c * X + C d)
+    (hf_0800 : f.eval (-4) = 8) (hf_1200 : f.eval 0 = 60) (hf_1300 : f.eval 1 = 58)
+    (hf_deriv_eq : f.derivative.eval (-4) = f.derivative.eval 4) :
+    (a = 1 ∧ b = 0 ∧ c = -3 ∧ d = 60) ∧
+    (∀ x ∈ Set.Icc (-2) 2, f.eval x ≤ 62) ∧
+    {x ∈ Set.Icc (-2) 2 | f.eval x = 62} = {-1, 2} := by
+```
+
+### `problem_122216`
+
+For any positive integer $n > 1$, let $P(n)$ denote the largest prime not exceeding $n$.
+Let $N(n)$ denote the next prime larger than $P(n)$. (For example $P(10) = 7$ and $N(10) = 11$,
+while $P(11) = 11$ and $N(11) = 13$.) If $n+1$ is a prime number, prove that the value of the sum
+
+$$
+\frac{1}{P(2) N(2)} + \frac{1}{P(3) N(3)} + \frac{1}{P(4) N(4)} + \cdots + \frac{1}{P(n) N(n)} =
+\frac{n - 1}{2 n + 2}
+$$
+
+[`Numina/problem_122216.lean`](Numina/problem_122216.lean)
+
+```lean
+theorem number_theory_122216 {P N : ℕ → ℕ}
+    (hP : ∀ n, P n = sSup {p | p.Prime ∧ p ≤ n})
+    (hN : ∀ n, N n = sInf {p | p.Prime ∧ n < p})
+    (n : ℕ) (hn : 1 < n) (h_prime : (n + 1).Prime) :
+    ∑ i ∈ Icc 2 n, 1 / (P i * N i : ℚ) = (n - 1) / (2 * n + 2) := by
+```
+
+### `problem_260669`
+
+If a positive integer $n$ makes the equation $x^3 + y^3 = z^n$ have positive integer solutions
+$(x, y, z)$, then $n$ is called a "good number". Then, the number of good numbers not exceeding
+2019 is?
+
+[`Numina/problem_260669.lean`](Numina/problem_260669.lean)
+
+```lean
+def isGood (n : ℕ) := ∃ x y z, x > 0 ∧ y > 0 ∧ z > 0 ∧ x^3 + y^3 = z^n
+
+theorem number_theory_260669 (h_fermat : ¬∃ x y z : ℕ, x > 0 ∧ y > 0 ∧ z > 0 ∧ x^3 + y^3 = z^3) :
+    {n ≤ 2019 | isGood n}.ncard = 1346 := by
+```
+
+### `problem_222793`
+
+Prove the Intermediate Value Theorem for a quadratic trinomial.
+
+[`Numina/problem_222793.lean`](Numina/problem_222793.lean)
+
+```lean
+theorem algebra_222793 (c₀ c₁ c₂ : ℝ) (f : ℝ → ℝ) (hf : ∀ x, f x = c₂ * x ^ 2 + c₁ * x + c₀)
+    (a b y : ℝ) (hy : y ∈ Set.uIcc (f a) (f b)) :
+    ∃ x ∈ Set.uIcc a b, f x = y := by
+```
+
+### `problem_118182`
+
+Find all natural numbers $a$ and $b$ such that $\sqrt{a} - \sqrt{b}$ is a root
+of the equation $x^2 + a x - b = 0$.
+
+[`Numina/problem_118182.lean`](Numina/problem_118182.lean)
+
+```lean
+theorem algebra_118182 (a b : ℕ) :
+    (√a - √b)^2 + a * (√a - √b) - b = 0 ↔ a = 0 ∨ a = 2 ∧ b = 1 := by
+```
+
+### `problem_205122`
+
+The sequences $\{a_{n}\}$ and $\{b_{n}\}$ are infinite arithmetic and geometric sequences,
+respectively. The sum of the first $n$ terms of $\{a_{n}\}$ is $S_{n} = \frac{3 n^2 + 5 n}{2}$.
+In the sequence $\{b_{n}\}$, $b_{3}=4$ and $b_{6}=32$. Let $\{c_{n}\}(n \in \mathbf{N}^{+})$ be
+the new sequence formed by all common terms of $\{a_{n}\}$ and $\{b_{n}\}$ (in the original order).
+Prove that $\{c_{n}\}$ is a geometric sequence.
+
+[`Numina/problem_205122.lean`](Numina/problem_205122.lean)
+
+```lean
+theorem algebra_205122 {a b : ℕ → ℝ}
+    (ha : ∃ d, ∀ n, a n = a 0 + d * n) (hb : ∃ q, ∀ n, b n = b 0 * q ^ n)
+    (hs : ∀ n, ∑ i in Finset.range n, a i = (3 * n ^ 2 + 5 * n : ℝ) / 2)
+    (hb2 : b 2 = 4) (hb5 : b 5 = 32) :
+    Set.range (fun n ↦ 4 ^ (n + 1)) = Set.range a ∩ Set.range b := by
+```
+
+### `problem_184865`
+
+Natural numbers $a < b < c$ are such that $b+a$ is divisible by $b−a$, and $c+b$ is
+divisible by $c−b$. The number $a$ is written with 2011 digits, and the number $b−2012$ is
+written with 2012 digits. How many digits does the number $c$ have?
+
+[`Numina/problem_184865.lean`](Numina/problem_184865.lean)
+
+```lean
+theorem number_theory_184865 (a b c : ℕ) (hab : a < b) (hbc : b < c)
+    (hab_dvd : b - a ∣ b + a) (hbc_dvd : c - b ∣ c + b)
+    (ha_digits : (Nat.digits 10 a).length = 2011)
+    (hb_digits : (Nat.digits 10 (b - 2012)).length = 2012) :
+    (Nat.digits 10 c).length = 2012 := by
+```
+
+### `problem_125542`
+
+The sum of the squares of two consecutive positive integers can be a square,
+for example $3^2 + 4^2 = 5^2$.
+Show that the sum of the squares of 3 or 6 consecutive positive integers cannot be a square.
+Give an example of the sum of the squares of 11 consecutive positive integers which is a square.
+
+[`Numina/problem_125542.lean`](Numina/problem_125542.lean)
+
+```lean
+theorem number_theory_125542 :
+    (¬∃ n m, ∑ i ∈ Finset.range 3, (n + i) ^ 2 = m ^ 2) ∧
+    (¬∃ n m, ∑ i ∈ Finset.range 6, (n + i) ^ 2 = m ^ 2) ∧
+    ∑ i ∈ Finset.range 11, (18 + i) ^ 2 = 77^2 := by
+```
+
+### `problem_202399`
+
+Prove the inequalities:
+
+a) $\sqrt[n]{a_1 \cdots a_n} ≤ \frac{a_1 + \cdots + a_n}{n}$ (Cauchy's inequality);
+
+b) $(\frac{b_1 + \cdots + b_n}{n})^{b_1 + \cdots + b_n} ≤ b_1^{b_1} \cdots b_n^{b_n}$
+
+c) $c_1^{b_1} \cdots c_n^{b_n} ≤ c_1 b_1 + \cdots + c_n b_n$, where $b_1 + \cdots + b_n = 1$.
+
+The values of the variables are assumed to be positive.
+
+[`Numina/problem_202399.lean`](Numina/problem_202399.lean)
+
+```lean
+theorem inequalities_202399 {n : ℕ} (hn : 0 < n) (a b c : Fin n → ℝ)
+    (ha_pos : ∀ i, 0 < a i) (hb_pos : ∀ i, 0 < b i) (hc_pos : ∀ i, 0 < c i)
+    (hb : ∑ i, b i = 1) :
+    (∏ i, a i) ^ (1 / n : ℝ) ≤ (∑ i, a i) / n ∧
+    ((∑ i, b i) / n) ^ (∑ i, b i) ≤ ∏ i, (b i) ^ (b i) ∧
+    ∏ i, (c i) ^ (b i) ≤ ∑ i, c i * b i := by
+```
+
+### `problem_188980`
+
+Kolya Vasin wrote down an example of multiplication, and then replaced all the digits with
+letters: the same digits with the same letters, and different digits with different letters.
+The resulting equation is $\overline{a b} \cdot \overline{c d} = \overline{e f f e}$.
+Did Kolya make a mistake?
+
+[`Numina/problem_188980.lean`](Numina/problem_188980.lean)
+
+```lean
+theorem number_theory_188980 (a b c d e f : ℕ) (h_nodup : [a, b, c, d, e, f].Nodup) :
+    ¬∃ x y z : ℕ, Nat.digits 10 x = [b, a] ∧ Nat.digits 10 y = [d, c] ∧
+      Nat.digits 10 z = [e, f, f, e] ∧ x * y = z := by
+```
+
+### `problem_128360`
+
+$p(x)$ is a polynomial of degree $n$ with real coefficients and is non-negative for all $x$.
+Show that $p(x) + p'(x) + p''(x) + \cdots \text{(n+1 terms)} ≥ 0$ for all $x$.
+
+[`Numina/problem_128360.lean`](Numina/problem_128360.lean)
+
+```lean
+theorem algebra_128360 (p : Polynomial ℝ)
+    (hp_nonneg : ∀ x, 0 ≤ p.eval x) :
+    ∀ x, 0 ≤ ∑ i ∈ Finset.range (p.natDegree + 1), (derivative^[i] p).eval x := by
+```
+
+### `problem_112767`
+
+Let $a, b, c$ be positive real numbers such that $a b c = 1$. Prove that
+
+$$ \frac{1}{a+b} + \frac{1}{b+c} + \frac{1}{a+c} \leq \frac{a^{2}+b^{2}+c^{2}}{2} $$
+
+[`Numina/problem_112767.lean`](Numina/problem_112767.lean)
+
+```lean
+theorem inequalities_112767 (a b c : ℝ) (ha : 0 < a) (hb : 0 < b) (hc : 0 < c)
+    (habc : a * b * c = 1) :
+    1 / (a + b) + 1 / (b + c) + 1 / (a + c) ≤ (a ^ 2 + b ^ 2 + c ^ 2) / 2 := by
+```
+
+### `problem_148288`
+
+If for any $x \in(-\infty,-1)$, we have
+
+$$ (m - m^{2}) 4^{x} + 2^{x} + 1 > 0, $$
+
+then the range of real number $m$ is?
+
+[`Numina/problem_148288.lean`](Numina/problem_148288.lean)
+
+```lean
+theorem inequalities_148288 (m : ℝ) :
+    (∀ x : ℝ, x < -1 → 0 < (m - m^2) * 4^x + 2^x + 1) ↔ m ∈ Set.Icc (-2) 3 := by
+```
+
+### `problem_100122`
+
+Let $a, b, c$ be positive real numbers such that $a b c = 1$. Show that
+
+$$
+\frac{1}{a^{3} + b c} + \frac{1}{b^{3} + c a} + \frac{1}{c^{3} + a b} \leq
+  \frac{(a b + b c + c a)^{2}}{6}
+$$
+
+[`Numina/problem_100122.lean`](Numina/problem_100122.lean)
+
+```lean
+theorem inequalities_100122 (a b c : ℝ) (ha : 0 < a) (hb : 0 < b) (hc : 0 < c)
+    (habc : a * b * c = 1) :
+    1 / (a ^ 3 + b * c) + 1 / (b ^ 3 + c * a) + 1 / (c ^ 3 + a * b) ≤
+      ((a * b + b * c + c * a) ^ 2) / 6 :=
+```
+
+### `problem_223945`
+
+Prove that for any natural $n \geqslant 2$ the number $2^{4 n + 2} + 1$ is
+not the product of two prime numbers.
+
+[`Numina/problem_223945.lean`](Numina/problem_223945.lean)
+
+```lean
+theorem number_theory_223945 (n : ℕ) (hn : 2 ≤ n) :
+    ¬∃ p q, 2 ^ (4 * n + 2) + 1 = p * q ∧ p.Prime ∧ q.Prime := by
+```
+
+### `problem_145653`
+
+Let $f(x)$ and $g(x)$ be odd and even functions defined on $R$, respectively, and
+$f(x) + g(x) = 2^x$. If for $x \in [1, 2]$, the inequality $a f(x) + g(2x) \geq 0$ always holds,
+then the range of the real number $a$ is?
+
+[`Numina/problem_145653.lean`](Numina/problem_145653.lean)
+
+```lean
+theorem algebra_145653 (f g : ℝ → ℝ) (hf : f.Odd) (hg : g.Even)
+    (hfg : ∀ x, f x + g x = 2 ^ x) (a : ℝ) :
+    (∀ x ∈ Set.Icc 1 2, 0 ≤ a * f x + g (2 * x)) ↔ -17/6 ≤ a := by
+```
+
+### `problem_139025`
+
+The real polynomial $p(x) ≡ x^3 + a x^2 + b x + c$ has three real roots $α < β < γ$.
+Show that $\sqrt{a^2 - 3 b} < (γ - α) ≤ 2 \sqrt{a^2 / 3 - b}$.
+
+<https://prase.cz/kalva/putnam/psoln/psol5113.html>
+
+[`Numina/problem_139025.lean`](Numina/problem_139025.lean)
+
+```lean
+theorem algebra_139025 {a b c α β γ : ℝ}
+    (h : (X ^ 3 + C a * X ^ 2 + C b * X + C c).roots = {α, β, γ}) (hαβ : α < β) (hβγ : β < γ) :
+    √(a ^ 2 - 3 * b) < γ - α ∧ γ - α ≤ 2 * √(a ^ 2 / 3 - b) := by
+```
+
+### `problem_205856`
+
+Prove that any 39 successive natural numbers include at least one whose
+digit sum is divisible by 11.
+
+[`Numina/problem_205856.lean`](Numina/problem_205856.lean)
+
+```lean
+theorem number_theory_205856 (n : ℕ) :
+    ∃ m ∈ Set.Ico n (n + 39), 11 ∣ (Nat.digits 10 m).sum := by
+```
+
+### `problem_250464`
+
+If real numbers $a, b, x, y$ satisfy
+
+$$ \begin{align}
+a x + b y & = 3 , \\
+a x^{2} + b y^{2} & = 7 , \\
+a x^{3} + b y^{3} & = 16 , \\
+a x^{4} + b y^{4} = 42 ,
+\end{align} $$
+
+find the value of $a x^{5}+b y^{5}$.
+
+[`Numina/problem_250464.lean`](Numina/problem_250464.lean)
+
+```lean
+theorem algebra_250464 (a b x y : ℝ) (h₁ : a * x + b * y = 3) (h₂ : a * x^2 + b * y^2 = 7)
+    (h₃ : a * x^3 + b * y^3 = 16) (h₄ : a * x^4 + b * y^4 = 42) :
+    a * x^5 + b * y^5 = 20 := by
+```
+
+### `problem_107999`
+
+Solve the Diophantine equation $6(x^{2} + y^{2}) = z^{2} + t^{2}$.
+
+[`Numina/problem_107999.lean`](Numina/problem_107999.lean)
+
+```lean
+theorem number_theory_107999 (x y z t : ℕ) (h : 6 * (x ^ 2 + y ^ 2) = z ^ 2 + t ^ 2) :
+    (x, y, z, t) = 0 := by
+```
+
+### `problem_198767`
+
+Determine all pairs $(a, b)$ of prime numbers for which the following holds:
+
+$$ 3 a^{2} + a = b^{2} + b $$
+
+[`Numina/problem_198767.lean`](Numina/problem_198767.lean)
+
+```lean
+theorem number_theory_198767 (a b : ℕ) (ha : a.Prime) (hb : b.Prime) (h : 3 * a^2 + a = b^2 + b) :
+    a = 3 ∧ b = 5 := by
+```
+
+
 # Batch 4
 
 ### `problem_251758`
